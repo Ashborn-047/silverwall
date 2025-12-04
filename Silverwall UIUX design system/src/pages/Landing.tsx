@@ -1,0 +1,297 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag } from 'lucide-react';
+
+// ============================================================================
+// 🏎️ TELEMETRY LIVE VIEWER
+// Engineering-grade F1 telemetry display matching AMG pit-wall aesthetics
+// ============================================================================
+
+export default function Landing() {
+    const [isHovered, setIsHovered] = useState(false);
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, isLive: false });
+
+    // Race target: DEC 07, 2024 @ 18:30 IST (UTC+5:30)
+    const raceDate = new Date('2024-12-07T13:00:00Z'); // 18:30 IST = 13:00 UTC
+
+    // Countdown timer
+    useEffect(() => {
+        const updateCountdown = () => {
+            const now = new Date();
+            const diff = raceDate.getTime() - now.getTime();
+
+            if (diff <= 0) {
+                setCountdown({ days: 0, hours: 0, minutes: 0, isLive: true });
+                return;
+            }
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            setCountdown({ days, hours, minutes, isLive: false });
+        };
+
+        updateCountdown();
+        const timer = setInterval(updateCountdown, 60000); // Update every minute
+        return () => clearInterval(timer);
+    }, []);
+
+    // Simulating a pit-wall clock
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    return (
+        <div className="min-h-screen bg-[#050608] text-[#E0E0E0] font-sans selection:bg-[#00D2BE] selection:text-[#050608] flex flex-col overflow-hidden relative">
+
+            {/* Background Grid Mesh (Subtle Engineering Texture) */}
+            <div
+                className="absolute inset-0 pointer-events-none opacity-10"
+                style={{
+                    backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), 
+          linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`,
+                    backgroundSize: '40px 40px'
+                }}
+            />
+
+            {/* ========================================================================
+          HEADER
+      ======================================================================== */}
+            <header className="w-full max-w-[1400px] mx-auto px-6 py-6 flex items-center justify-between relative z-10 border-b border-[#00D2BE]/10">
+                <div className="flex items-center gap-3">
+                    <div className="w-1 h-6 bg-[#00D2BE]" /> {/* AMG Style Accent Bar */}
+                    <h1 className="text-xl font-bold tracking-widest uppercase">
+                        SILVER<span className="text-[#00D2BE]">WALL</span>
+                    </h1>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-sm border border-[#00D2BE]/20 bg-[#00D2BE]/5">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-[10px] font-mono tracking-wider text-[#00D2BE] uppercase">System Operational</span>
+                    </div>
+                    <span className="text-[10px] text-[#9CA3AF] font-mono border border-[#333] px-2 py-1 rounded">
+                        OPEN SOURCE | OpenF1
+                    </span>
+                </div>
+            </header>
+
+            {/* ========================================================================
+          MAIN CONTENT AREA
+      ======================================================================== */}
+            <main className="flex-grow flex items-center justify-center relative z-10 w-full max-w-[1400px] mx-auto px-6 py-12">
+                <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
+
+                    {/* LEFT COL: Value Prop & CTA */}
+                    <div className="lg:col-span-7 flex flex-col gap-8">
+
+                        {/* Context Label */}
+                        <div className="flex items-center gap-2 text-[#00D2BE] font-mono text-xs tracking-[0.2em] uppercase mb-[-1rem]">
+                            <Terminal size={14} />
+                            <span>Telemetry Extraction Unit</span>
+                        </div>
+
+                        {/* Headline */}
+                        <h2 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1]">
+                            ENGINEERING-GRADE<br />
+                            <span className="text-white">RACE TELEMETRY.</span>
+                        </h2>
+
+                        {/* Countdown Timer */}
+                        <div className="flex items-center gap-3 font-mono text-sm">
+                            {countdown.isLive ? (
+                                <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-sm animate-pulse">
+                                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                                    <span className="text-red-500 font-bold tracking-wider">RACE LIVE</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-4 px-4 py-2 bg-[#00D2BE]/5 border border-[#00D2BE]/20 rounded-sm">
+                                    <span className="text-[#555] text-xs uppercase tracking-wider">Race In:</span>
+                                    <span className="text-[#00D2BE] font-bold">
+                                        {countdown.days}D {countdown.hours}H {countdown.minutes}M
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Value Statement */}
+                        <p className="text-[#9CA3AF] text-lg md:text-xl max-w-2xl font-light border-l-2 border-[#333] pl-6 py-1">
+                            Speed, gear changes, throttle, braking, and DRS — visualized in real-time.
+                            A precise tactical toolkit for analysts, mirroring the pit wall environment.
+                        </p>
+
+                        {/* Metric Preview Pills */}
+                        <div className="flex flex-wrap gap-3 font-mono text-xs text-[#00D2BE]">
+                            {['SPEED_KPH', 'RPM', 'DRS_STATUS', 'THROTTLE_%', 'BRAKE_PSI', 'GEAR'].map((metric) => (
+                                <span key={metric} className="px-2 py-1 bg-[#00D2BE]/10 border border-[#00D2BE]/20 rounded-sm">
+                                    {metric}
+                                </span>
+                            ))}
+                        </div>
+
+                        {/* PRIMARY CTA */}
+                        <div className="mt-4">
+                            <Link
+                                to="/telemetry/live"
+                                onMouseEnter={() => setIsHovered(true)}
+                                onMouseLeave={() => setIsHovered(false)}
+                                className={`
+                  group relative flex items-center justify-between px-8 py-5 
+                  bg-[#00D2BE] text-[#050608] 
+                  text-lg font-bold tracking-wider uppercase
+                  rounded-[4px] transition-all duration-300
+                  ${isHovered ? 'shadow-[0_0_20px_rgba(0,210,190,0.4)] translate-y-[-1px]' : 'shadow-none'}
+                `}
+                                style={{ minWidth: '300px' }}
+                            >
+                                <span>Open Live Pit-Wall</span>
+                                <ChevronRight
+                                    className={`transition-transform duration-300 ${isHovered ? 'translate-x-2' : ''}`}
+                                    size={24}
+                                    strokeWidth={3}
+                                />
+                            </Link>
+
+                            {/* Demo Replay Button */}
+                            <Link
+                                to="/telemetry/live?demo=true"
+                                className="flex items-center justify-center gap-2 px-6 py-3 mt-3
+                                  bg-transparent border border-[#00D2BE]/30 text-[#00D2BE]
+                                  text-sm font-mono tracking-wider uppercase
+                                  rounded-[4px] hover:bg-[#00D2BE]/10 hover:border-[#00D2BE]/50 transition-all duration-300"
+                                style={{ minWidth: '300px' }}
+                            >
+                                <Activity size={16} />
+                                <span>View Demo Replay</span>
+                            </Link>
+
+                            <div className="mt-3 flex items-center gap-2 text-[#555] text-xs font-mono">
+                                <ShieldAlert size={12} />
+                                <span>RESTRICTED ACCESS: ENGINEERING PERSONNEL ONLY</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* RIGHT COL: Next Race Card */}
+                    <div className="lg:col-span-5 w-full">
+                        <RaceCard currentTime={currentTime} />
+                    </div>
+
+                </div>
+            </main>
+
+            {/* ========================================================================
+          FOOTER
+      ======================================================================== */}
+            <footer className="w-full max-w-[1400px] mx-auto px-6 py-8 border-t border-[#00D2BE]/10 relative z-10">
+                <div className="flex flex-col md:flex-row justify-between items-center text-[#555] text-xs gap-4">
+                    <div className="flex items-center gap-4">
+                        <p className="font-mono">
+                            SILVERWALL V2.4.0 <span className="mx-2">|</span> SESSION ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}
+                        </p>
+                        <Link
+                            to="/design-system"
+                            className="font-mono text-[10px] text-[#555] hover:text-[#00D2BE] transition-colors uppercase tracking-wider border border-[#333] hover:border-[#00D2BE]/30 px-2 py-1 rounded"
+                        >
+                            Design System
+                        </Link>
+                    </div>
+                    <p className="text-center md:text-right opacity-60">
+                        Data provided by OpenF1 — SilverWall is an Independent Project.<br />
+                        Not affiliated with Formula 1® or Liberty Media.
+                    </p>
+                </div>
+            </footer>
+
+        </div>
+    );
+}
+
+// ============================================================================
+// 🧩 COMPONENT: Race Card
+// ============================================================================
+const RaceCard = ({ currentTime }: { currentTime: Date }) => {
+    return (
+        <div className="relative w-full bg-[#0A0C10] border border-[#00D2BE]/20 rounded-sm overflow-hidden">
+            {/* Decorative Corner Markers */}
+            <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-[#00D2BE]" />
+            <div className="absolute top-0 right-0 w-2 h-2 border-r border-t border-[#00D2BE]" />
+            <div className="absolute bottom-0 left-0 w-2 h-2 border-l border-b border-[#00D2BE]" />
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-[#00D2BE]" />
+
+            {/* Card Header */}
+            <div className="bg-[#00D2BE]/5 border-b border-[#00D2BE]/10 p-4 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <Activity size={16} className="text-[#00D2BE]" />
+                    <span className="text-[#00D2BE] font-mono text-xs font-bold tracking-widest">NEXT EVENT</span>
+                </div>
+                <div className="font-mono text-xs text-[#9CA3AF]">
+                    UTC: {currentTime.toISOString().split('T')[1].split('.')[0]}
+                </div>
+            </div>
+
+            {/* Card Body */}
+            <div className="p-6 md:p-8">
+                <div className="flex flex-col gap-1 mb-6">
+                    <h3 className="text-2xl font-bold text-white tracking-wide uppercase">Abu Dhabi Grand Prix</h3>
+                    <span className="text-[#9CA3AF] text-sm font-light">Yas Marina Circuit</span>
+                </div>
+
+                {/* Data Grid */}
+                <div className="grid grid-cols-2 gap-y-4 gap-x-8 mb-8 border-t border-b border-[#333] py-4">
+                    <DataPoint icon={<Clock size={14} />} label="DATE" value="DEC 07, 2024" sub="18:30 IST" />
+                    <DataPoint icon={<Flag size={14} />} label="LAPS" value="58" sub="5.281 KM" />
+                    <DataPoint icon={<MapPin size={14} />} label="LOCATION" value="ABU DHABI" sub="UAE" />
+                    <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub="LIVE STREAM" />
+                </div>
+
+                {/* Track Map Visualization (Yas Marina Silhouette) */}
+                <div className="relative w-full h-48 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity duration-500">
+                    {/* Grid Behind Map */}
+                    <div
+                        className="absolute inset-0 z-0"
+                        style={{
+                            backgroundImage: `radial-gradient(circle, #333 1px, transparent 1px)`,
+                            backgroundSize: '20px 20px',
+                            opacity: 0.3
+                        }}
+                    />
+
+                    {/* Yas Marina Approximate SVG Path */}
+                    <svg viewBox="0 0 200 150" className="w-full h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)] z-10 transform scale-90">
+                        <path
+                            d="M 40 110 L 130 110 L 135 105 L 140 80 L 135 75 L 100 75 L 90 65 L 40 65 L 30 75 L 30 100 Z 
+                 M 40 110 L 30 100 L 25 100 L 20 80 L 30 75
+                 M 130 110 L 150 110 L 160 100 L 160 50 L 150 40 L 120 40 L 115 45 L 115 55 L 100 75"
+                            fill="none"
+                            stroke="#00D2BE"
+                            strokeWidth="1.5"
+                            strokeLinejoin="round"
+                            strokeLinecap="round"
+                        />
+                        {/* Start/Finish Line */}
+                        <line x1="140" y1="105" x2="140" y2="115" stroke="white" strokeWidth="2" />
+                    </svg>
+
+                    <div className="absolute bottom-2 right-2 text-[10px] font-mono text-[#00D2BE] opacity-50">
+                        SECTOR 1 | SECTOR 2 | SECTOR 3
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const DataPoint = ({ icon, label, value, sub }: { icon: React.ReactNode, label: string, value: string, sub: string }) => (
+    <div className="flex flex-col">
+        <div className="flex items-center gap-2 text-[#555] mb-1">
+            {icon}
+            <span className="text-[10px] font-bold tracking-wider">{label}</span>
+        </div>
+        <span className="font-mono text-[#E0E0E0] text-sm">{value}</span>
+        <span className="font-mono text-[#00D2BE] text-[10px]">{sub}</span>
+    </div>
+);

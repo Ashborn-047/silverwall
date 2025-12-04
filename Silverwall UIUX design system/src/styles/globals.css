@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import Design Tokens */
+@import './tokens.css';
+
+/* =================================================
+   SILVERWALL DESIGN TOKENS
+   AMG Surgical Engineering Theme
+   ================================================= */
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--sw-bg-carbon-100);
+  color: var(--sw-text-high);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Utility for font-mono in tailwind */
+.font-mono {
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+}
+
+/* Selection styling */
+::selection {
+  background-color: var(--sw-primary-teal);
+  color: var(--sw-bg-carbon-100);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--sw-bg-carbon-200);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--sw-text-dim);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sw-text-mid);
+}

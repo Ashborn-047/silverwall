@@ -1,0 +1,23 @@
+# Node / React
+node_modules/
+dist/
+.env
+*.local
+
+# Python / Backend
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build caches
+.env.*
+*.log

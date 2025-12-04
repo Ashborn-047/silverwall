@@ -1,0 +1,248 @@
+/**
+ * SilverWall Design System — AMG Pit Standard
+ * CSS Custom Properties (CSS Variables)
+ * Version: 1.0.0
+ * 
+ * Import this file to use design tokens as CSS variables:
+ * @import './tokens.css';
+ */
+
+:root {
+  /* ========================================================================
+     COLORS - Background
+  ======================================================================== */
+  --sw-bg-carbon-100: #050608;
+  --sw-bg-carbon-200: #0A0C10;
+  --sw-bg-carbon-300: #1A1C20;
+
+  /* ========================================================================
+     COLORS - Primary
+  ======================================================================== */
+  --sw-primary-teal: #00D2BE;
+  --sw-primary-teal-dim: rgba(0, 210, 190, 0.5);
+  --sw-primary-teal-glow: rgba(0, 210, 190, 0.15);
+
+  /* ========================================================================
+     COLORS - Text
+  ======================================================================== */
+  --sw-text-high: #E0E0E0;
+  --sw-text-mid: #9CA3AF;
+  --sw-text-dim: #555555;
+  --sw-text-dark: #333333;
+
+  /* ========================================================================
+     COLORS - Border
+  ======================================================================== */
+  --sw-border-weak: rgba(0, 210, 190, 0.15);
+  --sw-border-medium: rgba(0, 210, 190, 0.3);
+  --sw-border-strong: rgba(0, 210, 190, 0.5);
+
+  /* ========================================================================
+     COLORS - Status
+  ======================================================================== */
+  --sw-alert-red: #FF3B30;
+  --sw-success-green: #10B981;
+  --sw-warning-amber: #F59E0B;
+  --sw-info-blue: #3B82F6;
+
+  /* ========================================================================
+     COLORS - Sector
+  ======================================================================== */
+  --sw-sector-purple: #D042FF;
+  --sw-sector-green: #00D2BE;
+  --sw-sector-yellow: #FFD700;
+
+  /* ========================================================================
+     COLORS - Teams
+  ======================================================================== */
+  --sw-team-mercedes: #00D2BE;
+  --sw-team-redbull: #3671C6;
+  --sw-team-ferrari: #DC0000;
+  --sw-team-mclaren: #FF8700;
+  --sw-team-aston: #006F62;
+  --sw-team-alpine: #0090FF;
+  --sw-team-williams: #005AFF;
+  --sw-team-alphatauri: #2B4562;
+  --sw-team-alfa: #900000;
+  --sw-team-haas: #FFFFFF;
+
+  /* ========================================================================
+     TYPOGRAPHY - Font Families
+  ======================================================================== */
+  --font-sans: Inter, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+
+  /* ========================================================================
+     TYPOGRAPHY - Font Sizes
+  ======================================================================== */
+  --text-xlhead: 42px;
+  --text-head: 24px;
+  --text-subhead: 18px;
+  --text-body: 14px;
+  --text-label: 12px;
+  --text-data: 14px;
+  --text-data-large: 28px;
+  --text-tiny: 10px;
+
+  /* ========================================================================
+     TYPOGRAPHY - Font Weights
+  ======================================================================== */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ========================================================================
+     TYPOGRAPHY - Line Heights
+  ======================================================================== */
+  --leading-tight: 1.1;
+  --leading-snug: 1.2;
+  --leading-normal: 1.5;
+
+  /* ========================================================================
+     TYPOGRAPHY - Letter Spacing
+  ======================================================================== */
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.01em;
+  --tracking-wider: 0.02em;
+  --tracking-widest: 0.04em;
+
+  /* ========================================================================
+     SPACING
+  ======================================================================== */
+  --sp-xs: 4px;
+  --sp-s: 8px;
+  --sp-m: 16px;
+  --sp-l: 24px;
+  --sp-xl: 40px;
+  --sp-xxl: 64px;
+
+  /* ========================================================================
+     BORDER RADIUS
+  ======================================================================== */
+  --radius-none: 0px;
+  --radius-sm: 2px;
+  --radius-default: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* ========================================================================
+     LAYOUT
+  ======================================================================== */
+  --layout-leaderboard-width: 280px;
+  --layout-telemetry-width: 320px;
+  --layout-header-height: 64px;
+  --layout-footer-height: 48px;
+  --layout-max-width: 1920px;
+
+  /* ========================================================================
+     TRACK VISUALIZATION
+  ======================================================================== */
+  --track-stroke-width: 14px;
+  --track-stroke-thin: 3px;
+  --track-color: #00D2BE;
+  --track-background: #333333;
+  --track-opacity-inactive: 0.65;
+  --track-opacity-active: 1.0;
+
+  /* ========================================================================
+     CAR MARKERS
+  ======================================================================== */
+  --car-dot-radius: 11px;
+  --car-dot-radius-small: 5px;
+  --car-dot-stroke: 3px;
+  --car-label-offset: 18px;
+  --car-trail-length: 40px;
+  --car-trail-opacity: 0.4;
+
+  /* ========================================================================
+     TELEMETRY BARS
+  ======================================================================== */
+  --telemetry-bar-height: 10px;
+  --telemetry-bar-height-small: 6px;
+  --telemetry-bar-radius: 2px;
+  --telemetry-bar-spacing: 10px;
+  --telemetry-bar-gap: 2px;
+  --telemetry-dot-radius: 4px;
+  --telemetry-dot-radius-small: 1.5px;
+
+  /* ========================================================================
+     ANIMATION
+  ======================================================================== */
+  --duration-fast: 150ms;
+  --duration-default: 300ms;
+  --duration-slow: 500ms;
+  --easing-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-smooth: cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* ========================================================================
+   UTILITY CLASSES (Optional)
+======================================================================== */
+
+.text-xlhead {
+  font-size: var(--text-xlhead);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wider);
+  font-family: var(--font-sans);
+}
+
+.text-head {
+  font-size: var(--text-head);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-wider);
+  font-family: var(--font-sans);
+}
+
+.text-label {
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-widest);
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+}
+
+.text-data {
+  font-size: var(--text-data);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.text-tiny {
+  font-size: var(--text-tiny);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-widest);
+  font-family: var(--font-mono);
+  opacity: 0.65;
+  text-transform: uppercase;
+}
+
+/* ========================================================================
+   EXAMPLE USAGE
+======================================================================== */
+
+/*
+  .my-component {
+    background-color: var(--sw-bg-carbon-100);
+    color: var(--sw-text-high);
+    border: 1px solid var(--sw-border-weak);
+    padding: var(--sp-m);
+    border-radius: var(--radius-default);
+    transition: all var(--duration-default) var(--easing-default);
+  }
+
+  .my-heading {
+    font-size: var(--text-head);
+    font-weight: var(--weight-semibold);
+    color: var(--sw-primary-teal);
+  }
+
+  .my-data {
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    color: var(--sw-text-mid);
+  }
+*/
