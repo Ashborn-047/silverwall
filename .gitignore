@@ -20,4 +20,5 @@ venv/
 
 # Build caches
 .env.*
+!.env.production
 *.log
