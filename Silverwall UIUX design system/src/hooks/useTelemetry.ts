@@ -43,33 +43,41 @@ export function useTelemetry(): TelemetryState {
     const isDemo = typeof window !== 'undefined' && window.location.search.includes('demo=true');
 
     const connect = useCallback(() => {
-        // Different behavior for demo vs live mode
-        if (!isDemo) {
-            // LIVE MODE: In real production, this would connect to OpenF1 live stream
-            // For now, we show "waiting" state since there's no real race
-            console.log('📡 Live mode: Waiting for real race data...');
-            setStatus('waiting');
-            setFrame(null); // No fake data in live mode
-            return;
-        }
+        // Different WebSocket endpoints for demo vs live mode
+        const baseUrl = import.meta.env.VITE_WS_URL?.replace('/ws/abu_dhabi', '') || 'ws://localhost:8000';
 
-        // DEMO MODE: Connect to fake simulated stream
-        const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/abu_dhabi';
-        console.log(`🎮 Demo mode: Connecting to simulated stream at ${wsUrl}`);
+        // DEMO MODE: Connect to simulated stream at /ws/abu_dhabi
+        // LIVE MODE: Connect to real OpenF1 data at /ws/live
+        const wsEndpoint = isDemo ? '/ws/abu_dhabi' : '/ws/live';
+        const wsUrl = `${baseUrl}${wsEndpoint}`;
+
+        console.log(`📡 ${isDemo ? 'DEMO' : 'LIVE'} mode: Connecting to ${wsUrl}`);
 
         try {
             const ws = new WebSocket(wsUrl);
             wsRef.current = ws;
 
             ws.onopen = () => {
-                console.log('✅ Demo WebSocket connected');
+                console.log(`✅ ${isDemo ? 'Demo' : 'Live'} WebSocket connected`);
                 setStatus('connected');
             };
 
             ws.onmessage = (event) => {
                 try {
-                    const data = JSON.parse(event.data) as TelemetryFrame;
-                    setFrame(data);
+                    const data = JSON.parse(event.data);
+
+                    // Handle different response types from live endpoint
+                    if (data.status === 'waiting') {
+                        setStatus('waiting');
+                        setFrame(null);
+                    } else if (data.status === 'error') {
+                        console.error('WebSocket error:', data.message);
+                        setStatus('error');
+                    } else {
+                        // Valid frame data
+                        setFrame(data as TelemetryFrame);
+                        setStatus('connected');
+                    }
                 } catch (e) {
                     console.error('Failed to parse telemetry data:', e);
                 }
@@ -81,13 +89,13 @@ export function useTelemetry(): TelemetryState {
             };
 
             ws.onclose = () => {
-                console.log('🔌 Demo WebSocket disconnected');
+                console.log(`🔌 ${isDemo ? 'Demo' : 'Live'} WebSocket disconnected`);
                 setStatus('disconnected');
 
-                // Attempt to reconnect after 2 seconds (demo mode only)
+                // Attempt to reconnect after 2 seconds
                 reconnectTimeoutRef.current = window.setTimeout(() => {
                     if (wsRef.current?.readyState === WebSocket.CLOSED) {
-                        console.log('🔄 Attempting to reconnect demo stream...');
+                        console.log('🔄 Attempting to reconnect...');
                         setStatus('connecting');
                         connect();
                     }

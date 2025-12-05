@@ -37,14 +37,39 @@ NEXT_SEASON = {
 async def fetch_live_session():
     """Check if there's an active session on OpenF1"""
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Get the latest session
             response = await client.get(f"{OPENF1_API}/sessions", params={"session_key": "latest"})
             if response.status_code == 200:
                 data = response.json()
                 if data:
-                    return data[0]
-    except:
-        pass
+                    session = data[0]
+                    # Check if session is currently live:
+                    # - date_end is None (session hasn't ended)
+                    # - OR session started less than 3 hours ago (as fallback)
+                    date_end = session.get("date_end")
+                    date_start = session.get("date_start")
+                    
+                    if date_end is None:
+                        # Session is live - no end time yet
+                        print(f"🟢 LIVE SESSION DETECTED: {session.get('session_name')} at {session.get('circuit_short_name')}")
+                        return session
+                    
+                    # Check if session ended recently (within last 30 minutes) - show as live
+                    if date_end:
+                        from datetime import datetime
+                        try:
+                            end_time = datetime.fromisoformat(date_end.replace('Z', '+00:00'))
+                            now = datetime.now(timezone.utc)
+                            if (now - end_time).total_seconds() < 1800:  # 30 minutes
+                                print(f"🟡 RECENT SESSION: {session.get('session_name')} ended {int((now - end_time).total_seconds() / 60)} mins ago")
+                                return session
+                        except:
+                            pass
+                    
+                    print(f"⚪ Session ended: {session.get('session_name')}")
+    except Exception as e:
+        print(f"❌ Error fetching live session: {e}")
     return None
 
 
