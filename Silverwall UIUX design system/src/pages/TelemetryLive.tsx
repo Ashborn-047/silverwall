@@ -4,6 +4,7 @@ import { ArrowLeft, Radio, Wifi, Circle, Activity, Clock } from 'lucide-react';
 import { useTelemetry } from '../hooks/useTelemetry';
 import { useTrack, TrackPoint } from '../hooks/useTrack';
 import { useRaceStatus } from '../hooks/useRaceStatus';
+import CommentaryPanel from '../components/CommentaryPanel';
 
 // ============================================================================
 // 🏎️ TELEMETRY LIVE VIEWER
@@ -377,6 +378,9 @@ export default function TelemetryLive() {
               );
             })}
           </div>
+
+          {/* Commentary Panel */}
+          <CommentaryPanel isDemo={isDemo} isConnected={isConnected} />
         </aside>
 
         {/* CENTER PANEL: TRACK MAP */}

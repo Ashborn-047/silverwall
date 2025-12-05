@@ -14,6 +14,8 @@ from pipeline.fake_monza_timeline import TIMELINE
 from websocket.live import router as abu_dhabi_ws_router
 from routes.track import router as track_router
 from routes.status import router as status_router
+from routes.commentary import router as commentary_router
+from routes.radio import router as radio_router
 
 app = FastAPI(
     title="SilverWall F1 Telemetry",
@@ -37,6 +39,8 @@ app.include_router(abu_dhabi_ws_router)
 # Include REST API routers
 app.include_router(track_router, prefix="/api")
 app.include_router(status_router, prefix="/api")
+app.include_router(commentary_router, prefix="/api")
+app.include_router(radio_router, prefix="/api")
 
 
 @app.on_event("startup")
