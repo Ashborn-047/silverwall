@@ -1,9 +1,9 @@
+/* Import Design Tokens - must come first */
+@import './tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import Design Tokens */
-@import './tokens.css';
 
 /* =================================================
    SILVERWALL DESIGN TOKENS
