@@ -123,7 +123,7 @@ def generate_frame(t: float, track_points: list, cumulative: list, total_length:
 
 @router.websocket("/ws/abu_dhabi")
 async def websocket_abu_dhabi(websocket: WebSocket):
-    """WebSocket endpoint for Abu Dhabi telemetry stream at 5 FPS"""
+    """WebSocket endpoint for Abu Dhabi telemetry stream at 3 FPS (smoother for remote)"""
     await websocket.accept()
     print("🔌 Client connected to /ws/abu_dhabi")
     
@@ -138,8 +138,8 @@ async def websocket_abu_dhabi(websocket: WebSocket):
         while True:
             frame = generate_frame(t, track_points, cumulative, total_length)
             await websocket.send_json(frame)
-            t += 0.2  # 5 FPS
-            await asyncio.sleep(0.2)
+            t += 0.33  # 3 FPS for smoother remote animation
+            await asyncio.sleep(0.33)
     except WebSocketDisconnect:
         print("🔌 Client disconnected from /ws/abu_dhabi")
     except Exception as e:
