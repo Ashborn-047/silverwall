@@ -76,7 +76,6 @@ export default function TelemetryLive() {
   // Connection status from hook
   const isConnected = status === 'connected';
   const isWaiting = status === 'waiting';
-  const isRaceLive = raceStatus.status === 'live';
 
   // Get driver team colors map
   const teamColors: Record<string, string> = {
