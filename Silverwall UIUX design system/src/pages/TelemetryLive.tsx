@@ -277,7 +277,14 @@ export default function TelemetryLive() {
             <span className="text-[#333] mx-2">|</span>
 
             {/* Show countdown or live status */}
-            {raceStatus.status === 'live' || isDemo ? (
+            {isDemo ? (
+              <>
+                <span className="text-[#9CA3AF]">SESSION</span>
+                <span className="text-[#00D2BE] font-bold">{sessionTime}</span>
+                <span className="text-[#333] mx-2">|</span>
+                <span className="text-yellow-500 font-bold">DEMO</span>
+              </>
+            ) : isConnected && raceStatus.status === 'live' ? (
               <>
                 <span className="text-[#9CA3AF]">SESSION</span>
                 <span className="text-[#00D2BE] font-bold">{sessionTime}</span>
@@ -293,7 +300,7 @@ export default function TelemetryLive() {
             ) : raceStatus.status === 'ended' ? (
               <span className="text-[#555]">SEASON ENDED</span>
             ) : (
-              <span className="text-[#555]">LOADING...</span>
+              <span className="text-[#555]">WAITING...</span>
             )}
           </div>
         </div>

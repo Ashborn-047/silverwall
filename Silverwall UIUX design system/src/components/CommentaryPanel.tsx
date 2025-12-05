@@ -102,29 +102,18 @@ export default function CommentaryPanel({ isDemo, isConnected }: CommentaryPanel
 
     // Fetch initial commentary history
     useEffect(() => {
-        const fetchHistory = async () => {
-            try {
-                const response = await fetch(`${apiUrl}/api/commentary/history?limit=5`);
-                if (response.ok) {
-                    const data = await response.json();
-                    setEvents(data.events || []);
-                }
-            } catch (error) {
-                console.error('Failed to fetch commentary history:', error);
-            }
-        };
-
         if (isDemo) {
-            // Generate initial demo events
+            // Generate initial demo events only in demo mode
             const initialEvents: CommentaryEvent[] = [];
             for (let i = 0; i < 5; i++) {
                 initialEvents.push(generateDemoEvent());
             }
             setEvents(initialEvents);
         } else {
-            fetchHistory();
+            // In live mode, start with empty events - will fill when race starts
+            setEvents([]);
         }
-    }, [isDemo, apiUrl]);
+    }, [isDemo]);
 
     // Poll for new events or generate demo events
     useEffect(() => {
