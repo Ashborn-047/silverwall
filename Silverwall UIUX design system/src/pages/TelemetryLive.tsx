@@ -200,14 +200,18 @@ export default function TelemetryLive() {
   useEffect(() => {
     if (!isDemo) return; // Don't simulate session time in live mode
 
+    // Start session time from 0
+    let totalSeconds = 0;
+    setSessionTime('00:00:00');
+
     const timer = setInterval(() => {
-      setSessionTime((prev) => {
-        const [min, sec] = prev.split(':').map(Number);
-        const totalSec = min * 60 + sec + 1;
-        const newMin = Math.floor(totalSec / 60);
-        const newSec = totalSec % 60;
-        return `${String(newMin).padStart(2, '0')}:${String(newSec).padStart(2, '0')}`;
-      });
+      totalSeconds += 1;
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      setSessionTime(
+        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+      );
     }, 1000);
 
     return () => clearInterval(timer);

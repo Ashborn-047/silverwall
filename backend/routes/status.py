@@ -11,13 +11,13 @@ router = APIRouter()
 
 OPENF1_API = "https://api.openf1.org/v1"
 
-# Abu Dhabi GP 2024 Schedule (UTC times)
+# Abu Dhabi GP 2025 Schedule (UTC times)
 ABU_DHABI_SCHEDULE = {
-    "fp1": datetime(2024, 12, 6, 6, 30, tzinfo=timezone.utc),
-    "fp2": datetime(2024, 12, 6, 10, 0, tzinfo=timezone.utc),
-    "fp3": datetime(2024, 12, 7, 7, 30, tzinfo=timezone.utc),
-    "qualifying": datetime(2024, 12, 7, 11, 0, tzinfo=timezone.utc),
-    "race": datetime(2024, 12, 8, 9, 0, tzinfo=timezone.utc),
+    "fp1": datetime(2025, 12, 5, 6, 30, tzinfo=timezone.utc),
+    "fp2": datetime(2025, 12, 5, 10, 0, tzinfo=timezone.utc),
+    "fp3": datetime(2025, 12, 6, 7, 30, tzinfo=timezone.utc),
+    "qualifying": datetime(2025, 12, 6, 11, 0, tzinfo=timezone.utc),
+    "race": datetime(2025, 12, 7, 9, 0, tzinfo=timezone.utc),
 }
 
 
