@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Radio, Wifi, Circle, Activity, Clock } from 'lucide-react';
 import { useTelemetry } from '../hooks/useTelemetry';
 import { useTrack, TrackPoint } from '../hooks/useTrack';
+import { useRaceStatus } from '../hooks/useRaceStatus';
 
 // ============================================================================
 // 🏎️ TELEMETRY LIVE VIEWER
@@ -31,36 +32,7 @@ interface DriverTelemetry {
   throttle: number;
 }
 
-// Countdown hook for race status
-function useCountdown() {
-  const [countdown, setCountdown] = useState({ text: '', isLive: false });
-
-  useEffect(() => {
-    const raceDate = new Date('2024-12-07T13:00:00Z'); // 18:30 IST = 13:00 UTC
-
-    const updateCountdown = () => {
-      const now = new Date();
-      const diff = raceDate.getTime() - now.getTime();
-
-      if (diff <= 0) {
-        setCountdown({ text: 'RACE LIVE', isLive: true });
-        return;
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-      setCountdown({ text: `${days}D ${hours}H ${minutes}M`, isLive: false });
-    };
-
-    updateCountdown();
-    const timer = setInterval(updateCountdown, 60000);
-    return () => clearInterval(timer);
-  }, []);
-
-  return countdown;
-}
+// Countdown hook removed - now using useRaceStatus from hooks
 
 // SVG viewBox constants - MUST be consistent between track and cars
 const SVG_VIEWBOX = 1000;
@@ -95,16 +67,16 @@ export default function TelemetryLive() {
   const { frame, status, isDemo } = useTelemetry();
   // Track hook - live mode fetches from /track/current, demo uses static abu_dhabi
   const { points: trackPoints } = useTrack('abu_dhabi', !isDemo);
-  const countdown = useCountdown();
+  // Race status from backend API
+  const raceStatus = useRaceStatus(isDemo);
 
-  const [sessionTime, setSessionTime] = useState('00:05:10');
-  const [currentLap] = useState(3);
-  const [totalLaps] = useState(58);
+  const [sessionTime, setSessionTime] = useState('--:--:--');
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
 
   // Connection status from hook
   const isConnected = status === 'connected';
   const isWaiting = status === 'waiting';
+  const isRaceLive = raceStatus.status === 'live';
 
   // Get driver team colors map
   const teamColors: Record<string, string> = {
@@ -291,26 +263,33 @@ export default function TelemetryLive() {
 
           {/* Session Context */}
           <div className="hidden md:flex items-center gap-3 font-mono text-xs">
-            <span className="text-[#E0E0E0] uppercase tracking-wider">RACE</span>
+            <span className="text-[#E0E0E0] uppercase tracking-wider">
+              {raceStatus.sessionName || (isDemo ? 'DEMO' : 'RACE')}
+            </span>
             <span className="text-[#333]">·</span>
-            <span className="text-[#9CA3AF] uppercase">Abu Dhabi GP</span>
+            <span className="text-[#9CA3AF] uppercase">
+              {raceStatus.meetingName || 'Abu Dhabi GP'}
+            </span>
             <span className="text-[#333] mx-2">|</span>
-            <span className="text-[#9CA3AF]">LAP</span>
-            <span className="text-[#00D2BE] font-bold">{currentLap}</span>
-            <span className="text-[#555]">/</span>
-            <span className="text-[#9CA3AF]">{totalLaps}</span>
-            <span className="text-[#333] mx-2">|</span>
-            <span className="text-[#9CA3AF]">TIME</span>
-            <span className="text-[#00D2BE] font-bold">{sessionTime}</span>
-            <span className="text-[#333] mx-2">|</span>
-            {/* Race Countdown / Status */}
-            {countdown.isLive ? (
-              <span className="text-[#00D2BE] font-bold animate-pulse">RACE LIVE</span>
-            ) : (
+
+            {/* Show countdown or live status */}
+            {raceStatus.status === 'live' || isDemo ? (
+              <>
+                <span className="text-[#9CA3AF]">SESSION</span>
+                <span className="text-[#00D2BE] font-bold">{sessionTime}</span>
+                <span className="text-[#333] mx-2">|</span>
+                <span className="text-[#00D2BE] font-bold animate-pulse">LIVE</span>
+              </>
+            ) : raceStatus.status === 'waiting' && raceStatus.countdown ? (
               <>
                 <Clock size={12} className="text-[#9CA3AF]" />
-                <span className="text-[#9CA3AF] ml-1">{countdown.text}</span>
+                <span className="text-[#9CA3AF] ml-1 uppercase">{raceStatus.nextSession}</span>
+                <span className="text-[#00D2BE] font-bold ml-2">{raceStatus.countdown.text}</span>
               </>
+            ) : raceStatus.status === 'ended' ? (
+              <span className="text-[#555]">SEASON ENDED</span>
+            ) : (
+              <span className="text-[#555]">LOADING...</span>
             )}
           </div>
         </div>
