@@ -20,6 +20,19 @@ ABU_DHABI_SCHEDULE = {
     "race": datetime(2025, 12, 7, 9, 0, tzinfo=timezone.utc),
 }
 
+# 2026 Season - First Race: Australian GP (Melbourne)
+NEXT_SEASON = {
+    "year": 2026,
+    "first_race": "Australian Grand Prix",
+    "location": "Melbourne",
+    "country": "Australia",
+    "circuit": "Albert Park",
+    "circuit_length_km": 5.278,
+    "laps": 58,
+    # Official date: March 6-8, 2026
+    "race_date": datetime(2026, 3, 8, 5, 0, tzinfo=timezone.utc),  # Approx 3 PM local Melbourne time
+}
+
 
 async def fetch_live_session():
     """Check if there's an active session on OpenF1"""
@@ -44,13 +57,32 @@ def get_next_session():
     return None
 
 
+def get_2026_countdown():
+    """Get countdown to 2026 season opener"""
+    now = datetime.now(timezone.utc)
+    race_date = NEXT_SEASON["race_date"]
+    countdown_seconds = int((race_date - now).total_seconds())
+    
+    return {
+        "year": NEXT_SEASON["year"],
+        "first_race": NEXT_SEASON["first_race"],
+        "location": NEXT_SEASON["location"],
+        "country": NEXT_SEASON["country"],
+        "circuit": NEXT_SEASON["circuit"],
+        "circuit_length_km": NEXT_SEASON["circuit_length_km"],
+        "laps": NEXT_SEASON["laps"],
+        "race_date": race_date.isoformat(),
+        "countdown_seconds": countdown_seconds,
+    }
+
+
 @router.get("/status")
 async def get_race_status():
     """
     Returns current race status:
     - "live": Race/session is active
     - "waiting": No active session, includes countdown to next
-    - "ended": Season ended
+    - "off_season": Season ended, countdown to 2026
     """
     # Check for live session
     live = await fetch_live_session()
@@ -74,7 +106,12 @@ async def get_race_status():
             "meeting": "Abu Dhabi Grand Prix",
         }
     
-    return {"status": "ended", "message": "2024 F1 Season Complete"}
+    # Season ended - show 2026 countdown
+    return {
+        "status": "off_season",
+        "message": "2025 F1 Season Complete",
+        "next_season": get_2026_countdown(),
+    }
 
 
 @router.get("/leaderboard")

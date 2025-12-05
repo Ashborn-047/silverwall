@@ -248,7 +248,7 @@ const RaceCard = ({ currentTime }: { currentTime: Date }) => {
                     <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub="LIVE STREAM" />
                 </div>
 
-                {/* Track Map Visualization (Yas Marina Silhouette) */}
+                {/* Track Map Visualization (Yas Marina Circuit) */}
                 <div className="relative w-full h-48 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity duration-500">
                     {/* Grid Behind Map */}
                     <div
@@ -260,20 +260,42 @@ const RaceCard = ({ currentTime }: { currentTime: Date }) => {
                         }}
                     />
 
-                    {/* Yas Marina Approximate SVG Path */}
-                    <svg viewBox="0 0 200 150" className="w-full h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)] z-10 transform scale-90">
+                    {/* Yas Marina Realistic SVG Path */}
+                    <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)] z-10 transform scale-90">
+                        {/* Main track outline - realistic Yas Marina shape */}
                         <path
-                            d="M 40 110 L 130 110 L 135 105 L 140 80 L 135 75 L 100 75 L 90 65 L 40 65 L 30 75 L 30 100 Z 
-                 M 40 110 L 30 100 L 25 100 L 20 80 L 30 75
-                 M 130 110 L 150 110 L 160 100 L 160 50 L 150 40 L 120 40 L 115 45 L 115 55 L 100 75"
+                            d="M 30 80 
+                               C 25 80, 20 75, 20 70 
+                               L 20 45 
+                               C 20 35, 30 30, 40 30 
+                               L 70 30 
+                               C 80 30, 85 35, 90 40 
+                               L 100 50 
+                               C 105 55, 115 55, 120 50 
+                               L 130 40 
+                               C 135 35, 145 30, 155 30 
+                               L 170 30 
+                               C 180 30, 185 40, 185 50 
+                               L 185 60 
+                               C 185 70, 175 80, 165 80 
+                               L 150 80 
+                               C 140 80, 135 75, 130 70 
+                               L 125 65 
+                               C 120 60, 110 60, 105 65 
+                               L 95 75 
+                               C 90 80, 80 85, 70 85 
+                               L 45 85 
+                               C 35 85, 30 82, 30 80 Z"
                             fill="none"
                             stroke="#00D2BE"
-                            strokeWidth="1.5"
+                            strokeWidth="2"
                             strokeLinejoin="round"
                             strokeLinecap="round"
                         />
                         {/* Start/Finish Line */}
-                        <line x1="140" y1="105" x2="140" y2="115" stroke="white" strokeWidth="2" />
+                        <line x1="40" y1="78" x2="40" y2="88" stroke="white" strokeWidth="2" />
+                        {/* Pit lane entrance indicator */}
+                        <circle cx="50" cy="82" r="2" fill="#FF9F0A" opacity="0.6" />
                     </svg>
 
                     <div className="absolute bottom-2 right-2 text-[10px] font-mono text-[#00D2BE] opacity-50">

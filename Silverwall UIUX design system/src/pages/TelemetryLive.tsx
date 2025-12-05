@@ -297,6 +297,13 @@ export default function TelemetryLive() {
                 <span className="text-[#9CA3AF] ml-1 uppercase">{raceStatus.nextSession}</span>
                 <span className="text-[#00D2BE] font-bold ml-2">{raceStatus.countdown.text}</span>
               </>
+            ) : raceStatus.status === 'off_season' ? (
+              <>
+                <span className="text-[#9CA3AF]">2026 SEASON</span>
+                <span className="text-[#00D2BE] font-bold ml-2">
+                  {raceStatus.nextSeason ? `${Math.floor(raceStatus.nextSeason.countdown_seconds / 86400)}D` : 'SOON'}
+                </span>
+              </>
             ) : raceStatus.status === 'ended' ? (
               <span className="text-[#555]">SEASON ENDED</span>
             ) : (

@@ -16,6 +16,7 @@ from routes.track import router as track_router
 from routes.status import router as status_router
 from routes.commentary import router as commentary_router
 from routes.radio import router as radio_router
+from routes.results import router as results_router
 
 app = FastAPI(
     title="SilverWall F1 Telemetry",
@@ -41,6 +42,7 @@ app.include_router(track_router, prefix="/api")
 app.include_router(status_router, prefix="/api")
 app.include_router(commentary_router, prefix="/api")
 app.include_router(radio_router, prefix="/api")
+app.include_router(results_router, prefix="/api")
 
 
 @app.on_event("startup")

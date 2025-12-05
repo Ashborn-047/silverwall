@@ -1,12 +1,24 @@
 /**
  * useRaceStatus - Hook to fetch race status from backend
- * Returns: status (live/waiting/ended), countdown, session info
+ * Returns: status (live/waiting/off_season), countdown, session info
  */
 
 import { useState, useEffect } from 'react';
 
+interface NextSeason {
+    year: number;
+    first_race: string;
+    location: string;
+    country: string;
+    circuit: string;
+    circuit_length_km: number;
+    laps: number;
+    race_date: string;
+    countdown_seconds: number;
+}
+
 interface RaceStatus {
-    status: 'live' | 'waiting' | 'ended' | 'loading' | 'error';
+    status: 'live' | 'waiting' | 'off_season' | 'ended' | 'loading' | 'error';
     sessionName?: string;
     meetingName?: string;
     circuit?: string;
@@ -19,6 +31,7 @@ interface RaceStatus {
         text: string;
     };
     message?: string;
+    nextSeason?: NextSeason;
 }
 
 export function useRaceStatus(isDemo: boolean): RaceStatus {
@@ -78,6 +91,13 @@ export function useRaceStatus(isDemo: boolean): RaceStatus {
                                     : `${minutes}M ${secs}S`,
                         },
                     });
+                } else if (data.status === 'off_season') {
+                    // Season ended - show next season countdown
+                    setRaceStatus({
+                        status: 'off_season',
+                        message: data.message || '2025 Season Complete',
+                        nextSeason: data.next_season,
+                    });
                 } else {
                     setRaceStatus({
                         status: 'ended',
@@ -106,3 +126,4 @@ export function useRaceStatus(isDemo: boolean): RaceStatus {
 }
 
 export default useRaceStatus;
+
