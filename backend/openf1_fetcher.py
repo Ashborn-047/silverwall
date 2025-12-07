@@ -86,38 +86,110 @@ async def fetch_driver_info(session_key: int = None) -> Dict[int, Dict]:
     return {}
 
 
+async def fetch_stints(session_key: int = None) -> Dict[int, Dict]:
+    """Fetch latest tyre stint for each driver"""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            params = {}
+            if session_key:
+                params["session_key"] = session_key
+            else:
+                params["session_key"] = "latest"
+            
+            response = await client.get(f"{OPENF1_API}/stints", params=params)
+            if response.status_code == 200:
+                data = response.json()
+                stints = {}
+                for s in data:
+                    driver_num = s.get("driver_number")
+                    if driver_num:
+                        # Keep latest stint
+                        if driver_num not in stints or s.get("stint_number") > stints[driver_num].get("stint_number"):
+                            stints[driver_num] = s
+                return stints
+    except Exception as e:
+        print(f"Error fetching stints: {e}")
+    return {}
+
+
 async def fetch_live_telemetry(session_key: int = None) -> Dict:
     """
-    Fetch live telemetry data combining positions and driver info.
-    Returns data ready for WebSocket broadcast.
+    Fetch live telemetry data combining positions, intervals, stints, and driver info.
+    Returns data ready for WebSocket broadcast, SORTED by race position.
     """
     session_key = session_key or await get_latest_session_key()
     
     if not session_key:
         return {"status": "offline", "cars": [], "message": "No active session"}
     
-    # Fetch positions and drivers in parallel
-    positions = await fetch_car_positions(session_key)
-    drivers = await fetch_driver_info(session_key)
+    # Fetch all data in parallel
+    # 1. Positions (Leaderboard order)
+    # 2. Intervals (Gaps)
+    # 3. Locations (Map coordinates)
+    # 4. Drivers (Static info)
+    # 5. Stints (Tyres)
     
-    if not positions:
+    # We'll fetch them sequentially for now to keep logic simple, but ideally use asyncio.gather
+    race_positions = await fetch_position()
+    intervals = await fetch_intervals()
+    locations = await fetch_car_positions(session_key)
+    drivers = await fetch_driver_info(session_key)
+    stints = await fetch_stints(session_key)
+    
+    if not race_positions and not locations:
         return {"status": "waiting", "cars": [], "session_key": session_key}
     
-    # Combine position data with driver info
+    # helper maps
+    interval_map = {i.get("driver_number"): i for i in intervals}
+    location_map = {l.get("driver_number"): l for l in locations}
+    
+    # If we have race positions, use that as the primary list
+    # If not (e.g. practice session where position might be weird or missing), fall back to location keys
+    
+    primary_list = race_positions if race_positions else [{"driver_number": k} for k in location_map.keys()]
+    
     cars = []
-    for pos in positions:
-        driver_num = pos.get("driver_number")
+    for entry in primary_list:
+        driver_num = entry.get("driver_number")
+        if not driver_num:
+            continue
+            
         driver_info = drivers.get(driver_num, {"code": f"#{driver_num}", "team": "Unknown", "color": "#555"})
+        loc = location_map.get(driver_num, {})
+        interval_data = interval_map.get(driver_num, {})
+        stint_data = stints.get(driver_num, {})
         
+        # Calculate gap
+        gap = interval_data.get("gap_to_leader")
+        if gap is None:
+            gap = interval_data.get("interval") # Fallback
+            
+        # Format gap string
+        gap_str = ""
+        if entry.get("position") == 1:
+            gap_str = "LEADER"
+        elif gap:
+             gap_str = f"+{gap}s"
+        else:
+            gap_str = "--"
+            
         cars.append({
+            "position": entry.get("position", 0),
+            "driver_number": driver_num,
             "code": driver_info["code"],
             "team": driver_info["team"],
             "color": driver_info["color"],
-            "x": pos.get("x", 0),
-            "y": pos.get("y", 0),
-            "z": pos.get("z", 0),
-            "driver_number": driver_num,
+            "x": loc.get("x", 0),
+            "y": loc.get("y", 0),
+            "z": loc.get("z", 0),
+            "gap": gap_str,
+            "interval": interval_data.get("interval"),
+            "tyre": stint_data.get("compound", "UNKNOWN"),
+            "tyre_age": stint_data.get("tyre_age_at_start", 0), # This might be laps?
         })
+        
+    # Sort by position just in case
+    cars.sort(key=lambda x: x["position"] if x["position"] > 0 else 999)
     
     return {
         "status": "live",

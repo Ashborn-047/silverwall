@@ -153,84 +153,33 @@ async def websocket_abu_dhabi(websocket: WebSocket):
 @router.websocket("/ws/live")
 async def websocket_live(websocket: WebSocket):
     """
-    LIVE MODE WebSocket - Fetches real car positions from OpenF1 API.
+    LIVE MODE WebSocket - Fetches real car positions from OpenF1 API using openf1_fetcher.
     Falls back to 'waiting' status when no live session is available.
     """
     await websocket.accept()
     print("🏎️ LIVE: Client connected to /ws/live (OpenF1)")
     
     try:
-        import httpx
-        from datetime import datetime, timezone
-        
-        OPENF1_API = "https://api.openf1.org/v1"
+        from openf1_fetcher import fetch_live_telemetry
         
         while True:
             try:
-                async with httpx.AsyncClient(timeout=10.0) as client:
-                    # Check if session is live
-                    session_resp = await client.get(f"{OPENF1_API}/sessions", params={"session_key": "latest"})
-                    if session_resp.status_code != 200:
-                        await websocket.send_json({"status": "error", "message": "OpenF1 API unavailable"})
-                        await asyncio.sleep(5)
-                        continue
-                    
-                    sessions = session_resp.json()
-                    if not sessions or sessions[0].get("date_end") is not None:
-                        # No live session
-                        await websocket.send_json({
-                            "status": "waiting",
-                            "message": "No active session",
-                            "cars": []
-                        })
-                        await asyncio.sleep(10)  # Poll less frequently when waiting
-                        continue
-                    
-                    session = sessions[0]
-                    session_key = session.get("session_key")
-                    print(f"🟢 LIVE session: {session.get('session_name')} - key: {session_key}")
-                    
-                    # Fetch car locations
-                    loc_resp = await client.get(f"{OPENF1_API}/location", params={"session_key": session_key})
-                    if loc_resp.status_code != 200:
-                        await asyncio.sleep(1)
-                        continue
-                    
-                    locations = loc_resp.json()
-                    
-                    # Get latest position for each driver
-                    latest = {}
-                    for loc in locations[-200:]:  # Last 200 entries
-                        driver_num = loc.get("driver_number")
-                        if driver_num:
-                            if driver_num not in latest or loc.get("date", "") > latest[driver_num].get("date", ""):
-                                latest[driver_num] = loc
-                    
-                    # Build cars array
-                    cars = []
-                    for driver_num, pos in latest.items():
-                        cars.append({
-                            "code": f"#{driver_num}",  # Will be enhanced with driver lookup
-                            "team": "Unknown",
-                            "x": pos.get("x", 0),
-                            "y": pos.get("y", 0),
-                            "speed": 0,
-                            "driver_number": driver_num,
-                        })
-                    
-                    await websocket.send_json({
-                        "status": "live",
-                        "session": session.get("session_name"),
-                        "circuit": session.get("circuit_short_name"),
-                        "t": int(datetime.now(timezone.utc).timestamp()),
-                        "cars": cars
-                    })
+                # Use shared fetcher logic to get full telemetry state
+                data = await fetch_live_telemetry()
+                
+                # Forward the data directly to the client
+                await websocket.send_json(data)
+                
+                # If waiting or offline, poll slower
+                if data.get("status") != "live":
+                    await asyncio.sleep(5)
+                else:
+                    await asyncio.sleep(0.5)  # 2 FPS poll rate for live data
                     
             except Exception as e:
                 print(f"⚠️ LIVE fetch error: {e}")
                 await websocket.send_json({"status": "error", "message": str(e), "cars": []})
-            
-            await asyncio.sleep(0.5)  # 2 FPS poll rate for live data
+                await asyncio.sleep(5)
             
     except WebSocketDisconnect:
         print("🏎️ LIVE: Client disconnected from /ws/live")
