@@ -12,12 +12,14 @@ router = APIRouter()
 OPENF1_API = "https://api.openf1.org/v1"
 
 # Abu Dhabi GP 2025 Schedule (UTC times)
+# Abu Dhabi is UTC+4, so local times convert as: Local - 4 = UTC
+# Race is 17:00 local = 13:00 UTC = 18:30 IST
 ABU_DHABI_SCHEDULE = {
-    "fp1": datetime(2025, 12, 5, 6, 30, tzinfo=timezone.utc),
-    "fp2": datetime(2025, 12, 5, 10, 0, tzinfo=timezone.utc),
-    "fp3": datetime(2025, 12, 6, 7, 30, tzinfo=timezone.utc),
-    "qualifying": datetime(2025, 12, 6, 11, 0, tzinfo=timezone.utc),
-    "race": datetime(2025, 12, 7, 9, 0, tzinfo=timezone.utc),
+    "fp1": datetime(2025, 12, 5, 6, 30, tzinfo=timezone.utc),     # 10:30 AM local
+    "fp2": datetime(2025, 12, 5, 10, 0, tzinfo=timezone.utc),    # 2:00 PM local
+    "fp3": datetime(2025, 12, 6, 8, 30, tzinfo=timezone.utc),    # 12:30 PM local
+    "qualifying": datetime(2025, 12, 6, 12, 0, tzinfo=timezone.utc),  # 4:00 PM local
+    "race": datetime(2025, 12, 7, 13, 0, tzinfo=timezone.utc),   # 5:00 PM local = 6:30 PM IST
 }
 
 # 2026 Season - First Race: Australian GP (Melbourne)

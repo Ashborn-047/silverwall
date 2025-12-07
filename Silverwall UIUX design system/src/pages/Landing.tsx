@@ -12,8 +12,8 @@ export default function Landing() {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, isLive: false });
 
-    // Race target: DEC 07, 2025 @ 14:30 IST (UTC+5:30)
-    const raceDate = new Date('2025-12-07T09:00:00Z'); // 14:30 IST = 09:00 UTC
+    // Race target: DEC 07, 2025 @ 18:30 IST (6:30 PM) = 17:00 Abu Dhabi local
+    const raceDate = new Date('2025-12-07T13:00:00Z'); // 18:30 IST = 13:00 UTC
 
     // Countdown timer
     useEffect(() => {
@@ -242,7 +242,7 @@ const RaceCard = ({ currentTime }: { currentTime: Date }) => {
 
                 {/* Data Grid */}
                 <div className="grid grid-cols-2 gap-y-4 gap-x-8 mb-8 border-t border-b border-[#333] py-4">
-                    <DataPoint icon={<Clock size={14} />} label="DATE" value="DEC 07, 2025" sub="14:30 IST" />
+                    <DataPoint icon={<Clock size={14} />} label="DATE" value="DEC 07, 2025" sub="18:30 IST" />
                     <DataPoint icon={<Flag size={14} />} label="LAPS" value="58" sub="5.281 KM" />
                     <DataPoint icon={<MapPin size={14} />} label="LOCATION" value="ABU DHABI" sub="UAE" />
                     <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub="LIVE STREAM" />
