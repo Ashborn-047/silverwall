@@ -12,14 +12,15 @@ from routes.track import get_track_points
 router = APIRouter()
 
 # Simulated driver data with individual speed factors
+# Simulated driver data with individual speed factors (2025 Season Finale Order)
 DRIVERS = [
-    {"code": "HAM", "team": "MER", "base_offset": 0.00, "speed_factor": 1.00},
-    {"code": "VER", "team": "RBR", "base_offset": 0.05, "speed_factor": 0.998},
-    {"code": "LEC", "team": "FER", "base_offset": 0.10, "speed_factor": 0.995},
-    {"code": "SAI", "team": "FER", "base_offset": 0.15, "speed_factor": 0.992},
-    {"code": "NOR", "team": "MCL", "base_offset": 0.20, "speed_factor": 0.990},
-    {"code": "PER", "team": "RBR", "base_offset": 0.25, "speed_factor": 0.988},
-    {"code": "RUS", "team": "MER", "base_offset": 0.30, "speed_factor": 0.985},
+    {"code": "NOR", "team": "MCL", "base_offset": 0.00, "speed_factor": 1.00},  # Norris P1 (Leader)
+    {"code": "VER", "team": "RBR", "base_offset": 0.02, "speed_factor": 0.998}, # Verstappen P2 (Close behind)
+    {"code": "PIA", "team": "MCL", "base_offset": 0.10, "speed_factor": 0.995}, # Piastri P3
+    {"code": "LEC", "team": "FER", "base_offset": 0.15, "speed_factor": 0.992},
+    {"code": "RUS", "team": "MER", "base_offset": 0.20, "speed_factor": 0.990},
+    {"code": "HAM", "team": "FER", "base_offset": 0.25, "speed_factor": 0.988}, # Hamilton in Ferrari
+    {"code": "SAI", "team": "WIL", "base_offset": 0.30, "speed_factor": 0.985}, # Sainz in Williams
     {"code": "ALO", "team": "AMR", "base_offset": 0.35, "speed_factor": 0.982},
 ]
 

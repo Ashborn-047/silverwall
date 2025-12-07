@@ -127,13 +127,13 @@ export default function TelemetryLive() {
 
     // In DEMO mode: return fallback mock data (shouldn't reach here if WS works)
     return [
-      { position: 1, code: 'HAM', gap: '--', team: 'Mercedes', teamColor: '#00D2BE' },
+      { position: 1, code: 'NOR', gap: '--', team: 'McLaren', teamColor: '#FF8700' },
       { position: 2, code: 'VER', gap: '+0.5s', team: 'Red Bull Racing', teamColor: '#3671C6' },
-      { position: 3, code: 'LEC', gap: '+1.2s', team: 'Ferrari', teamColor: '#DC0000' },
-      { position: 4, code: 'SAI', gap: '+8.2s', team: 'Ferrari', teamColor: '#DC0000' },
-      { position: 5, code: 'NOR', gap: '+8.5s', team: 'McLaren', teamColor: '#FF8700' },
-      { position: 6, code: 'PER', gap: '+8.7s', team: 'Red Bull Racing', teamColor: '#3671C6' },
-      { position: 7, code: 'RUS', gap: '+9.0s', team: 'Mercedes', teamColor: '#00D2BE' },
+      { position: 3, code: 'PIA', gap: '+1.2s', team: 'McLaren', teamColor: '#FF8700' },
+      { position: 4, code: 'LEC', gap: '+8.2s', team: 'Ferrari', teamColor: '#DC0000' },
+      { position: 5, code: 'RUS', gap: '+8.5s', team: 'Mercedes', teamColor: '#00D2BE' },
+      { position: 6, code: 'HAM', gap: '+8.7s', team: 'Ferrari', teamColor: '#DC0000' },
+      { position: 7, code: 'SAI', gap: '+9.0s', team: 'Williams', teamColor: '#005AFF' },
       { position: 8, code: 'ALO', gap: '+9.2s', team: 'Aston Martin', teamColor: '#006F62' },
     ];
   }, [frame, isDemo]);
@@ -186,10 +186,10 @@ export default function TelemetryLive() {
 
     // Demo mode fallback
     return [
-      { code: 'HAM', throttle: 98 },
+      { code: 'NOR', throttle: 98 },
       { code: 'VER', throttle: 98 },
-      { code: 'LEC', throttle: 98 },
-      { code: 'SAI', throttle: 60 },
+      { code: 'PIA', throttle: 98 },
+      { code: 'LEC', throttle: 60 },
     ];
   }, [frame, isDemo]);
 
@@ -270,7 +270,7 @@ export default function TelemetryLive() {
           {/* Session Context */}
           <div className="hidden md:flex items-center gap-3 font-mono text-xs">
             <span className="text-[#E0E0E0] uppercase tracking-wider">
-              {raceStatus.sessionName || (isDemo ? 'DEMO' : 'RACE')}
+              {raceStatus.sessionName || 'RACE'}
             </span>
             <span className="text-[#333]">·</span>
             <span className="text-[#9CA3AF] uppercase">
@@ -284,7 +284,7 @@ export default function TelemetryLive() {
                 <span className="text-[#9CA3AF]">SESSION</span>
                 <span className="text-[#00D2BE] font-bold">{sessionTime}</span>
                 <span className="text-[#333] mx-2">|</span>
-                <span className="text-yellow-500 font-bold">DEMO</span>
+                <span className="text-[#00D2BE] font-bold animate-pulse">LIVE</span>
               </>
             ) : isConnected && raceStatus.status === 'live' ? (
               <>
@@ -325,14 +325,7 @@ export default function TelemetryLive() {
               {isConnected ? 'Live' : isWaiting ? 'Waiting' : 'Offline'}
             </span>
           </div>
-          {/* Demo Mode Indicator */}
-          {isDemo && (
-            <div className="flex items-center gap-2 px-3 py-1 rounded-sm border border-yellow-500/30 bg-yellow-500/10">
-              <span className="text-[10px] font-mono tracking-wider text-yellow-500 uppercase">
-                Demo Mode
-              </span>
-            </div>
-          )}
+
           {/* Results Button */}
           <button
             onClick={() => setShowResults(true)}
