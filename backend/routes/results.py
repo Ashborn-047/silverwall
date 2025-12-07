@@ -40,10 +40,32 @@ DRIVERS = {
 
 
 async def fetch_race_results_from_openf1(session_key: str = "latest"):
-    """Fetch race results from OpenF1 API"""
+    """Fetch race results from OpenF1 API - ONLY for actual race sessions"""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            # Get final positions
+            # First check if the latest session is actually a RACE (not qualifying, FP, etc.)
+            session_resp = await client.get(
+                f"{OPENF1_API}/sessions",
+                params={"session_key": session_key}
+            )
+            if session_resp.status_code == 200:
+                sessions = session_resp.json()
+                if sessions:
+                    session = sessions[0]
+                    session_type = session.get("session_type", "").lower()
+                    session_name = session.get("session_name", "").lower()
+                    
+                    # Only show results for actual race sessions
+                    if "race" not in session_type and "race" not in session_name:
+                        print(f"⚠️ Latest session is {session.get('session_name')}, not Race - skipping results")
+                        return []
+                    
+                    # Check if race has ended (has date_end)
+                    if session.get("date_end") is None:
+                        print(f"🏎️ Race session is LIVE - no final results yet")
+                        return []
+            
+            # Get final positions for race
             response = await client.get(
                 f"{OPENF1_API}/position",
                 params={"session_key": session_key}
@@ -75,28 +97,14 @@ async def get_race_results(session_key: str = "latest"):
     results_data = await fetch_race_results_from_openf1(session_key)
     
     if not results_data:
-        # Return mock results for demo/development
+        # No results yet - race hasn't finished
         return {
-            "source": "mock",
+            "source": "waiting",
+            "status": "waiting",
             "race": "Abu Dhabi Grand Prix 2025",
-            "podium": [
-                {"position": 1, "code": "VER", "name": "Max Verstappen", "team": "Red Bull Racing", "time": "1:32:45.123", "color": "#3671C6"},
-                {"position": 2, "code": "HAM", "name": "Lewis Hamilton", "team": "Ferrari", "gap": "+5.234s", "color": "#DC0000"},
-                {"position": 3, "code": "LEC", "name": "Charles Leclerc", "team": "Ferrari", "gap": "+12.567s", "color": "#DC0000"},
-            ],
-            "standings": [
-                {"position": 1, "code": "VER", "name": "Max Verstappen", "team": "Red Bull Racing", "time": "1:32:45.123"},
-                {"position": 2, "code": "HAM", "name": "Lewis Hamilton", "team": "Ferrari", "gap": "+5.234s"},
-                {"position": 3, "code": "LEC", "name": "Charles Leclerc", "team": "Ferrari", "gap": "+12.567s"},
-                {"position": 4, "code": "NOR", "name": "Lando Norris", "team": "McLaren", "gap": "+18.901s"},
-                {"position": 5, "code": "SAI", "name": "Carlos Sainz", "team": "Williams", "gap": "+22.345s"},
-                {"position": 6, "code": "PIA", "name": "Oscar Piastri", "team": "McLaren", "gap": "+28.678s"},
-                {"position": 7, "code": "RUS", "name": "George Russell", "team": "Mercedes", "gap": "+35.012s"},
-                {"position": 8, "code": "ALO", "name": "Fernando Alonso", "team": "Aston Martin", "gap": "+42.345s"},
-                {"position": 9, "code": "PER", "name": "Sergio Perez", "team": "Red Bull Racing", "gap": "+48.678s"},
-                {"position": 10, "code": "STR", "name": "Lance Stroll", "team": "Aston Martin", "gap": "+55.901s"},
-            ],
-            "fastest_lap": {"driver": "VER", "time": "1:25.678"},
+            "message": "Race hasn't started yet. Results will appear after the race.",
+            "podium": None,
+            "standings": None,
         }
     
     # Format live results

@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Radio, Wifi, Circle, Activity, Clock } from 'lucide-react';
+import { ArrowLeft, Radio, Wifi, Circle, Activity, Clock, Trophy } from 'lucide-react';
 import { useTelemetry } from '../hooks/useTelemetry';
 import { useTrack, TrackPoint } from '../hooks/useTrack';
 import { useRaceStatus } from '../hooks/useRaceStatus';
 import CommentaryPanel from '../components/CommentaryPanel';
+import ResultsModal from '../components/ResultsModal';
 
 // ============================================================================
 // 🏎️ TELEMETRY LIVE VIEWER
@@ -73,6 +74,7 @@ export default function TelemetryLive() {
 
   const [sessionTime, setSessionTime] = useState('--:--:--');
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  const [showResults, setShowResults] = useState(false);
 
   // Connection status from hook
   const isConnected = status === 'connected';
@@ -248,8 +250,8 @@ export default function TelemetryLive() {
       {/* ========================================================================
           TOP HEADER BAR
       ======================================================================== */}
-      <header className="w-full border-b border-[#00D2BE]/10 px-6 py-3 flex items-center justify-between bg-[#0A0C10]">
-        <div className="flex items-center gap-6">
+      <header className="w-full border-b border-[#00D2BE]/10 px-3 sm:px-6 py-2 sm:py-3 flex flex-wrap items-center justify-between gap-2 bg-[#0A0C10]">
+        <div className="flex items-center gap-3 sm:gap-6">
           <Link
             to="/"
             className="flex items-center gap-2 text-[#9CA3AF] hover:text-[#00D2BE] transition-colors text-xs uppercase tracking-wider font-mono"
@@ -312,7 +314,7 @@ export default function TelemetryLive() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
           <div className="flex items-center gap-2 px-3 py-1 rounded-sm border border-[#00D2BE]/20 bg-[#00D2BE]/5">
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' :
               isWaiting ? 'bg-yellow-500' :
@@ -331,16 +333,26 @@ export default function TelemetryLive() {
               </span>
             </div>
           )}
+          {/* Results Button */}
+          <button
+            onClick={() => setShowResults(true)}
+            className="flex items-center gap-2 px-3 py-1 rounded-sm border border-[#FFD700]/30 bg-[#FFD700]/10 hover:bg-[#FFD700]/20 transition-colors"
+          >
+            <Trophy size={12} className="text-[#FFD700]" />
+            <span className="text-[10px] font-mono tracking-wider text-[#FFD700] uppercase">
+              Results
+            </span>
+          </button>
         </div>
       </header>
 
       {/* ========================================================================
           MAIN GRID LAYOUT
       ======================================================================== */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[280px_1fr_320px] gap-0 overflow-hidden">
+      <main className="flex-1 grid grid-cols-1 md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr_320px] gap-0 overflow-hidden">
 
         {/* LEFT PANEL: LEADERBOARD */}
-        <aside className="border-r border-[#00D2BE]/10 bg-[#0A0C10] overflow-y-auto">
+        <aside className="hidden md:block border-r border-[#00D2BE]/10 bg-[#0A0C10] overflow-y-auto">
           <div className="sticky top-0 bg-[#00D2BE]/5 border-b border-[#00D2BE]/10 px-4 py-3">
             <div className="flex items-center gap-2">
               <Activity size={12} className="text-[#00D2BE]" />
@@ -672,6 +684,9 @@ export default function TelemetryLive() {
           </div>
         </div>
       </footer>
+
+      {/* Results Modal */}
+      <ResultsModal isOpen={showResults} onClose={() => setShowResults(false)} />
     </div>
   );
 }
