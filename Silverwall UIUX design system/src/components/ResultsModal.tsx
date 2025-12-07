@@ -42,6 +42,7 @@ type TabType = 'today' | 'season' | 'drivers' | 'constructors';
 
 export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
     const [activeTab, setActiveTab] = useState<TabType>('today');
+    const [selectedYear, setSelectedYear] = useState<number>(2025);
     const [driverStandings, setDriverStandings] = useState<Driver[]>([]);
     const [constructorStandings, setConstructorStandings] = useState<Constructor[]>([]);
     const [seasonRaces, setSeasonRaces] = useState<Race[]>([]);
@@ -94,9 +95,9 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
             try {
                 // Fetch all data in parallel
                 const [driversRes, constructorsRes, racesRes, resultsRes] = await Promise.all([
-                    fetch(`${apiUrl}/api/standings/drivers`),
-                    fetch(`${apiUrl}/api/standings/constructors`),
-                    fetch(`${apiUrl}/api/season/races`),
+                    fetch(`${apiUrl}/api/standings/drivers/${selectedYear}`),
+                    fetch(`${apiUrl}/api/standings/constructors/${selectedYear}`),
+                    fetch(`${apiUrl}/api/season/races/${selectedYear}`),
                     fetch(`${apiUrl}/api/results`),
                 ]);
 
@@ -124,7 +125,7 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
         };
 
         fetchData();
-    }, [isOpen]);
+    }, [isOpen, selectedYear]);
 
     if (!isOpen) return null;
 
@@ -134,6 +135,23 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
         { id: 'drivers' as TabType, label: 'Drivers', icon: <Crown size={14} /> },
         { id: 'constructors' as TabType, label: 'Constructors', icon: <Users size={14} /> },
     ];
+
+    const renderSeasonSelector = () => (
+        <div className="flex justify-center gap-2 mb-4">
+            {[2024, 2025, 2026].map((year) => (
+                <button
+                    key={year}
+                    onClick={() => setSelectedYear(year)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-mono transition-colors ${selectedYear === year
+                        ? 'bg-[#00D2BE] text-black font-bold'
+                        : 'bg-[#1A1A1A] text-[#9CA3AF] hover:bg-[#333] border border-[#333]'
+                        }`}
+                >
+                    {year}
+                </button>
+            ))}
+        </div>
+    );
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -391,77 +409,99 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
 
                             {/* Drivers Championship Tab */}
                             {activeTab === 'drivers' && (
-                                <div className="space-y-2">
-                                    {driverStandings.map((driver, index) => (
-                                        <div
-                                            key={driver.code}
-                                            className={`flex items-center justify-between px-4 py-3 rounded-lg border ${index < 3
-                                                ? 'border-[#00D2BE]/30 bg-[#00D2BE]/5'
-                                                : 'border-[#333] hover:border-[#555]'
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <span className={`font-mono text-lg w-8 ${index === 0 ? 'text-[#FFD700]' :
-                                                    index === 1 ? 'text-[#C0C0C0]' :
-                                                        index === 2 ? 'text-[#CD7F32]' : 'text-[#555]'
-                                                    }`}>
-                                                    {driver.position}
-                                                </span>
-                                                <div
-                                                    className="w-1 h-8 rounded-full"
-                                                    style={{ backgroundColor: driver.color }}
-                                                />
-                                                <div>
-                                                    <div className="font-bold text-white">{driver.code}</div>
-                                                    <div className="text-[10px] text-[#9CA3AF]">{driver.team}</div>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="font-mono font-bold text-[#00D2BE]">{driver.points}</div>
-                                                <div className="text-[10px] text-[#9CA3AF]">points</div>
-                                            </div>
+                                <div className="space-y-4">
+                                    {renderSeasonSelector()}
+                                    {selectedYear === 2026 ? (
+                                        <div className="text-center py-12 text-[#9CA3AF]">
+                                            <Timer className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                                            <div className="text-xl font-bold text-white mb-2">2026 Season Coming Soon</div>
+                                            <div>New regulations. New cars. New drama.</div>
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {driverStandings.map((driver, index) => (
+                                                <div
+                                                    key={driver.code}
+                                                    className={`flex items-center justify-between px-4 py-3 rounded-lg border ${index < 3
+                                                        ? 'border-[#00D2BE]/30 bg-[#00D2BE]/5'
+                                                        : 'border-[#333] hover:border-[#555]'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <span className={`font-mono text-lg w-8 ${index === 0 ? 'text-[#FFD700]' :
+                                                            index === 1 ? 'text-[#C0C0C0]' :
+                                                                index === 2 ? 'text-[#CD7F32]' : 'text-[#555]'
+                                                            }`}>
+                                                            {driver.position}
+                                                        </span>
+                                                        <div
+                                                            className="w-1 h-8 rounded-full"
+                                                            style={{ backgroundColor: driver.color }}
+                                                        />
+                                                        <div>
+                                                            <div className="font-bold text-white">{driver.code}</div>
+                                                            <div className="text-[10px] text-[#9CA3AF]">{driver.team}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="font-mono font-bold text-[#00D2BE]">{driver.points}</div>
+                                                        <div className="text-[10px] text-[#9CA3AF]">points</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             {/* Constructors Championship Tab */}
                             {activeTab === 'constructors' && (
-                                <div className="space-y-2">
-                                    {/* McLaren Champion Banner */}
-                                    <div className="bg-gradient-to-r from-[#FF8000]/20 to-[#FF8000]/5 border border-[#FF8000]/50 rounded-lg p-4 mb-4 text-center">
-                                        <div className="text-2xl mb-2">🏆</div>
-                                        <div className="text-[#FF8000] font-bold text-lg">McLaren</div>
-                                        <div className="text-[#9CA3AF] text-sm font-mono">2025 CONSTRUCTORS' WORLD CHAMPIONS</div>
-                                    </div>
-
-                                    {constructorStandings.map((team, index) => (
-                                        <div
-                                            key={team.team}
-                                            className={`flex items-center justify-between px-4 py-3 rounded-lg border ${team.champion
-                                                ? 'border-[#FF8000]/50 bg-[#FF8000]/10'
-                                                : 'border-[#333] hover:border-[#555]'
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <span className={`font-mono text-lg w-8 ${index === 0 ? 'text-[#FFD700]' :
-                                                    index === 1 ? 'text-[#C0C0C0]' :
-                                                        index === 2 ? 'text-[#CD7F32]' : 'text-[#555]'
-                                                    }`}>
-                                                    {team.position}
-                                                </span>
-                                                <div
-                                                    className="w-1 h-8 rounded-full"
-                                                    style={{ backgroundColor: team.color }}
-                                                />
-                                                <div className="font-bold text-white">{team.team}</div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="font-mono font-bold text-[#00D2BE]">{team.points}</div>
-                                                <div className="text-[10px] text-[#9CA3AF]">points</div>
-                                            </div>
+                                <div className="space-y-4">
+                                    {renderSeasonSelector()}
+                                    {selectedYear === 2026 ? (
+                                        <div className="text-center py-12 text-[#9CA3AF]">
+                                            <Timer className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                                            <div className="text-xl font-bold text-white mb-2">2026 Season Coming Soon</div>
+                                            <div>New regulations. New cars. New drama.</div>
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {/* McLaren Champion Banner */}
+                                            <div className="bg-gradient-to-r from-[#FF8000]/20 to-[#FF8000]/5 border border-[#FF8000]/50 rounded-lg p-4 mb-4 text-center">
+                                                <div className="text-2xl mb-2">🏆</div>
+                                                <div className="text-[#FF8000] font-bold text-lg">McLaren</div>
+                                                <div className="text-[#9CA3AF] text-sm font-mono">{selectedYear} CONSTRUCTORS' WORLD CHAMPIONS</div>
+                                            </div>
+
+                                            {constructorStandings.map((team, index) => (
+                                                <div
+                                                    key={team.team}
+                                                    className={`flex items-center justify-between px-4 py-3 rounded-lg border ${team.champion
+                                                        ? 'border-[#FF8000]/50 bg-[#FF8000]/10'
+                                                        : 'border-[#333] hover:border-[#555]'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <span className={`font-mono text-lg w-8 ${index === 0 ? 'text-[#FFD700]' :
+                                                            index === 1 ? 'text-[#C0C0C0]' :
+                                                                index === 2 ? 'text-[#CD7F32]' : 'text-[#555]'
+                                                            }`}>
+                                                            {team.position}
+                                                        </span>
+                                                        <div
+                                                            className="w-1 h-8 rounded-full"
+                                                            style={{ backgroundColor: team.color }}
+                                                        />
+                                                        <div className="font-bold text-white">{team.team}</div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="font-mono font-bold text-[#00D2BE]">{team.points}</div>
+                                                        <div className="text-[10px] text-[#9CA3AF]">points</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </>

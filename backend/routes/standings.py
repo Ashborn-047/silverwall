@@ -102,62 +102,259 @@ SEASON_RACES = [
 
 
 @router.get("/standings/drivers")
-async def get_driver_standings():
-    """Get current driver championship standings"""
-    return {
-        "season": 2025,
-        "round": 23,
-        "total_rounds": 24,
-        "title_fight": "THREE-WAY BATTLE: Norris leads by 12pts, Piastri 4pts behind Verstappen!",
-        "standings": DRIVER_STANDINGS[:20],
-        "leader": DRIVER_STANDINGS[0] if DRIVER_STANDINGS else None,
+@router.get("/standings/drivers/{year}")
+async def get_driver_standings(year: int = 2025):
+    """Get driver championship standings for specified year from Supabase"""
+    
+    # Season-specific messages
+    SEASON_INFO = {
+        2024: {
+            "title_fight": "MAX VERSTAPPEN - 4x WORLD CHAMPION! 🏆",
+            "champion": {"code": "VER", "name": "Max Verstappen"},
+        },
+        2025: {
+            "title_fight": "THREE-WAY BATTLE: Norris leads by 12pts, Piastri 4pts behind Verstappen!",
+            "champion": None,  # Not decided yet
+        },
+        2026: {
+            "title_fight": "Season starts March 2026 - Stay tuned!",
+            "champion": None,
+        },
     }
+    
+    info = SEASON_INFO.get(year, {"title_fight": f"{year} Season", "champion": None})
+    
+    # 2026 placeholder
+    if year == 2026:
+        return {
+            "season": 2026,
+            "round": 0,
+            "total_rounds": 24,
+            "source": "placeholder",
+            "title_fight": info["title_fight"],
+            "standings": [],
+            "leader": None,
+            "message": "The 2026 F1 season begins in March. Check back for updates!",
+        }
+    
+    try:
+        from database import supabase
+        client = supabase()
+        result = client.table("driver_standings") \
+            .select("position, driver_code, driver_name, team, team_color, points, wins") \
+            .eq("season_year", year) \
+            .order("position") \
+            .execute()
+        
+        if result.data and len(result.data) > 0:
+            standings = [
+                {
+                    "position": d["position"],
+                    "code": d["driver_code"],
+                    "name": d["driver_name"],
+                    "team": d["team"],
+                    "color": d["team_color"],
+                    "points": float(d["points"]),
+                    "wins": d.get("wins", 0),
+                }
+                for d in result.data
+            ]
+            return {
+                "season": year,
+                "round": 24 if year == 2024 else 23,
+                "total_rounds": 24,
+                "source": "supabase",
+                "title_fight": info["title_fight"],
+                "standings": standings,
+                "leader": standings[0] if standings else None,
+                "champion": info.get("champion"),
+            }
+    except Exception as e:
+        print(f"⚠️ Supabase error, falling back to hardcoded: {e}")
+    
+    # Fallback to hardcoded (only 2025 available)
+    if year == 2025:
+        return {
+            "season": 2025,
+            "round": 23,
+            "total_rounds": 24,
+            "source": "hardcoded",
+            "title_fight": info["title_fight"],
+            "standings": DRIVER_STANDINGS[:20],
+            "leader": DRIVER_STANDINGS[0] if DRIVER_STANDINGS else None,
+        }
+    
+    return {"season": year, "standings": [], "message": f"No data available for {year}"}
 
 
 @router.get("/standings/constructors")
-async def get_constructor_standings():
-    """Get current constructor championship standings"""
-    return {
-        "season": 2025,
-        "round": 23,
-        "total_rounds": 24,
-        "standings": CONSTRUCTOR_STANDINGS,
-        "champion": {"team": "McLaren", "message": "2025 CONSTRUCTORS' CHAMPIONS! 🏆"},
+@router.get("/standings/constructors/{year}")
+async def get_constructor_standings(year: int = 2025):
+    """Get constructor championship standings for specified year from Supabase"""
+    
+    CHAMPION_INFO = {
+        2024: {"team": "McLaren", "message": "2024 CONSTRUCTORS' CHAMPIONS! 🏆"},
+        2025: {"team": "McLaren", "message": "2025 CONSTRUCTORS' CHAMPIONS! 🏆"},
+        2026: None,
     }
+    
+    # 2026 placeholder
+    if year == 2026:
+        return {
+            "season": 2026,
+            "round": 0,
+            "total_rounds": 24,
+            "source": "placeholder",
+            "standings": [],
+            "champion": None,
+            "message": "The 2026 F1 season begins in March. Check back for updates!",
+        }
+    
+    try:
+        from database import supabase
+        client = supabase()
+        result = client.table("constructor_standings") \
+            .select("position, team, team_color, points, wins, is_champion") \
+            .eq("season_year", year) \
+            .order("position") \
+            .execute()
+        
+        if result.data and len(result.data) > 0:
+            standings = [
+                {
+                    "position": c["position"],
+                    "team": c["team"],
+                    "color": c["team_color"],
+                    "points": float(c["points"]),
+                    "wins": c.get("wins", 0),
+                    "champion": c.get("is_champion", False),
+                }
+                for c in result.data
+            ]
+            return {
+                "season": year,
+                "round": 24 if year == 2024 else 23,
+                "total_rounds": 24,
+                "source": "supabase",
+                "standings": standings,
+                "champion": CHAMPION_INFO.get(year),
+            }
+    except Exception as e:
+        print(f"⚠️ Supabase error, falling back to hardcoded: {e}")
+    
+    if year == 2025:
+        return {
+            "season": 2025,
+            "round": 23,
+            "total_rounds": 24,
+            "source": "hardcoded",
+            "standings": CONSTRUCTOR_STANDINGS,
+            "champion": CHAMPION_INFO.get(2025),
+        }
+    
+    return {"season": year, "standings": [], "message": f"No data available for {year}"}
 
 
 @router.get("/season/races")
-async def get_season_races():
-    """Get all races in the current season with podium results"""
+@router.get("/season/races/{year}")
+async def get_season_races(year: int = 2025):
+    """Get all races in the specified season with podium results"""
     from datetime import datetime, timezone
     
-    # Dynamically calculate Abu Dhabi race status
-    RACE_START = datetime(2025, 12, 7, 13, 0, tzinfo=timezone.utc)  # 18:30 IST = 13:00 UTC
-    RACE_END = datetime(2025, 12, 7, 15, 0, tzinfo=timezone.utc)    # ~2 hours for race
+    # 2026 placeholder
+    if year == 2026:
+        return {
+            "season": 2026,
+            "total_races": 24,
+            "completed": 0,
+            "source": "placeholder",
+            "races": [],
+            "message": "2026 Season calendar to be announced."
+        }
+        
+    # Try Supabase first
+    try:
+        from database import supabase
+        client = supabase()
+        # Fetch races and their results
+        # Note: race_results is a related table
+        result = client.table("races") \
+            .select("*, race_results(*)") \
+            .eq("season_year", year) \
+            .order("round") \
+            .execute()
+            
+        if result.data and len(result.data) > 0:
+            races = []
+            completed_count = 0
+            
+            for r in result.data:
+                # Transform podium data
+                podium = []
+                results = r.get("race_results", [])
+                # Filter for podium places (1-3)
+                podium_results = sorted([res for res in results if res["position"] <= 3], key=lambda x: x["position"])
+                
+                if podium_results:
+                    completed_count += 1
+                    for pres in podium_results:
+                        podium.append({
+                            "pos": pres["position"],
+                            "code": pres["driver_code"],
+                            "name": pres["driver_name"]
+                        })
+                
+                races.append({
+                    "round": r["round"],
+                    "name": r["name"],
+                    "circuit": r["circuit"],
+                    "date": r["date"],
+                    "podium": podium if podium else None,
+                    "status": "finished" if podium else "upcoming" # Basic status derived from results
+                })
+                
+            return {
+                "season": year,
+                "total_races": len(races),
+                "completed": completed_count,
+                "source": "supabase",
+                "races": races,
+            }
+    except Exception as e:
+        print(f"⚠️ Supabase error for races, falling back to hardcoded 2025: {e}")
+
+    # Fallback to hardcoded 2025 data if year matches or Supabase fails
+    if year == 2025:
+        # Dynamically calculate Abu Dhabi race status for hardcoded data
+        RACE_START = datetime(2025, 12, 7, 13, 0, tzinfo=timezone.utc)  # 18:30 IST = 13:00 UTC
+        RACE_END = datetime(2025, 12, 7, 15, 0, tzinfo=timezone.utc)    # ~2 hours for race
+        
+        now = datetime.now(timezone.utc)
+        races = SEASON_RACES.copy()
+        
+        # Update Abu Dhabi (Round 24) status dynamically
+        for race in races:
+            if race["round"] == 24:
+                if race.get("podium") is not None:
+                    # Race finished - has results
+                    race["status"] = None
+                elif now < RACE_START:
+                    race["status"] = "upcoming"
+                elif now < RACE_END:
+                    race["status"] = "live"
+                else:
+                    # Race should be over, waiting for results
+                    race["status"] = "finished"
+        
+        return {
+            "season": 2025,
+            "total_races": 24,
+            "completed": 23,
+            "source": "hardcoded",
+            "races": races,
+        }
     
-    now = datetime.now(timezone.utc)
-    races = SEASON_RACES.copy()
-    
-    # Update Abu Dhabi (Round 24) status dynamically
-    for race in races:
-        if race["round"] == 24:
-            if race.get("podium") is not None:
-                # Race finished - has results
-                race["status"] = None
-            elif now < RACE_START:
-                race["status"] = "upcoming"
-            elif now < RACE_END:
-                race["status"] = "live"
-            else:
-                # Race should be over, waiting for results
-                race["status"] = "finished"
-    
-    return {
-        "season": 2025,
-        "total_races": 24,
-        "completed": 23,
-        "races": races,
-    }
+    return {"season": year, "races": [], "message": f"No race data available for {year}"}
 
 
 @router.get("/season/race/{round_num}")

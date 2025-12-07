@@ -94,6 +94,22 @@ async def get_race_results(session_key: str = "latest"):
     Get race results for podium and standings display.
     Returns top 3 for podium + full results.
     """
+    # SIMULATION: Check if race has started yet (Abu Dhabi 2025)
+    # 18:30 IST = 13:00 UTC
+    RACE_START = datetime(2025, 12, 7, 13, 0, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+    
+    if now < RACE_START:
+        # Race hasn't started -> Show countdown
+        return {
+            "source": "waiting",
+            "status": "waiting",
+            "race": "Abu Dhabi Grand Prix 2025",
+            "message": "Race hasn't started yet. Results will appear after the race.",
+            "podium": None,
+            "standings": None,
+        }
+
     results_data = await fetch_race_results_from_openf1(session_key)
     
     if not results_data:
