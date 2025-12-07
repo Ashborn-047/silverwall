@@ -39,8 +39,8 @@ export function useTelemetry(): TelemetryState {
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<number | null>(null);
 
-    // Check if in demo mode
-    const isDemo = typeof window !== 'undefined' && window.location.search.includes('demo=true');
+    // Check if in demo mode (default to TRUE for simulation event unless live=true is forced)
+    const isDemo = typeof window !== 'undefined' && !window.location.search.includes('live=true');
 
     const connect = useCallback(() => {
         // Different WebSocket endpoints for demo vs live mode
