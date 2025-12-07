@@ -89,13 +89,13 @@ function getTyreLetter(compound: string | undefined): string {
 
 export default function TelemetryLive() {
   // WebSocket telemetry hook
-  const { frame, status, isDemo } = useTelemetry();
-  // Track hook - live mode fetches from /track/current, demo uses static abu_dhabi
-  const { points: trackPoints } = useTrack('abu_dhabi', !isDemo);
+  const { frame, status } = useTelemetry();
+  // Track hook - fetches from /track/current explicitly live
+  const { points: trackPoints } = useTrack('abu_dhabi', true);
   // Race status from backend API
-  const raceStatus = useRaceStatus(isDemo);
+  const raceStatus = useRaceStatus();
 
-  const [sessionTime, setSessionTime] = useState('--:--:--');
+  const sessionTime = '--:--:--';
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [showResults, setShowResults] = useState(false);
 
@@ -146,23 +146,9 @@ export default function TelemetryLive() {
       }));
     }
 
-    // In LIVE mode with no data: return empty
-    if (!isDemo) {
-      return [];
-    }
-
-    // In DEMO mode: return fallback mock data
-    return [
-      { position: 1, code: 'NOR', gap: 'LEADER', team: 'McLaren', teamColor: '#FF8700', tyre: 'MEDIUM', tyreAge: 12 },
-      { position: 2, code: 'VER', gap: '+0.5s', team: 'Red Bull Racing', teamColor: '#3671C6', tyre: 'HARD', tyreAge: 8 },
-      { position: 3, code: 'PIA', gap: '+1.2s', team: 'McLaren', teamColor: '#FF8700', tyre: 'MEDIUM', tyreAge: 12 },
-      { position: 4, code: 'LEC', gap: '+8.2s', team: 'Ferrari', teamColor: '#DC0000', tyre: 'HARD', tyreAge: 15 },
-      { position: 5, code: 'RUS', gap: '+8.5s', team: 'Mercedes', teamColor: '#00D2BE', tyre: 'MEDIUM', tyreAge: 10 },
-      { position: 6, code: 'HAM', gap: '+8.7s', team: 'Ferrari', teamColor: '#DC0000', tyre: 'HARD', tyreAge: 15 },
-      { position: 7, code: 'SAI', gap: '+9.0s', team: 'Williams', teamColor: '#005AFF', tyre: 'HARD', tyreAge: 14 },
-      { position: 8, code: 'ALO', gap: '+9.2s', team: 'Aston Martin', teamColor: '#006F62', tyre: 'SOFT', tyreAge: 22 },
-    ];
-  }, [frame, isDemo]);
+    // Return empty if no data (waiting state)
+    return [];
+  }, [frame]);
 
   // Get selected car telemetry from frame
   const selectedCar = useMemo(() => {
@@ -174,12 +160,12 @@ export default function TelemetryLive() {
 
   // Telemetry data from selected car
   const [telemetry, setTelemetry] = useState<TelemetryData>({
-    throttle: 98,
+    throttle: 0,
     brake: 0,
-    speed: 310,
-    gear: 8,
-    drs: true,
-    rpm: 11200,
+    speed: 0,
+    gear: 0,
+    drs: false,
+    rpm: 0,
   });
 
   // Update telemetry when frame changes
@@ -204,20 +190,8 @@ export default function TelemetryLive() {
         throttle: car.throttle,
       }));
     }
-
-    // In LIVE mode with no data: return empty (waiting for real race)
-    if (!isDemo) {
-      return [];
-    }
-
-    // Demo mode fallback
-    return [
-      { code: 'NOR', throttle: 98 },
-      { code: 'VER', throttle: 98 },
-      { code: 'PIA', throttle: 98 },
-      { code: 'LEC', throttle: 60 },
-    ];
-  }, [frame, isDemo]);
+    return [];
+  }, [frame]);
 
   // Get driver color by code
   const getDriverColor = (code: string): string => {
@@ -225,50 +199,12 @@ export default function TelemetryLive() {
     return driver?.teamColor || '#00D2BE';
   };
 
-  // Session timer simulation (DEMO MODE ONLY)
-  useEffect(() => {
-    if (!isDemo) return; // Don't simulate session time in live mode
-
-    // Start session time from 0
-    let totalSeconds = 0;
-    setSessionTime('00:00:00');
-
-    const timer = setInterval(() => {
-      totalSeconds += 1;
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      setSessionTime(
-        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-      );
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isDemo]);
-
   // Select first driver by default
   useEffect(() => {
     if (!selectedDriver && leaderboard.length > 0) {
       setSelectedDriver(leaderboard[0]);
     }
   }, [leaderboard]);
-
-  // Simulate telemetry updates (DEMO MODE ONLY)
-  useEffect(() => {
-    if (!isDemo) return; // Don't simulate telemetry in live mode
-
-    const interval = setInterval(() => {
-      setTelemetry((prev) => ({
-        ...prev,
-        throttle: Math.floor(Math.random() * 100),
-        brake: Math.random() > 0.8 ? Math.floor(Math.random() * 100) : 0,
-        speed: 250 + Math.floor(Math.random() * 80),
-        gear: Math.floor(Math.random() * 8) + 1,
-      }));
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, [isDemo]);
 
   return (
     <div className="h-screen bg-[#050608] text-[#E0E0E0] font-sans flex flex-col overflow-hidden">
@@ -305,14 +241,7 @@ export default function TelemetryLive() {
             <span className="text-[#333] mx-2">|</span>
 
             {/* Show countdown or live status */}
-            {isDemo ? (
-              <>
-                <span className="text-[#9CA3AF]">SESSION</span>
-                <span className="text-[#00D2BE] font-bold">{sessionTime}</span>
-                <span className="text-[#333] mx-2">|</span>
-                <span className="text-[#00D2BE] font-bold animate-pulse">LIVE</span>
-              </>
-            ) : isConnected && raceStatus.status === 'live' ? (
+            {isConnected && raceStatus.status === 'live' ? (
               <>
                 <span className="text-[#9CA3AF]">SESSION</span>
                 <span className="text-[#00D2BE] font-bold">{sessionTime}</span>
@@ -384,7 +313,7 @@ export default function TelemetryLive() {
 
           <div>
             {/* Show waiting message in live mode when no race data */}
-            {leaderboard.length === 0 && !isDemo && (
+            {leaderboard.length === 0 && (
               <div className="p-6 text-center">
                 <div className="text-[#555] font-mono text-xs uppercase tracking-wider mb-2">
                   No Active Session
@@ -441,7 +370,7 @@ export default function TelemetryLive() {
           </div>
 
           {/* Commentary Panel */}
-          <CommentaryPanel isDemo={isDemo} isConnected={isConnected} />
+          <CommentaryPanel isConnected={isConnected} />
         </aside>
 
         {/* CENTER PANEL: TRACK MAP */}

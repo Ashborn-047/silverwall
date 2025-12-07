@@ -34,21 +34,10 @@ interface RaceStatus {
     nextSeason?: NextSeason;
 }
 
-export function useRaceStatus(isDemo: boolean): RaceStatus {
+export function useRaceStatus(): RaceStatus {
     const [raceStatus, setRaceStatus] = useState<RaceStatus>({ status: 'loading' });
 
     useEffect(() => {
-        // In demo mode, show simulated "live" status
-        if (isDemo) {
-            setRaceStatus({
-                status: 'live',
-                sessionName: 'Demo Race',
-                meetingName: 'Abu Dhabi Grand Prix',
-                circuit: 'Yas Marina',
-            });
-            return;
-        }
-
         const fetchStatus = async () => {
             try {
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -120,10 +109,9 @@ export function useRaceStatus(isDemo: boolean): RaceStatus {
         const interval = setInterval(fetchStatus, 30000);
 
         return () => clearInterval(interval);
-    }, [isDemo]);
+    }, []);
 
     return raceStatus;
 }
 
 export default useRaceStatus;
-

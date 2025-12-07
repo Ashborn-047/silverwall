@@ -1,9 +1,8 @@
 /**
  * useTelemetry - WebSocket hook for live F1 telemetry
  * 
- * MODES:
- * - Live mode (/telemetry/live): Connects to real race data - shows empty state if no race
- * - Demo mode (/telemetry/live?demo=true): Connects to fake simulated stream
+ * Connected strictly to real race data (/ws/live).
+ * Shows empty/waiting state if no live session is active.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -30,7 +29,6 @@ type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error' | 
 interface TelemetryState {
     frame: TelemetryFrame | null;
     status: ConnectionStatus;
-    isDemo: boolean;
 }
 
 export function useTelemetry(): TelemetryState {
@@ -39,26 +37,19 @@ export function useTelemetry(): TelemetryState {
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<number | null>(null);
 
-    // Check if in demo mode (default to TRUE for simulation event unless live=true is forced)
-    const isDemo = typeof window !== 'undefined' && !window.location.search.includes('live=true');
-
     const connect = useCallback(() => {
-        // Different WebSocket endpoints for demo vs live mode
         const baseUrl = import.meta.env.VITE_WS_URL?.replace('/ws/abu_dhabi', '') || 'ws://localhost:8000';
-
-        // DEMO MODE: Connect to simulated stream at /ws/abu_dhabi
-        // LIVE MODE: Connect to real OpenF1 data at /ws/live
-        const wsEndpoint = isDemo ? '/ws/abu_dhabi' : '/ws/live';
+        const wsEndpoint = '/ws/live';
         const wsUrl = `${baseUrl}${wsEndpoint}`;
 
-        console.log(`📡 ${isDemo ? 'DEMO' : 'LIVE'} mode: Connecting to ${wsUrl}`);
+        console.log(`📡 Connecting to LIVE telemetry at ${wsUrl}`);
 
         try {
             const ws = new WebSocket(wsUrl);
             wsRef.current = ws;
 
             ws.onopen = () => {
-                console.log(`✅ ${isDemo ? 'Demo' : 'Live'} WebSocket connected`);
+                console.log('✅ Live WebSocket connected');
                 setStatus('connected');
             };
 
@@ -89,7 +80,7 @@ export function useTelemetry(): TelemetryState {
             };
 
             ws.onclose = () => {
-                console.log(`🔌 ${isDemo ? 'Demo' : 'Live'} WebSocket disconnected`);
+                console.log('🔌 Live WebSocket disconnected');
                 setStatus('disconnected');
 
                 // Attempt to reconnect after 2 seconds
@@ -105,7 +96,7 @@ export function useTelemetry(): TelemetryState {
             console.error('Failed to create WebSocket:', error);
             setStatus('error');
         }
-    }, [isDemo]);
+    }, []);
 
     useEffect(() => {
         connect();
@@ -122,7 +113,7 @@ export function useTelemetry(): TelemetryState {
         };
     }, [connect]);
 
-    return { frame, status, isDemo };
+    return { frame, status };
 }
 
 export default useTelemetry;

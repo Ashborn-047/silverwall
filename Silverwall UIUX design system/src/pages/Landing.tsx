@@ -155,18 +155,7 @@ export default function Landing() {
                                 />
                             </Link>
 
-                            {/* Demo Replay Button */}
-                            <Link
-                                to="/telemetry/live?demo=true"
-                                className="flex items-center justify-center gap-2 px-6 py-3 mt-3
-                                  bg-transparent border border-[#00D2BE]/30 text-[#00D2BE]
-                                  text-sm font-mono tracking-wider uppercase
-                                  rounded-[4px] hover:bg-[#00D2BE]/10 hover:border-[#00D2BE]/50 transition-all duration-300"
-                                style={{ minWidth: '300px' }}
-                            >
-                                <Activity size={16} />
-                                <span>View Demo Replay</span>
-                            </Link>
+
 
                             <div className="mt-3 flex items-center gap-2 text-[#555] text-xs font-mono">
                                 <ShieldAlert size={12} />

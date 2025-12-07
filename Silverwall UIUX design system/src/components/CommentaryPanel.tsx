@@ -17,7 +17,6 @@ interface CommentaryEvent {
 }
 
 interface CommentaryPanelProps {
-    isDemo: boolean;
     isConnected: boolean;
 }
 
@@ -32,115 +31,35 @@ const eventIcons: Record<string, React.ReactNode> = {
     start: <Flag size={14} className="text-white" />,
 };
 
-// Demo event generator
-function generateDemoEvent(): CommentaryEvent {
-    const types: Array<CommentaryEvent['type']> = ['overtake', 'pit', 'fastest_lap', 'radio', 'drs', 'battle'];
-    const type = types[Math.floor(Math.random() * types.length)];
-    const drivers = ['HAM', 'VER', 'LEC', 'SAI', 'NOR', 'PER', 'RUS', 'ALO'];
-    const driver1 = drivers[Math.floor(Math.random() * drivers.length)];
-    const driver2 = drivers.filter(d => d !== driver1)[Math.floor(Math.random() * 7)];
-
-    const colors: Record<string, string> = {
-        overtake: '#00D2BE',
-        pit: '#FF3B30',
-        fastest_lap: '#BF5AF2',
-        radio: '#FFD60A',
-        drs: '#30D158',
-        battle: '#FF9F0A',
-    };
-
-    const messages: Record<string, string[]> = {
-        overtake: [
-            `${driver1} overtakes ${driver2} into Turn ${Math.floor(Math.random() * 21) + 1}!`,
-            `Brilliant move! ${driver1} passes ${driver2}`,
-            `${driver1} makes the pass on ${driver2}! What a move!`,
-        ],
-        pit: [
-            `${driver1} pits - ${['Soft', 'Medium', 'Hard'][Math.floor(Math.random() * 3)]} compound`,
-            `Box box for ${driver1}!`,
-            `${driver1} in the pit lane - ${(Math.random() * 1.5 + 2.2).toFixed(1)}s stop`,
-        ],
-        fastest_lap: [
-            `${driver1} sets the fastest lap! 1:${23 + Math.floor(Math.random() * 3)}.${Math.floor(Math.random() * 900) + 100}`,
-            `Purple sector for ${driver1}!`,
-        ],
-        radio: [
-            `"These tyres are gone!" - ${driver1}`,
-            `"He pushed me off!" - ${driver1}`,
-            `"Box box, box box" - ${driver1}`,
-            `"This is mega pace!" - ${driver1}`,
-            `"Copy, understood" - ${driver1}`,
-        ],
-        drs: [
-            `${driver1} opens DRS on the main straight`,
-            `DRS enabled for ${driver1}`,
-        ],
-        battle: [
-            `${driver1} and ${driver2} wheel to wheel! Gap: ${(Math.random() * 0.4 + 0.1).toFixed(1)}s`,
-            `Intense battle! ${driver1} defending from ${driver2}`,
-        ],
-    };
-
-    const messageList = messages[type];
-    const message = messageList[Math.floor(Math.random() * messageList.length)];
-
-    return {
-        id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        type,
-        icon: type === 'radio' ? '📻' : type === 'overtake' ? '⚡' : '🏁',
-        message,
-        driver: driver1,
-        timestamp: new Date().toISOString(),
-        color: colors[type],
-    };
-}
-
-export default function CommentaryPanel({ isDemo, isConnected }: CommentaryPanelProps) {
+export default function CommentaryPanel({ isConnected }: CommentaryPanelProps) {
     const [events, setEvents] = useState<CommentaryEvent[]>([]);
     const feedRef = useRef<HTMLDivElement>(null);
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
     // Fetch initial commentary history
     useEffect(() => {
-        if (isDemo) {
-            // Generate initial demo events only in demo mode
-            const initialEvents: CommentaryEvent[] = [];
-            for (let i = 0; i < 5; i++) {
-                initialEvents.push(generateDemoEvent());
-            }
-            setEvents(initialEvents);
-        } else {
-            // In live mode, start with empty events - will fill when race starts
-            setEvents([]);
-        }
-    }, [isDemo]);
+        // Start with empty events - will fill when race starts
+        setEvents([]);
+    }, []);
 
-    // Poll for new events or generate demo events
+    // Poll for new events
     useEffect(() => {
-        if (!isConnected && !isDemo) return;
+        if (!isConnected) return;
 
         const interval = setInterval(() => {
-            if (isDemo) {
-                // 30% chance to generate new event in demo mode
-                if (Math.random() < 0.3) {
-                    const newEvent = generateDemoEvent();
-                    setEvents(prev => [newEvent, ...prev.slice(0, 19)]);
-                }
-            } else {
-                // Poll API for new events
-                fetch(`${apiUrl}/api/commentary?demo=false`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.events?.length > 0) {
-                            setEvents(prev => [...data.events, ...prev.slice(0, 19)]);
-                        }
-                    })
-                    .catch(console.error);
-            }
+            // Poll API for new events
+            fetch(`${apiUrl}/api/commentary?demo=false`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.events?.length > 0) {
+                        setEvents(prev => [...data.events, ...prev.slice(0, 19)]);
+                    }
+                })
+                .catch(console.error);
         }, 3000); // Check every 3 seconds
 
         return () => clearInterval(interval);
-    }, [isDemo, isConnected, apiUrl]);
+    }, [isConnected, apiUrl]);
 
     // Auto-scroll to top when new event
     useEffect(() => {
@@ -169,9 +88,9 @@ export default function CommentaryPanel({ isDemo, isConnected }: CommentaryPanel
                         Live Commentary
                     </span>
                 </div>
-                <div className={`flex items-center gap-2 text-[10px] font-mono ${isConnected || isDemo ? 'text-green-500' : 'text-red-500'}`}>
-                    <span className={`w-2 h-2 rounded-full ${isConnected || isDemo ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                    {isDemo ? 'DEMO' : isConnected ? 'LIVE' : 'OFFLINE'}
+                <div className={`flex items-center gap-2 text-[10px] font-mono ${isConnected ? 'text-green-500' : 'text-red-500'}`}>
+                    <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                    {isConnected ? 'LIVE' : 'OFFLINE'}
                 </div>
             </div>
 
