@@ -51,21 +51,21 @@ app.include_router(standings_router, prefix="/api")
 async def startup_event():
     """Load timeline data on startup"""
     print("\n" + "="*60)
-    print("🏁 SilverWall F1 Telemetry Backend")
+    print("SilverWall F1 Telemetry Backend")
     print("="*60)
-    print(f"📊 Loading timeline...")
+    print(f"Loading timeline...")
     
     # Load fake timeline into WebSocket module
     ws.TIMELINE = TIMELINE
     
-    print(f"✓ Timeline loaded: {len(TIMELINE)} frames")
+    print(f"v Timeline loaded: {len(TIMELINE)} frames")
     if TIMELINE:
-        print(f"✓ Duration: {TIMELINE[-1].t:.1f}s")
-        print(f"✓ Cars: {len(TIMELINE[0].cars)}")
-    print(f"✓ Frame rate: 10 fps (0.1s intervals)")
+        print(f"v Duration: {TIMELINE[-1].t:.1f}s")
+        print(f"v Cars: {len(TIMELINE[0].cars)}")
+    print(f"v Frame rate: 10 fps (0.1s intervals)")
     print("="*60)
-    print("🚀 Backend ready at http://127.0.0.1:8000")
-    print("🔌 WebSocket endpoint: ws://127.0.0.1:8000/ws/monza")
+    print("Backend ready at http://127.0.0.1:8000")
+    print("WebSocket endpoint: ws://127.0.0.1:8000/ws/monza")
     print("="*60 + "\n")
 
 

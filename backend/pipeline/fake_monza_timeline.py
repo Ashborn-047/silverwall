@@ -153,4 +153,4 @@ def generate_fake_timeline(duration: float = 60.0, tick_interval: float = 0.1) -
 
 # Generate timeline on module import
 TIMELINE = generate_fake_timeline(duration=180.0)
-print(f"✓ Fake Monza timeline loaded: {len(TIMELINE)} frames")
+print(f"OK: Fake Monza timeline loaded: {len(TIMELINE)} frames")

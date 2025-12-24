@@ -54,7 +54,7 @@ async def fetch_live_session():
                     
                     if date_end is None:
                         # Session is live - no end time yet
-                        print(f"🟢 LIVE SESSION DETECTED: {session.get('session_name')} at {session.get('circuit_short_name')}")
+                        print(f"OK: LIVE SESSION DETECTED: {session.get('session_name')} at {session.get('circuit_short_name')}")
                         return session
                     
                     # Check if session ended recently (within last 30 minutes) - show as live
@@ -64,20 +64,24 @@ async def fetch_live_session():
                             end_time = datetime.fromisoformat(date_end.replace('Z', '+00:00'))
                             now = datetime.now(timezone.utc)
                             if (now - end_time).total_seconds() < 1800:  # 30 minutes
-                                print(f"🟡 RECENT SESSION: {session.get('session_name')} ended {int((now - end_time).total_seconds() / 60)} mins ago")
+                                print(f"WAIT: RECENT SESSION: {session.get('session_name')} ended {int((now - end_time).total_seconds() / 60)} mins ago")
                                 return session
                         except:
                             pass
                     
-                    print(f"⚪ Session ended: {session.get('session_name')}")
+                    print(f"DONE: Session ended: {session.get('session_name')}")
     except Exception as e:
-        print(f"❌ Error fetching live session: {e}")
+        print(f"ERR: Error fetching live session: {e}")
     return None
 
 
 def get_next_session():
     """Get the next scheduled session"""
     now = datetime.now(timezone.utc)
+    # If it's after the 2025 season finale (Dec 7), skip Abu Dhabi schedule
+    if now.year == 2025 and now.month == 12 and now.day > 10:
+        return None
+
     for name, time in sorted(ABU_DHABI_SCHEDULE.items(), key=lambda x: x[1]):
         if time > now:
             return {"name": name, "start_time": time.isoformat(), "countdown_seconds": int((time - now).total_seconds())}
