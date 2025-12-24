@@ -130,8 +130,8 @@ async def fetch_live_telemetry(session_key: int = None) -> Dict:
     # 5. Stints (Tyres)
     
     # We'll fetch them sequentially for now to keep logic simple, but ideally use asyncio.gather
-    race_positions = await fetch_position()
-    intervals = await fetch_intervals()
+    race_positions = await fetch_position(session_key)
+    intervals = await fetch_intervals(session_key)
     locations = await fetch_car_positions(session_key)
     drivers = await fetch_driver_info(session_key)
     stints = await fetch_stints(session_key)
@@ -199,11 +199,17 @@ async def fetch_live_telemetry(session_key: int = None) -> Dict:
     }
 
 
-async def fetch_intervals() -> List[Dict]:
+async def fetch_intervals(session_key: int = None) -> List[Dict]:
     """Fetch gap intervals between drivers for leaderboard"""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{OPENF1_API}/intervals", params={"session_key": "latest"})
+            params = {}
+            if session_key:
+                params["session_key"] = session_key
+            else:
+                params["session_key"] = "latest"
+
+            response = await client.get(f"{OPENF1_API}/intervals", params=params)
             if response.status_code == 200:
                 data = response.json()
                 # Get latest interval for each driver
@@ -219,11 +225,17 @@ async def fetch_intervals() -> List[Dict]:
     return []
 
 
-async def fetch_position() -> List[Dict]:
+async def fetch_position(session_key: int = None) -> List[Dict]:
     """Fetch current race positions for leaderboard"""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{OPENF1_API}/position", params={"session_key": "latest"})
+            params = {}
+            if session_key:
+                params["session_key"] = session_key
+            else:
+                params["session_key"] = "latest"
+
+            response = await client.get(f"{OPENF1_API}/position", params=params)
             if response.status_code == 200:
                 data = response.json()
                 # Get latest position for each driver
