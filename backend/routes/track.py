@@ -55,7 +55,8 @@ async def fetch_track_from_openf1(session_key: str = "latest") -> list:
             if not data:
                 return []
             
-            points = [{"x": item["x"], "y": item["y"]} for item in data[:500] if "x" in item and "y" in item]
+            # Fetch more points for higher fidelity (up to 2000)
+            points = [{"x": item["x"], "y": item["y"]} for item in data[:2000] if "x" in item and "y" in item]
             
             if not points:
                 return []
@@ -67,13 +68,19 @@ async def fetch_track_from_openf1(session_key: str = "latest") -> list:
             range_x = max_x - min_x if max_x != min_x else 1
             range_y = max_y - min_y if max_y != min_y else 1
             
-            step = max(1, len(points) // 80)
+            # To prevent squashing, we need to maintain the aspect ratio.
+            # We'll normalize both X and Y by the SAME larger range.
+            max_range = max(range_x, range_y)
+            
+            # Use a step that gives us around 200 points for the final path
+            # (balanced for performance and smoothness)
+            step = max(1, len(points) // 200)
             normalized = []
             for i in range(0, len(points), step):
                 p = points[i]
                 normalized.append({
-                    "x": round((p["x"] - min_x) / range_x, 4),
-                    "y": round((p["y"] - min_y) / range_y, 4)
+                    "x": round((p["x"] - min_x) / max_range, 4),
+                    "y": round((p["y"] - min_y) / max_range, 4)
                 })
             
             return normalized

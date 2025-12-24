@@ -91,7 +91,7 @@ export default function TelemetryLive() {
   // WebSocket telemetry hook
   const { frame, status } = useTelemetry();
   // Track hook - fetches from /track/current explicitly live
-  const { points: trackPoints } = useTrack('abu_dhabi', true);
+  const { track, points: trackPoints } = useTrack('abu_dhabi', true);
   // Race status from backend API
   const raceStatus = useRaceStatus();
 
@@ -387,24 +387,22 @@ export default function TelemetryLive() {
           {/* Track Map Container */}
           <div className="relative w-full max-w-2xl aspect-[16/10] flex items-center justify-center">
             {/* Dynamic Track from Backend + Real Car Positions */}
-            <svg viewBox="0 0 1000 800" className="w-full h-full drop-shadow-[0_0_12px_rgba(0,210,190,0.4)]">
+            <svg viewBox={`0 0 ${SVG_VIEWBOX} ${SVG_VIEWBOX}`} className="w-full h-full drop-shadow-[0_0_12px_rgba(0,210,190,0.4)]">
               {/* Track Path - from backend or fallback */}
               {trackPoints.length > 0 ? (
                 <path
                   d={trackPointsToSvgPath(trackPoints)}
                   fill="none"
                   stroke="#00D2BE"
-                  strokeWidth="4"
+                  strokeWidth="3"
                   strokeLinejoin="round"
                   strokeLinecap="round"
-                  opacity="0.8"
+                  opacity="0.9"
                 />
               ) : (
                 /* Fallback static track */
                 <path
-                  d="M 200 550 L 650 550 L 675 525 L 700 400 L 675 375 L 500 375 L 450 325 L 200 325 L 150 375 L 150 500 Z
-                     M 200 550 L 150 500 L 125 500 L 100 400 L 150 375
-                     M 650 550 L 750 550 L 800 500 L 800 250 L 750 200 L 600 200 L 575 225 L 575 275 L 500 375"
+                  d="M 200 550 L 650 550 L 675 525 L 700 400 L 675 375 L 500 375 L 450 325 L 200 325 L 150 375 L 150 500 Z"
                   fill="none"
                   stroke="#00D2BE"
                   strokeWidth="4"
@@ -462,8 +460,12 @@ export default function TelemetryLive() {
           </div>
 
           <div className="absolute bottom-8 right-8 text-right">
-            <h2 className="text-[#555] text-xs font-mono tracking-[0.2em] uppercase mb-1">Yas Marina Circuit</h2>
-            <h1 className="text-[#00D2BE] text-2xl font-bold uppercase tracking-wider">Abu Dhabi</h1>
+            <h2 className="text-[#555] text-xs font-mono tracking-[0.2em] uppercase mb-1">
+              {track?.name || 'Yas Marina Circuit'}
+            </h2>
+            <h1 className="text-[#00D2BE] text-2xl font-bold uppercase tracking-wider">
+              {track?.location || 'Abu Dhabi'}
+            </h1>
           </div>
         </section>
 
@@ -589,6 +591,6 @@ export default function TelemetryLive() {
 
       {/* Results Modal */}
       {showResults && <ResultsModal isOpen={true} onClose={() => setShowResults(false)} />}
-    </div>
+    </div >
   );
 }
