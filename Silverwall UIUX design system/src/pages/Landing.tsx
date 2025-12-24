@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag } from 'lucide-react';
+import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag, Trophy } from 'lucide-react';
 import useRaceStatus from '../hooks/useRaceStatus';
 
 // ============================================================================
@@ -20,27 +20,37 @@ export default function Landing() {
     }, []);
 
     const isLive = raceStatus.status === 'live';
-    const isWaiting = raceStatus.status === 'waiting';
     const isOffSeason = raceStatus.status === 'off_season';
 
-    let countdownData = { days: 0, hours: 0, minutes: 0, isLive: isLive };
+    // High-precision countdown timer (seconds)
+    const [secondsRemaining, setSecondsRemaining] = useState(0);
 
-    if (isWaiting && raceStatus.countdown) {
-        countdownData = {
-            days: raceStatus.countdown.days,
-            hours: raceStatus.countdown.hours,
-            minutes: raceStatus.countdown.minutes,
-            isLive: false
-        };
-    } else if (isOffSeason && raceStatus.nextSeason) {
-        const seconds = raceStatus.nextSeason.countdown_seconds;
-        countdownData = {
-            days: Math.floor(seconds / 86400),
-            hours: Math.floor((seconds % 86400) / 3600),
-            minutes: Math.floor((seconds % 3600) / 60),
-            isLive: false
-        };
-    }
+    useEffect(() => {
+        let timer: any;
+        if (raceStatus.status === 'off_season' && raceStatus.nextSeason) {
+            setSecondsRemaining(raceStatus.nextSeason.countdown_seconds);
+            timer = setInterval(() => {
+                setSecondsRemaining(prev => Math.max(0, prev - 1));
+            }, 1000);
+        } else if (raceStatus.status === 'waiting' && raceStatus.countdown) {
+            const c = raceStatus.countdown;
+            const total = (c.days * 86400) + (c.hours * 3600) + (c.minutes * 60) + c.seconds;
+            setSecondsRemaining(total);
+            timer = setInterval(() => {
+                setSecondsRemaining(prev => Math.max(0, prev - 1));
+            }, 1000);
+        }
+
+        return () => clearInterval(timer);
+    }, [raceStatus]);
+
+    const formatCountdown = () => {
+        const d = Math.floor(secondsRemaining / 86400);
+        const h = Math.floor((secondsRemaining % 86400) / 3600);
+        const m = Math.floor((secondsRemaining % 3600) / 60);
+        const s = secondsRemaining % 60;
+        return `${d}D ${h}H ${m}M ${s}S`;
+    };
 
     return (
         <div className="min-h-screen bg-[#050608] text-[#E0E0E0] font-sans selection:bg-[#00D2BE] selection:text-[#050608] flex flex-col overflow-hidden relative">
@@ -100,7 +110,7 @@ export default function Landing() {
 
                         {/* Countdown Timer */}
                         <div className="flex items-center gap-3 font-mono text-sm">
-                            {countdownData.isLive ? (
+                            {isLive ? (
                                 <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-sm animate-pulse">
                                     <span className="w-2 h-2 rounded-full bg-red-500" />
                                     <span className="text-red-500 font-bold tracking-wider">RACE LIVE</span>
@@ -108,8 +118,8 @@ export default function Landing() {
                             ) : (
                                 <div className="flex items-center gap-4 px-4 py-2 bg-[#00D2BE]/5 border border-[#00D2BE]/20 rounded-sm">
                                     <span className="text-[#555] text-xs uppercase tracking-wider">{isOffSeason ? 'Season Starts In:' : 'Race In:'}</span>
-                                    <span className="text-[#00D2BE] font-bold">
-                                        {countdownData.days}D {countdownData.hours}H {countdownData.minutes}M
+                                    <span className="text-[#00D2BE] font-bold tabular-nums w-[140px]">
+                                        {formatCountdown()}
                                     </span>
                                 </div>
                             )}
@@ -163,8 +173,27 @@ export default function Landing() {
                     </div>
 
                     {/* RIGHT COL: Next Race Card */}
-                    <div className="lg:col-span-5 w-full">
+                    <div className="lg:col-span-5 w-full flex flex-col gap-6">
                         <RaceCard currentTime={currentTime} raceStatus={raceStatus} />
+
+                        {/* 2025 Champions Banner */}
+                        <div className="p-4 rounded-sm border border-[#FFD700]/20 bg-[#FFD700]/5 flex items-center justify-between overflow-hidden relative group">
+                            <div className="absolute top-0 left-0 w-1 h-full bg-[#FFD700] opacity-50" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] text-[#FFD700] font-mono font-bold tracking-[0.2em] uppercase mb-1">2025 WORLD CHAMPIONS</span>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-lg font-black text-[#E0E0E0] italic">MAX VERSTAPPEN</span>
+                                    <span className="text-xs text-[#9CA3AF]">/ RED BULL</span>
+                                </div>
+                                <div className="flex items-baseline gap-2 mt-0.5">
+                                    <span className="text-sm font-bold text-[#E0E0E0] uppercase tracking-wide">McLAREN F1 TEAM</span>
+                                    <span className="text-[10px] text-[#9CA3AF]">/ CONSTRUCTORS</span>
+                                </div>
+                            </div>
+                            <div className="opacity-10 group-hover:opacity-20 transition-opacity">
+                                <Trophy size={64} className="text-[#FFD700]" strokeWidth={1} />
+                            </div>
+                        </div>
                     </div>
 
                 </div>
@@ -267,48 +296,42 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                         }}
                     />
 
-                    {/* Yas Marina Realistic SVG Path */}
-                    <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)] z-10 transform scale-90">
-                        {/* Main track outline - realistic Yas Marina shape */}
+                    {/* Albert Park Realistic SVG Path */}
+                    <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)] z-10 transform translate-y-2 scale-95">
+                        {/* Main track outline - Albert Park */}
                         <path
-                            d="M 30 80 
-                               C 25 80, 20 75, 20 70 
-                               L 20 45 
-                               C 20 35, 30 30, 40 30 
-                               L 70 30 
-                               C 80 30, 85 35, 90 40 
-                               L 100 50 
-                               C 105 55, 115 55, 120 50 
-                               L 130 40 
-                               C 135 35, 145 30, 155 30 
-                               L 170 30 
-                               C 180 30, 185 40, 185 50 
-                               L 185 60 
-                               C 185 70, 175 80, 165 80 
-                               L 150 80 
-                               C 140 80, 135 75, 130 70 
-                               L 125 65 
-                               C 120 60, 110 60, 105 65 
-                               L 95 75 
-                               C 90 80, 80 85, 70 85 
-                               L 45 85 
-                               C 35 85, 30 82, 30 80 Z"
+                            d="M 120 100 L 100 95 C 80 85, 75 80, 75 70 C 80 60, 85 55, 90 50 C 95 45, 100 40, 105 30 C 100 20, 95 15, 85 10 C 70 5, 50 10, 40 15 C 30 20, 25 30, 25 40 L 40 45 L 60 48 L 80 52 L 100 55 L 120 60 L 135 68 L 150 78 L 170 88 L 185 95 L 195 102 L 180 110 L 160 115 L 140 112 L 120 100 Z"
                             fill="none"
                             stroke="#00D2BE"
-                            strokeWidth="2"
+                            strokeWidth="2.5"
                             strokeLinejoin="round"
                             strokeLinecap="round"
                         />
                         {/* Start/Finish Line */}
-                        <line x1="40" y1="78" x2="40" y2="88" stroke="white" strokeWidth="2" />
-                        {/* Pit lane entrance indicator */}
-                        <circle cx="50" cy="82" r="2" fill="#FF9F0A" opacity="0.6" />
+                        <line x1="110" y1="95" x2="110" y2="105" stroke="white" strokeWidth="2" />
+                        {/* Speed trap indicator */}
+                        <circle cx="160" cy="83" r="1.5" fill="#FFD700" opacity="0.8" />
                     </svg>
 
                     <div className="absolute bottom-2 right-2 text-[10px] font-mono text-[#00D2BE] opacity-50">
                         SECTOR 1 | SECTOR 2 | SECTOR 3
                     </div>
                 </div>
+
+                {/* 2026 Regulation Highlight */}
+                {isOffSeason && (
+                    <div className="px-6 md:px-8 pb-8">
+                        <div className="p-3 bg-[#00D2BE]/5 border border-[#00D2BE]/10 rounded-sm">
+                            <div className="flex items-center gap-2 mb-2">
+                                <ShieldAlert size={14} className="text-[#00D2BE]" />
+                                <span className="text-[10px] font-mono text-[#00D2BE] uppercase tracking-[0.2em] font-bold">2026 REGULATION OVERHAUL</span>
+                            </div>
+                            <p className="text-[11px] text-[#9CA3AF] leading-relaxed font-mono">
+                                NEW POWER UNITS: 50% ELECTRICAL SUSTAINABILITY. ACTIVE AERODYNAMICS. COMPLETELY NEW CHASSIS DESIGN.
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
