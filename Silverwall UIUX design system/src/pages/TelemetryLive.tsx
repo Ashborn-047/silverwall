@@ -390,15 +390,28 @@ export default function TelemetryLive() {
             <svg viewBox={`0 0 ${SVG_VIEWBOX} ${SVG_VIEWBOX}`} className="w-full h-full drop-shadow-[0_0_12px_rgba(0,210,190,0.4)]">
               {/* Track Path - from backend or fallback */}
               {trackPoints.length > 0 ? (
-                <path
-                  d={trackPointsToSvgPath(trackPoints)}
-                  fill="none"
-                  stroke="#00D2BE"
-                  strokeWidth="3"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                  opacity="0.9"
-                />
+                <>
+                  {/* Track Border (Inner Glow/Outline) */}
+                  <path
+                    d={trackPointsToSvgPath(trackPoints)}
+                    fill="none"
+                    stroke="#00D2BE"
+                    strokeWidth="8"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    opacity="0.2"
+                  />
+                  {/* Main Track Line */}
+                  <path
+                    d={trackPointsToSvgPath(trackPoints)}
+                    fill="none"
+                    stroke="#00D2BE"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    opacity="0.9"
+                  />
+                </>
               ) : (
                 /* Fallback static track */
                 <path
