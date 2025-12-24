@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag } from 'lucide-react';
+import useRaceStatus from '../hooks/useRaceStatus';
 
 // ============================================================================
 // 🏎️ TELEMETRY LIVE VIEWER
@@ -10,39 +11,36 @@ import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag
 export default function Landing() {
     const [isHovered, setIsHovered] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, isLive: false });
-
-    // Race target: DEC 07, 2025 @ 18:30 IST (6:30 PM) = 17:00 Abu Dhabi local
-    const raceDate = new Date('2025-12-07T13:00:00Z'); // 18:30 IST = 13:00 UTC
-
-    // Countdown timer
-    useEffect(() => {
-        const updateCountdown = () => {
-            const now = new Date();
-            const diff = raceDate.getTime() - now.getTime();
-
-            if (diff <= 0) {
-                setCountdown({ days: 0, hours: 0, minutes: 0, isLive: true });
-                return;
-            }
-
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-            setCountdown({ days, hours, minutes, isLive: false });
-        };
-
-        updateCountdown();
-        const timer = setInterval(updateCountdown, 60000); // Update every minute
-        return () => clearInterval(timer);
-    }, []);
+    const raceStatus = useRaceStatus();
 
     // Simulating a pit-wall clock
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
+
+    const isLive = raceStatus.status === 'live';
+    const isWaiting = raceStatus.status === 'waiting';
+    const isOffSeason = raceStatus.status === 'off_season';
+
+    let countdownData = { days: 0, hours: 0, minutes: 0, isLive: isLive };
+
+    if (isWaiting && raceStatus.countdown) {
+        countdownData = {
+            days: raceStatus.countdown.days,
+            hours: raceStatus.countdown.hours,
+            minutes: raceStatus.countdown.minutes,
+            isLive: false
+        };
+    } else if (isOffSeason && raceStatus.nextSeason) {
+        const seconds = raceStatus.nextSeason.countdown_seconds;
+        countdownData = {
+            days: Math.floor(seconds / 86400),
+            hours: Math.floor((seconds % 86400) / 3600),
+            minutes: Math.floor((seconds % 3600) / 60),
+            isLive: false
+        };
+    }
 
     return (
         <div className="min-h-screen bg-[#050608] text-[#E0E0E0] font-sans selection:bg-[#00D2BE] selection:text-[#050608] flex flex-col overflow-hidden relative">
@@ -102,16 +100,16 @@ export default function Landing() {
 
                         {/* Countdown Timer */}
                         <div className="flex items-center gap-3 font-mono text-sm">
-                            {countdown.isLive ? (
+                            {countdownData.isLive ? (
                                 <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-sm animate-pulse">
                                     <span className="w-2 h-2 rounded-full bg-red-500" />
                                     <span className="text-red-500 font-bold tracking-wider">RACE LIVE</span>
                                 </div>
                             ) : (
                                 <div className="flex items-center gap-4 px-4 py-2 bg-[#00D2BE]/5 border border-[#00D2BE]/20 rounded-sm">
-                                    <span className="text-[#555] text-xs uppercase tracking-wider">Race In:</span>
+                                    <span className="text-[#555] text-xs uppercase tracking-wider">{isOffSeason ? 'Season Starts In:' : 'Race In:'}</span>
                                     <span className="text-[#00D2BE] font-bold">
-                                        {countdown.days}D {countdown.hours}H {countdown.minutes}M
+                                        {countdownData.days}D {countdownData.hours}H {countdownData.minutes}M
                                     </span>
                                 </div>
                             )}
@@ -166,7 +164,7 @@ export default function Landing() {
 
                     {/* RIGHT COL: Next Race Card */}
                     <div className="lg:col-span-5 w-full">
-                        <RaceCard currentTime={currentTime} />
+                        <RaceCard currentTime={currentTime} raceStatus={raceStatus} />
                     </div>
 
                 </div>
@@ -202,7 +200,25 @@ export default function Landing() {
 // ============================================================================
 // 🧩 COMPONENT: Race Card
 // ============================================================================
-const RaceCard = ({ currentTime }: { currentTime: Date }) => {
+const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: any }) => {
+    const isOffSeason = raceStatus.status === 'off_season';
+    const nextSeason = raceStatus.nextSeason;
+
+    const eventName = isOffSeason ? nextSeason?.first_race : (raceStatus.meetingName || "Abu Dhabi Grand Prix");
+    const circuitName = isOffSeason ? nextSeason?.circuit : (raceStatus.circuit || "Yas Marina Circuit");
+    const location = isOffSeason ? nextSeason?.location : "ABU DHABI";
+    const country = isOffSeason ? nextSeason?.country : "UAE";
+
+    // Parse date for next season if applicable
+    let dateStr = "DEC 07, 2025";
+    let subDate = "18:30 IST";
+
+    if (isOffSeason && nextSeason?.race_date) {
+        const d = new Date(nextSeason.race_date);
+        dateStr = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
+        subDate = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) + " UTC";
+    }
+
     return (
         <div className="relative w-full bg-[#0A0C10] border border-[#00D2BE]/20 rounded-sm overflow-hidden">
             {/* Decorative Corner Markers */}
@@ -215,7 +231,9 @@ const RaceCard = ({ currentTime }: { currentTime: Date }) => {
             <div className="bg-[#00D2BE]/5 border-b border-[#00D2BE]/10 p-4 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <Activity size={16} className="text-[#00D2BE]" />
-                    <span className="text-[#00D2BE] font-mono text-xs font-bold tracking-widest">NEXT EVENT</span>
+                    <span className="text-[#00D2BE] font-mono text-xs font-bold tracking-widest uppercase">
+                        {isOffSeason ? 'NEXT SEASON opener' : 'NEXT EVENT'}
+                    </span>
                 </div>
                 <div className="font-mono text-xs text-[#9CA3AF]">
                     UTC: {currentTime.toISOString().split('T')[1].split('.')[0]}
@@ -225,16 +243,16 @@ const RaceCard = ({ currentTime }: { currentTime: Date }) => {
             {/* Card Body */}
             <div className="p-6 md:p-8">
                 <div className="flex flex-col gap-1 mb-6">
-                    <h3 className="text-2xl font-bold text-white tracking-wide uppercase">Abu Dhabi Grand Prix</h3>
-                    <span className="text-[#9CA3AF] text-sm font-light">Yas Marina Circuit</span>
+                    <h3 className="text-2xl font-bold text-white tracking-wide uppercase">{eventName}</h3>
+                    <span className="text-[#9CA3AF] text-sm font-light">{circuitName}</span>
                 </div>
 
                 {/* Data Grid */}
                 <div className="grid grid-cols-2 gap-y-4 gap-x-8 mb-8 border-t border-b border-[#333] py-4">
-                    <DataPoint icon={<Clock size={14} />} label="DATE" value="DEC 07, 2025" sub="18:30 IST" />
-                    <DataPoint icon={<Flag size={14} />} label="LAPS" value="58" sub="5.281 KM" />
-                    <DataPoint icon={<MapPin size={14} />} label="LOCATION" value="ABU DHABI" sub="UAE" />
-                    <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub="LIVE STREAM" />
+                    <DataPoint icon={<Clock size={14} />} label="DATE" value={dateStr} sub={subDate} />
+                    <DataPoint icon={<Flag size={14} />} label="LAPS" value={isOffSeason ? String(nextSeason?.laps || 58) : "58"} sub={isOffSeason ? `${nextSeason?.circuit_length_km || 5.278} KM` : "5.281 KM"} />
+                    <DataPoint icon={<MapPin size={14} />} label="LOCATION" value={location} sub={country} />
+                    <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub={isOffSeason ? "PLANNING" : "LIVE STREAM"} />
                 </div>
 
                 {/* Track Map Visualization (Yas Marina Circuit) */}
