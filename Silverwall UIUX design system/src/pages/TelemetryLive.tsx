@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Radio, Wifi, Activity, Trophy } from 'lucide-react';
-import { useTelemetry } from '../hooks/useTelemetry';
+import { ArrowLeft, Wifi, ChevronRight, Activity, MapPin, Calendar, Clock } from 'lucide-react';
+import useTelemetry from '../hooks/useTelemetry';
 import { useTrack, TrackPoint } from '../hooks/useTrack';
-import { useRaceStatus } from '../hooks/useRaceStatus';
+import useRaceStatus from '../hooks/useRaceStatus';
+import CountdownOverlay from '../components/CountdownOverlay';
 import CommentaryPanel from '../components/CommentaryPanel';
 import ResultsModal from '../components/ResultsModal';
 
@@ -206,8 +207,13 @@ export default function TelemetryLive() {
     }
   }, [leaderboard]);
 
+  const isLive = raceStatus.status === 'live';
+  const showCountdown = raceStatus.status === 'waiting' || raceStatus.status === 'off_season';
+
   return (
-    <div className="h-screen bg-[#050608] text-[#E0E0E0] font-sans flex flex-col overflow-hidden">
+    <div className="flex flex-col h-screen bg-[#050608] text-[#E0E0E0] select-none overflow-hidden font-inter">
+      {/* Countdown Overlay */}
+      {showCountdown && <CountdownOverlay raceStatus={raceStatus} />}
 
       {/* ========================================================================
           TOP HEADER BAR

@@ -31,8 +31,8 @@ NEXT_SEASON = {
     "circuit": "Albert Park",
     "circuit_length_km": 5.278,
     "laps": 58,
-    # Official date: March 6-8, 2026
-    "race_date": datetime(2026, 3, 8, 5, 0, tzinfo=timezone.utc),  # Approx 3 PM local Melbourne time
+    # Official date: March 15, 2026
+    "race_date": datetime(2026, 3, 15, 5, 0, tzinfo=timezone.utc),  # Approx 3 PM local Melbourne time
 }
 
 
