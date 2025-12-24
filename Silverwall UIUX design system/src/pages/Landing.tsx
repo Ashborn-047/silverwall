@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag, Trophy } from 'lucide-react';
 import useRaceStatus from '../hooks/useRaceStatus';
+import useTrack from '../hooks/useTrack';
 
 // ============================================================================
 // 🏎️ TELEMETRY LIVE VIEWER
@@ -163,8 +164,6 @@ export default function Landing() {
                                 />
                             </Link>
 
-
-
                             <div className="mt-3 flex items-center gap-2 text-[#555] text-xs font-mono">
                                 <ShieldAlert size={12} />
                                 <span>RESTRICTED ACCESS: ENGINEERING PERSONNEL ONLY</span>
@@ -176,22 +175,38 @@ export default function Landing() {
                     <div className="lg:col-span-5 w-full flex flex-col gap-6">
                         <RaceCard currentTime={currentTime} raceStatus={raceStatus} />
 
-                        {/* 2025 Champions Banner */}
-                        <div className="p-4 rounded-sm border border-[#FFD700]/20 bg-[#FFD700]/5 flex items-center justify-between overflow-hidden relative group">
+                        {/* 2024 Champions & 2025 Leaders Banner */}
+                        <div className="p-4 rounded-sm border border-[#FFD700]/20 bg-[#FFD700]/5 flex flex-col gap-3 overflow-hidden relative group">
                             <div className="absolute top-0 left-0 w-1 h-full bg-[#FFD700] opacity-50" />
-                            <div className="flex flex-col">
-                                <span className="text-[10px] text-[#FFD700] font-mono font-bold tracking-[0.2em] uppercase mb-1">2025 WORLD CHAMPIONS</span>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-lg font-black text-[#E0E0E0] italic">MAX VERSTAPPEN</span>
-                                    <span className="text-xs text-[#9CA3AF]">/ RED BULL</span>
+
+                            <div className="flex justify-between items-start relative z-10">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] text-[#FFD700] font-mono font-bold tracking-[0.2em] uppercase mb-1">2024 WORLD CHAMPIONS</span>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-lg font-black text-[#E0E0E0] italic">MAX VERSTAPPEN</span>
+                                        <span className="text-xs text-[#9CA3AF]">/ RED BULL</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 mt-0.5">
+                                        <span className="text-sm font-bold text-[#E0E0E0] uppercase tracking-wide">McLAREN F1 TEAM</span>
+                                        <span className="text-[10px] text-[#9CA3AF]">/ CONSTRUCTORS</span>
+                                    </div>
                                 </div>
-                                <div className="flex items-baseline gap-2 mt-0.5">
-                                    <span className="text-sm font-bold text-[#E0E0E0] uppercase tracking-wide">McLAREN F1 TEAM</span>
-                                    <span className="text-[10px] text-[#9CA3AF]">/ CONSTRUCTORS</span>
+                                <div className="opacity-10 group-hover:opacity-25 transition-opacity">
+                                    <Trophy size={48} className="text-[#FFD700]" strokeWidth={1} />
                                 </div>
                             </div>
-                            <div className="opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Trophy size={64} className="text-[#FFD700]" strokeWidth={1} />
+
+                            <div className="pt-3 border-t border-[#FFD700]/10 flex flex-col h-full bg-[#00D2BE]/5 relative z-10 p-2 rounded-sm">
+                                <span className="text-[9px] text-[#00D2BE] font-mono font-bold tracking-[0.1em] uppercase mb-1">Current 2025 Standings Leader</span>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-sm font-black text-white italic">LANDO NORRIS</span>
+                                        <span className="text-[10px] text-[#9CA3AF]">/ 408 PTS</span>
+                                    </div>
+                                    <div className="px-2 py-0.5 bg-[#FF8000]/20 border border-[#FF8000]/40 rounded-full">
+                                        <span className="text-[8px] text-[#FF8000] font-bold">+12 GAP</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -232,6 +247,9 @@ export default function Landing() {
 const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: any }) => {
     const isOffSeason = raceStatus.status === 'off_season';
     const nextSeason = raceStatus.nextSeason;
+
+    const circuitId = isOffSeason ? 'albert_park' : 'abu_dhabi';
+    const { points, loading } = useTrack(circuitId);
 
     const eventName = isOffSeason ? nextSeason?.first_race : (raceStatus.meetingName || "Abu Dhabi Grand Prix");
     const circuitName = isOffSeason ? nextSeason?.circuit : (raceStatus.circuit || "Yas Marina Circuit");
@@ -284,55 +302,64 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                     <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub={isOffSeason ? "PLANNING" : "LIVE STREAM"} />
                 </div>
 
-                {/* Track Map Visualization (Yas Marina Circuit) */}
-                <div className="relative w-full h-48 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity duration-500">
-                    {/* Grid Behind Map */}
-                    <div
-                        className="absolute inset-0 z-0"
-                        style={{
-                            backgroundImage: `radial-gradient(circle, #333 1px, transparent 1px)`,
-                            backgroundSize: '20px 20px',
-                            opacity: 0.3
-                        }}
-                    />
+                {/* Dynamic Track Map Visualization */}
+                <div className="relative w-full h-full flex items-center justify-center p-4">
+                    {loading ? (
+                        <div className="animate-pulse text-[#00D2BE] font-mono text-[10px]">LOADING_GEOMETRY...</div>
+                    ) : points.length > 0 ? (
+                        <svg
+                            viewBox="0 0 1.1 1.1"
+                            className="w-full h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)] z-10"
+                            preserveAspectRatio="xMidYMid meet"
+                        >
+                            {/* Main track outline */}
+                            <path
+                                d={`M ${points[0].x} ${points[0].y} ${points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')} Z`}
+                                fill="none"
+                                stroke="#00D2BE"
+                                strokeWidth="0.015"
+                                strokeLinejoin="round"
+                                strokeLinecap="round"
+                                className="transition-all duration-1000"
+                            />
 
-                    {/* Albert Park Realistic SVG Path */}
-                    <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)] z-10 transform translate-y-2 scale-95">
-                        {/* Main track outline - Albert Park */}
-                        <path
-                            d="M 120 100 L 100 95 C 80 85, 75 80, 75 70 C 80 60, 85 55, 90 50 C 95 45, 100 40, 105 30 C 100 20, 95 15, 85 10 C 70 5, 50 10, 40 15 C 30 20, 25 30, 25 40 L 40 45 L 60 48 L 80 52 L 100 55 L 120 60 L 135 68 L 150 78 L 170 88 L 185 95 L 195 102 L 180 110 L 160 115 L 140 112 L 120 100 Z"
-                            fill="none"
-                            stroke="#00D2BE"
-                            strokeWidth="2.5"
-                            strokeLinejoin="round"
-                            strokeLinecap="round"
-                        />
-                        {/* Start/Finish Line */}
-                        <line x1="110" y1="95" x2="110" y2="105" stroke="white" strokeWidth="2" />
-                        {/* Speed trap indicator */}
-                        <circle cx="160" cy="83" r="1.5" fill="#FFD700" opacity="0.8" />
-                    </svg>
+                            {/* Inner glow / detail path */}
+                            <path
+                                d={`M ${points[0].x} ${points[0].y} ${points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')} Z`}
+                                fill="none"
+                                stroke="white"
+                                strokeWidth="0.002"
+                                opacity="0.3"
+                            />
 
-                    <div className="absolute bottom-2 right-2 text-[10px] font-mono text-[#00D2BE] opacity-50">
-                        SECTOR 1 | SECTOR 2 | SECTOR 3
-                    </div>
+                            {/* Start/Finish Line Indicator */}
+                            <circle cx={points[0].x} cy={points[0].y} r="0.01" fill="white" />
+                            <text x={points[0].x + 0.02} y={points[0].y} fill="white" fontSize="0.03" className="font-mono">S/F</text>
+                        </svg>
+                    ) : (
+                        <div className="text-red-500/50 font-mono text-[10px]">GEOMETRY_ERROR</div>
+                    )}
                 </div>
 
-                {/* 2026 Regulation Highlight */}
-                {isOffSeason && (
-                    <div className="px-6 md:px-8 pb-8">
-                        <div className="p-3 bg-[#00D2BE]/5 border border-[#00D2BE]/10 rounded-sm">
-                            <div className="flex items-center gap-2 mb-2">
-                                <ShieldAlert size={14} className="text-[#00D2BE]" />
-                                <span className="text-[10px] font-mono text-[#00D2BE] uppercase tracking-[0.2em] font-bold">2026 REGULATION OVERHAUL</span>
-                            </div>
-                            <p className="text-[11px] text-[#9CA3AF] leading-relaxed font-mono">
-                                NEW POWER UNITS: 50% ELECTRICAL SUSTAINABILITY. ACTIVE AERODYNAMICS. COMPLETELY NEW CHASSIS DESIGN.
-                            </p>
-                        </div>
-                    </div>
-                )}
+                <div className="absolute bottom-2 right-2 text-[10px] font-mono text-[#00D2BE] opacity-50">
+                    SECTOR 1 | SECTOR 2 | SECTOR 3
+                </div>
             </div>
+
+            {/* 2026 Regulation Highlight */}
+            {isOffSeason && (
+                <div className="px-6 md:px-8 pb-8">
+                    <div className="p-3 bg-[#00D2BE]/5 border border-[#00D2BE]/10 rounded-sm">
+                        <div className="flex items-center gap-2 mb-2">
+                            <ShieldAlert size={14} className="text-[#00D2BE]" />
+                            <span className="text-[10px] font-mono text-[#00D2BE] uppercase tracking-[0.2em] font-bold">2026 REGULATION OVERHAUL</span>
+                        </div>
+                        <p className="text-[11px] text-[#9CA3AF] leading-relaxed font-mono">
+                            NEW POWER UNITS: 50% ELECTRICAL SUSTAINABILITY. ACTIVE AERODYNAMICS. COMPLETELY NEW CHASSIS DESIGN.
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
