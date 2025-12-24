@@ -176,37 +176,29 @@ export default function Landing() {
                         <RaceCard currentTime={currentTime} raceStatus={raceStatus} />
 
                         {/* 2024 Champions & 2025 Leaders Banner */}
-                        <div className="p-4 rounded-sm border border-[#FFD700]/20 bg-[#FFD700]/5 flex flex-col gap-3 overflow-hidden relative group">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-[#FFD700] opacity-50" />
+                        <div className="p-4 rounded-sm border border-[#FFD700]/20 bg-[#FFD700]/5 flex items-center justify-between overflow-hidden relative group transition-all duration-500 hover:border-[#FFD700]/40">
+                            <div className="absolute top-0 left-0 w-1 h-full bg-[#FFD700] opacity-50 shadow-[0_0_10px_rgba(255,215,0,0.3)]" />
 
-                            <div className="flex justify-between items-start relative z-10">
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] text-[#FFD700] font-mono font-bold tracking-[0.2em] uppercase mb-1">2024 WORLD CHAMPIONS</span>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-lg font-black text-[#E0E0E0] italic">MAX VERSTAPPEN</span>
-                                        <span className="text-xs text-[#9CA3AF]">/ RED BULL</span>
-                                    </div>
-                                    <div className="flex items-baseline gap-2 mt-0.5">
-                                        <span className="text-sm font-bold text-[#E0E0E0] uppercase tracking-wide">McLAREN F1 TEAM</span>
-                                        <span className="text-[10px] text-[#9CA3AF]">/ CONSTRUCTORS</span>
-                                    </div>
+                            <div className="flex flex-col relative z-10">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Trophy size={14} className="text-[#FFD700] animate-pulse" />
+                                    <span className="text-[10px] text-[#FFD700] font-mono font-bold tracking-[0.2em] uppercase">2025 WORLD CHAMPIONS</span>
                                 </div>
-                                <div className="opacity-10 group-hover:opacity-25 transition-opacity">
-                                    <Trophy size={48} className="text-[#FFD700]" strokeWidth={1} />
+
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-xl font-black text-white italic tracking-tight uppercase">LANDO NORRIS</span>
+                                        <span className="text-[10px] text-[#9CA3AF] font-mono tracking-widest uppercase">/ McLAREN</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-sm font-bold text-[#E0E0E0] uppercase tracking-[0.1em]">McLAREN F1 TEAM</span>
+                                        <span className="text-[10px] text-[#9CA3AF] font-mono tracking-widest uppercase">/ CONSTRUCTORS</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="pt-3 border-t border-[#FFD700]/10 flex flex-col h-full bg-[#00D2BE]/5 relative z-10 p-2 rounded-sm">
-                                <span className="text-[9px] text-[#00D2BE] font-mono font-bold tracking-[0.1em] uppercase mb-1">Current 2025 Standings Leader</span>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-sm font-black text-white italic">LANDO NORRIS</span>
-                                        <span className="text-[10px] text-[#9CA3AF]">/ 408 PTS</span>
-                                    </div>
-                                    <div className="px-2 py-0.5 bg-[#FF8000]/20 border border-[#FF8000]/40 rounded-full">
-                                        <span className="text-[8px] text-[#FF8000] font-bold">+12 GAP</span>
-                                    </div>
-                                </div>
+                            <div className="opacity-10 group-hover:opacity-30 transition-all duration-700 transform group-hover:scale-110 -rotate-12 group-hover:rotate-0">
+                                <Trophy size={72} className="text-[#FFD700]" strokeWidth={1} />
                             </div>
                         </div>
                     </div>
