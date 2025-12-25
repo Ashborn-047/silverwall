@@ -6,7 +6,6 @@ from nacl.signing import VerifyKey
 from nacl.exceptions import BadSignatureError
 from datetime import datetime, timezone
 from database import supabase, get_next_race, get_driver_standings, get_constructor_standings
-from routes.track import CIRCUITS
 
 router = APIRouter(tags=["discord"])
 
