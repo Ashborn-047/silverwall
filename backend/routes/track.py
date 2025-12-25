@@ -159,7 +159,8 @@ async def get_current_track():
     try:
         next_race = await get_next_race()
         if next_race:
-            circuit_key = next_race.get("circuit")
+            circuit_name = next_race.get("circuit")
+            circuit_key = circuit_name.lower().replace(" ", "_")
             track_data = await get_track_geometry(circuit_key)
             if track_data:
                 return {
@@ -177,7 +178,9 @@ async def get_track(circuit: str, use_openf1: bool = False, session_key: str = "
     """Return track geometry for a specific circuit"""
     # 1. Prefer database
     try:
-        track_data = await get_track_geometry(circuit)
+        # Normalize the circuit key
+        circuit_key = circuit.lower().replace(" ", "_").replace("-", "_")
+        track_data = await get_track_geometry(circuit_key)
         if track_data:
             if use_openf1:
                 points = await fetch_track_from_openf1(session_key)

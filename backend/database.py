@@ -95,13 +95,17 @@ async def get_season_races(season_year: int = None):
 
 async def get_track_geometry(circuit_key: str):
     """Fetch track geometry from database."""
-    client = supabase()
-    result = client.table("tracks") \
-        .select("*") \
-        .eq("circuit_key", circuit_key) \
-        .single() \
-        .execute()
-    return result.data
+    try:
+        client = supabase()
+        result = client.table("tracks") \
+            .select("*") \
+            .eq("circuit_key", circuit_key) \
+            .single() \
+            .execute()
+        return result.data
+    except Exception as e:
+        print(f"[WARN] Track geometry fetch failed for {circuit_key}: {e}")
+        return None
 
 
 async def get_next_race():

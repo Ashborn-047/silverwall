@@ -70,6 +70,19 @@ CREATE TABLE IF NOT EXISTS races (
 );
 
 -- ============================================================
+-- TRACKS TABLE (Circuit Geometry)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS tracks (
+    circuit_key TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    location TEXT,
+    country TEXT,
+    points JSONB NOT NULL,
+    drs_zones JSONB DEFAULT '[]',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================================
 -- RACE RESULTS TABLE (P1-P20 for each race)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS race_results (
@@ -105,6 +118,7 @@ ALTER TABLE driver_standings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE constructor_standings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE races ENABLE ROW LEVEL SECURITY;
 ALTER TABLE race_results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tracks ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read access (anon key can read)
 CREATE POLICY "Allow public read" ON seasons FOR SELECT USING (true);
@@ -112,6 +126,7 @@ CREATE POLICY "Allow public read" ON driver_standings FOR SELECT USING (true);
 CREATE POLICY "Allow public read" ON constructor_standings FOR SELECT USING (true);
 CREATE POLICY "Allow public read" ON races FOR SELECT USING (true);
 CREATE POLICY "Allow public read" ON race_results FOR SELECT USING (true);
+CREATE POLICY "Allow public read" ON tracks FOR SELECT USING (true);
 
 -- Only service role can insert/update/delete
 CREATE POLICY "Service role full access" ON seasons FOR ALL USING (auth.role() = 'service_role');
@@ -119,3 +134,4 @@ CREATE POLICY "Service role full access" ON driver_standings FOR ALL USING (auth
 CREATE POLICY "Service role full access" ON constructor_standings FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Service role full access" ON races FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Service role full access" ON race_results FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role full access" ON tracks FOR ALL USING (auth.role() = 'service_role');
