@@ -107,6 +107,21 @@ async def get_next_race():
         .execute()
     
     return result.data[0] if result.data else None
+
+
+async def get_last_race():
+    """Fetch the most recently completed race from the database."""
+    client = supabase()
+    
+    # Query for the latest race that is completed
+    result = client.table("races") \
+        .select("*, race_results(*)") \
+        .eq("status", "completed") \
+        .order("race_date", desc=True) \
+        .limit(1) \
+        .execute()
+    
+    return result.data[0] if result.data else None
 async def update_standings_from_results(year: int):
     """Recalculate and update driver and constructor standings for a season."""
     client = supabase()

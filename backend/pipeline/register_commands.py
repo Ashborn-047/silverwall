@@ -21,7 +21,23 @@ COMMANDS = [
     },
     {
         "name": "standings",
-        "description": "Get current F1 championship standings (Drivers & Constructors)"
+        "description": "Get F1 championship standings. Defaults to current year.",
+        "options": [
+            {
+                "name": "year",
+                "description": "The year to fetch standings for (e.g., 2024)",
+                "type": 4, # INTEGER
+                "required": False
+            }
+        ]
+    },
+    {
+        "name": "results",
+        "description": "Get results of the most recently completed race"
+    },
+    {
+        "name": "champions",
+        "description": "Get the world champions of the last completed season"
     },
     {
         "name": "next",

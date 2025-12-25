@@ -25,9 +25,19 @@ The backend dynamically queries Supabase to identify the "Active Season" based o
 Built-in pipeline (`ingest_results.py`) fetches official positions from OpenF1 and updates championship standings in Supabase.
 
 ### 💓 Sentinel Monitoring & Interaction
-- **GitHub Actions**: Health checks every 3 days.
-- **One-Way Alerting**: Real-time rich health reports to Discord via Webhooks.
-- **Two-Way Interaction**: Full Slash Command support (`/status`, `/standings`, `/next`) via Discord Interaction Bot.
+SilverWall features a dual-layer Discord integration:
+
+1. **Automation (Webhooks)**: 
+   - `silverwall_automation.yml` triggers every 3 days.
+   - Posts a rich, automated report to your designated channel.
+   - Includes health status, leaderboard, and next race countdown.
+
+2. **Interaction (Slash Commands)**:
+   - **`/status`**: Check system health & next race.
+   - **`/standings [year]`**: Get live or historical championship standings.
+   - **`/results`**: Get detailed podium results of the last completed race.
+   - **`/champions`**: See world champions of the latest completed season.
+   - **`/next`**: Get countdown and location for the upcoming Grand Prix.
 
 ---
 
