@@ -24,9 +24,10 @@ The backend dynamically queries Supabase to identify the "Active Season" based o
 ### 🏁 Automated Results Ingestion
 Built-in pipeline (`ingest_results.py`) fetches official positions from OpenF1 and updates championship standings in Supabase.
 
-### 💓 Sentinel Monitoring
-- **GitHub Actions**: Health checks every 72 hours
-- **Discord Integration**: Real-time health reports to your Discord channel
+### 💓 Sentinel Monitoring & Interaction
+- **GitHub Actions**: Health checks every 3 days.
+- **One-Way Alerting**: Real-time rich health reports to Discord via Webhooks.
+- **Two-Way Interaction**: Full Slash Command support (`/status`, `/standings`, `/next`) via Discord Interaction Bot.
 
 ---
 
@@ -47,6 +48,7 @@ silverwall/
 │   │   ├── standings.py            # /api/standings/* & /api/champions
 │   │   ├── track.py                # /api/track/{circuit} - SVG geometry
 │   │   ├── results.py              # /api/results & /api/season/races
+│   │   ├── discord.py              # /api/discord/interactions - Bot handlers
 │   │   ├── commentary.py           # /api/commentary - AI race commentary
 │   │   └── radio.py                # /api/radio - Team radio messages
 │   │
@@ -62,6 +64,7 @@ silverwall/
 │   │   ├── seed_tracks.py          # Seed track geometry to Supabase
 │   │   ├── ingest_results.py       # Fetch & store race results from OpenF1
 │   │   ├── health_keepalive.py     # Supabase keepalive + Discord alerts
+│   │   ├── register_commands.py    # Register Discord Slash Commands
 │   │   └── fake_monza_timeline.py  # Test timeline generator
 │   │
 │   ├── 📂 websocket/               # WebSocket Handlers
@@ -103,7 +106,8 @@ silverwall/
 │
 ├── 📂 .github/
 │   └── 📂 workflows/
-│       └── health.yml              # Automated Supabase health checks
+│       ├── deploy-pages.yml        # Frontend deployment
+│       └── silverwall_automation.yml # Automated health check task
 │
 ├── 📂 docs/                        # Documentation
 │   ├── API.md                      # API endpoint documentation
@@ -128,7 +132,9 @@ graph TD
     B -->|WebSocket| F
     G[GitHub Actions] -->|Trigger| H[Health Sentinel]
     H -->|Ping| S
-    H -->|Report| D[Discord Webhook]
+    H -->|Report| D1[Discord Webhook]
+    U[Discord User] <-->|Slash Commands| B
+    B <-->|Interactions| D2[Discord Bot]
 ```
 
 ---
@@ -198,6 +204,7 @@ npm run dev -- --port 3000
 | `/api/season/races/{year}` | GET | Race schedule with podium results |
 | `/api/track/{circuit}` | GET | Track SVG geometry |
 | `/api/results` | GET | Latest race results |
+| `/api/discord/interactions` | POST | Discord Bot slash command gateway |
 
 ---
 
@@ -208,6 +215,9 @@ npm run dev -- --port 3000
 | `SUPABASE_URL` | Your Supabase Project API URL |
 | `SUPABASE_SERVICE_KEY` | Service Role Key (write access) |
 | `DISCORD_WEBHOOK_URL` | Discord health channel webhook |
+| `DISCORD_APP_ID` | Discord Bot Application ID |
+| `DISCORD_PUBLIC_KEY` | Discord Bot Public Key |
+| `DISCORD_BOT_TOKEN` | Discord Bot Auth Token |
 
 ---
 
@@ -227,6 +237,7 @@ npm run dev -- --port 3000
 - [x] Dynamic Track Map Learning
 - [x] Automated Standings Ingestion
 - [x] Off-Season Countdown Display
+- [x] Two-Way Discord Interaction Engine
 - [ ] AI-Powered Race Strategy Predictions
 - [ ] Multi-Driver Multi-View Layout
 - [ ] Lap Time Comparison Charts
