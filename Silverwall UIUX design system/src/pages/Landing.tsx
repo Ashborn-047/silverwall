@@ -4,6 +4,7 @@ import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag
 import useRaceStatus from '../hooks/useRaceStatus';
 import useTrack from '../hooks/useTrack';
 import useChampions from '../hooks/useChampions';
+import ResultsModal from '../components/ResultsModal';
 
 // ============================================================================
 // 🏎️ TELEMETRY LIVE VIEWER
@@ -13,6 +14,7 @@ import useChampions from '../hooks/useChampions';
 export default function Landing() {
     const [isHovered, setIsHovered] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [showStandings, setShowStandings] = useState(false);
     const raceStatus = useRaceStatus();
     const champions = useChampions(); // Dynamic from Supabase
 
@@ -213,6 +215,20 @@ export default function Landing() {
                                 <Trophy size={72} className="text-[#FFD700]" strokeWidth={1} />
                             </div>
                         </div>
+
+                        {/* View Season Results Button */}
+                        <button
+                            onClick={() => setShowStandings(true)}
+                            className="w-full p-3 flex items-center justify-between border border-[#00D2BE]/20 rounded-sm bg-[#00D2BE]/5 hover:bg-[#00D2BE]/10 hover:border-[#00D2BE]/40 transition-all group"
+                        >
+                            <div className="flex items-center gap-2">
+                                <Trophy size={14} className="text-[#00D2BE]" />
+                                <span className="text-[11px] text-[#E0E0E0] font-mono tracking-widest uppercase">
+                                    VIEW {champions.year} SEASON RESULTS
+                                </span>
+                            </div>
+                            <ChevronRight size={16} className="text-[#00D2BE] group-hover:translate-x-1 transition-transform" />
+                        </button>
                     </div>
 
                 </div>
@@ -236,11 +252,15 @@ export default function Landing() {
                     </div>
                     <p className="text-center md:text-right opacity-60">
                         Data provided by OpenF1 — SilverWall is an Independent Project.<br />
-                        Not affiliated with Formula 1® or Liberty Media.
                     </p>
                 </div>
             </footer>
 
+            {/* Results Modal */}
+            <ResultsModal
+                isOpen={showStandings}
+                onClose={() => setShowStandings(false)}
+            />
         </div>
     );
 }

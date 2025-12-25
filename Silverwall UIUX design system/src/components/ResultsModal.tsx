@@ -129,8 +129,15 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
 
     if (!isOpen) return null;
 
+    // Dynamic tab label for Today's Race
+    const getTodayTabLabel = () => {
+        if (countdown.isLive) return 'Live Race';
+        if (todayResult?.podium) return 'Last Race';
+        return 'Next Race';
+    };
+
     const tabs = [
-        { id: 'today' as TabType, label: "Today's Race", icon: <Flag size={14} /> },
+        { id: 'today' as TabType, label: getTodayTabLabel(), icon: <Flag size={14} /> },
         { id: 'season' as TabType, label: 'Season Races', icon: <Trophy size={14} /> },
         { id: 'drivers' as TabType, label: 'Drivers', icon: <Crown size={14} /> },
         { id: 'constructors' as TabType, label: 'Constructors', icon: <Users size={14} /> },
@@ -161,7 +168,7 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                     <div className="flex items-center gap-3">
                         <Trophy className="text-[#00D2BE]" size={20} />
                         <h2 className="text-sm sm:text-lg font-bold tracking-wider uppercase text-white">
-                            2025 Season Results
+                            This Season Results
                         </h2>
                     </div>
                     <button
@@ -345,65 +352,77 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
 
                             {/* Season Races Tab */}
                             {activeTab === 'season' && (
-                                <div className="space-y-2">
-                                    {seasonRaces.map((race) => (
-                                        <div
-                                            key={race.round}
-                                            className={`border rounded-lg overflow-hidden ${race.status === 'live'
-                                                ? 'border-[#00D2BE] bg-[#00D2BE]/5'
-                                                : 'border-[#333] hover:border-[#555]'
-                                                }`}
-                                        >
-                                            <button
-                                                onClick={() => setExpandedRace(expandedRace === race.round ? null : race.round)}
-                                                className="w-full flex items-center justify-between px-4 py-3 text-left"
-                                            >
-                                                <div className="flex items-center gap-4">
-                                                    <span className="font-mono text-[#555] text-sm w-8">R{race.round}</span>
-                                                    <div>
-                                                        <div className="font-medium text-white text-sm">{race.name}</div>
-                                                        <div className="text-[10px] text-[#9CA3AF]">{race.circuit}</div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    {race.status === 'live' && (
-                                                        <span className="px-2 py-0.5 bg-[#FF4444]/20 text-[#FF4444] text-[10px] font-mono rounded uppercase flex items-center gap-1">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-[#FF4444] animate-pulse" />
-                                                            Live
-                                                        </span>
-                                                    )}
-                                                    {race.status === 'upcoming' && (
-                                                        <span className="px-2 py-0.5 bg-[#FFD700]/20 text-[#FFD700] text-[10px] font-mono rounded uppercase">
-                                                            Upcoming
-                                                        </span>
-                                                    )}
-                                                    {race.podium && (
-                                                        <div className="flex gap-2 text-xs font-mono">
-                                                            <span className="flex items-center gap-1" style={{ color: '#FFD700' }}>
-                                                                <Crown size={12} /> {race.podium[0].code}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {expandedRace === race.round ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                </div>
-                                            </button>
-                                            {expandedRace === race.round && race.podium && (
-                                                <div className="px-4 py-3 bg-[#0A0C10] border-t border-[#333]">
-                                                    <div className="grid grid-cols-3 gap-4">
-                                                        {race.podium.map((p, i) => (
-                                                            <div key={i} className="text-center">
-                                                                <div className={`text-lg ${i === 0 ? 'text-[#FFD700]' : i === 1 ? 'text-[#C0C0C0]' : 'text-[#CD7F32]'}`}>
-                                                                    P{p.pos}
-                                                                </div>
-                                                                <div className="font-bold text-white">{p.code}</div>
-                                                                <div className="text-[10px] text-[#9CA3AF] truncate">{p.name}</div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
+                                <div className="space-y-4">
+                                    {renderSeasonSelector()}
+
+                                    {selectedYear === 2026 && (
+                                        <div className="text-center py-8 mb-4 border border-[#00D2BE]/30 rounded-lg bg-[#00D2BE]/5">
+                                            <Trophy className="w-8 h-8 mx-auto mb-2 text-[#00D2BE]" />
+                                            <div className="text-lg font-bold text-white mb-1">2026 Season Schedule</div>
+                                            <div className="text-[#9CA3AF] text-sm">Season starts March 2026</div>
                                         </div>
-                                    ))}
+                                    )}
+
+                                    <div className="space-y-2">
+                                        {seasonRaces.map((race) => (
+                                            <div
+                                                key={race.round}
+                                                className={`border rounded-lg overflow-hidden ${race.status === 'live'
+                                                    ? 'border-[#00D2BE] bg-[#00D2BE]/5'
+                                                    : 'border-[#333] hover:border-[#555]'
+                                                    }`}
+                                            >
+                                                <button
+                                                    onClick={() => setExpandedRace(expandedRace === race.round ? null : race.round)}
+                                                    className="w-full flex items-center justify-between px-4 py-3 text-left"
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="font-mono text-[#555] text-sm w-8">R{race.round}</span>
+                                                        <div>
+                                                            <div className="font-medium text-white text-sm">{race.name}</div>
+                                                            <div className="text-[10px] text-[#9CA3AF]">{race.circuit}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        {race.status === 'live' && (
+                                                            <span className="px-2 py-0.5 bg-[#FF4444]/20 text-[#FF4444] text-[10px] font-mono rounded uppercase flex items-center gap-1">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-[#FF4444] animate-pulse" />
+                                                                Live
+                                                            </span>
+                                                        )}
+                                                        {race.status === 'upcoming' && (
+                                                            <span className="px-2 py-0.5 bg-[#FFD700]/20 text-[#FFD700] text-[10px] font-mono rounded uppercase">
+                                                                Upcoming
+                                                            </span>
+                                                        )}
+                                                        {race.podium && (
+                                                            <div className="flex gap-2 text-xs font-mono">
+                                                                <span className="flex items-center gap-1" style={{ color: '#FFD700' }}>
+                                                                    <Crown size={12} /> {race.podium[0].code}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {expandedRace === race.round ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                    </div>
+                                                </button>
+                                                {expandedRace === race.round && race.podium && (
+                                                    <div className="px-4 py-3 bg-[#0A0C10] border-t border-[#333]">
+                                                        <div className="grid grid-cols-3 gap-4">
+                                                            {race.podium.map((p, i) => (
+                                                                <div key={i} className="text-center">
+                                                                    <div className={`text-lg ${i === 0 ? 'text-[#FFD700]' : i === 1 ? 'text-[#C0C0C0]' : 'text-[#CD7F32]'}`}>
+                                                                        P{p.pos}
+                                                                    </div>
+                                                                    <div className="font-bold text-white">{p.code}</div>
+                                                                    <div className="text-[10px] text-[#9CA3AF] truncate">{p.name}</div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 
