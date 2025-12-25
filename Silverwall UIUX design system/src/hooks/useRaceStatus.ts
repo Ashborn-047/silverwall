@@ -21,10 +21,13 @@ interface RaceStatus {
     status: 'live' | 'waiting' | 'off_season' | 'ended' | 'loading' | 'error';
     sessionName?: string;
     meetingName?: string;
+    meeting?: string;
     circuit?: string;
     circuit_name?: string;
     location?: string;
     country?: string;
+    race_date?: string;
+    round?: number;
     nextSession?: string;
     countdown?: {
         days: number;
@@ -70,10 +73,14 @@ export function useRaceStatus(): RaceStatus {
                     setRaceStatus({
                         status: 'waiting',
                         nextSession: data.next_session?.toUpperCase() || 'NEXT SESSION',
-                        meetingName: data.meeting || 'Abu Dhabi Grand Prix',
-                        location: data.circuit_name || 'Melbourne',
-                        country: data.country || 'Australia',
+                        meetingName: data.meeting,
+                        meeting: data.meeting,
+                        circuit: data.circuit,
                         circuit_name: data.circuit_name,
+                        location: data.circuit_name,
+                        country: data.country,
+                        race_date: data.race_date,
+                        round: data.round,
                         countdown: {
                             days,
                             hours,

@@ -332,46 +332,56 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                 </div>
 
                 {/* Dynamic Track Map Visualization */}
-                <div className="relative w-full h-full flex items-center justify-center p-4">
-                    {loading ? (
-                        <div className="animate-pulse text-[#00D2BE] font-mono text-[10px]">LOADING_GEOMETRY...</div>
-                    ) : points.length > 0 ? (
-                        <svg
-                            viewBox="0 0 1.1 1.1"
-                            className="w-full h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)] z-10"
-                            preserveAspectRatio="xMidYMid meet"
-                        >
-                            {/* Main track outline */}
-                            <path
-                                d={`M ${points[0].x} ${points[0].y} ${points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')} Z`}
-                                fill="none"
-                                stroke="#00D2BE"
-                                strokeWidth="0.015"
-                                strokeLinejoin="round"
-                                strokeLinecap="round"
-                                className="transition-all duration-1000"
-                            />
+                <div className="relative w-full bg-[#050608]/50 rounded border border-[#333]/50 overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                    <div className="absolute inset-0 flex items-center justify-center p-4">
+                        {loading ? (
+                            <div className="animate-pulse text-[#00D2BE] font-mono text-[10px]">LOADING_GEOMETRY...</div>
+                        ) : points.length > 0 ? (
+                            <svg
+                                viewBox="0 0 1.1 1.1"
+                                className="max-w-full max-h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)] z-10"
+                                style={{ transform: 'rotate(-90deg)', width: 'auto', height: '90%' }}
+                                preserveAspectRatio="xMidYMid meet"
+                            >
+                                {/* Main track outline */}
+                                <path
+                                    d={`M ${points[0].x} ${points[0].y} ${points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')} Z`}
+                                    fill="none"
+                                    stroke="#00D2BE"
+                                    strokeWidth="0.015"
+                                    strokeLinejoin="round"
+                                    strokeLinecap="round"
+                                    className="transition-all duration-1000"
+                                />
 
-                            {/* Inner glow / detail path */}
-                            <path
-                                d={`M ${points[0].x} ${points[0].y} ${points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')} Z`}
-                                fill="none"
-                                stroke="white"
-                                strokeWidth="0.002"
-                                opacity="0.3"
-                            />
+                                {/* Inner glow / detail path */}
+                                <path
+                                    d={`M ${points[0].x} ${points[0].y} ${points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')} Z`}
+                                    fill="none"
+                                    stroke="white"
+                                    strokeWidth="0.002"
+                                    opacity="0.3"
+                                />
 
-                            {/* Start/Finish Line Indicator */}
-                            <circle cx={points[0].x} cy={points[0].y} r="0.01" fill="white" />
-                            <text x={points[0].x + 0.02} y={points[0].y} fill="white" fontSize="0.03" className="font-mono">S/F</text>
-                        </svg>
-                    ) : (
-                        <div className="text-red-500/50 font-mono text-[10px]">GEOMETRY_ERROR</div>
-                    )}
-                </div>
+                                {/* Start/Finish Line Indicator */}
+                                <circle cx={points[0].x} cy={points[0].y} r="0.01" fill="white" />
+                                <text x={points[0].x + 0.02} y={points[0].y} fill="white" fontSize="0.03" className="font-mono">S/F</text>
+                            </svg>
+                        ) : (
+                            <div className="text-red-500/50 font-mono text-[10px]">GEOMETRY_ERROR</div>
+                        )}
+                    </div>
 
-                <div className="absolute bottom-2 right-2 text-[10px] font-mono text-[#00D2BE] opacity-50">
-                    SECTOR 1 | SECTOR 2 | SECTOR 3
+                    {/* Track container corner accents */}
+                    <div className="absolute top-1 left-1 w-3 h-3 border-l border-t border-[#00D2BE]/30" />
+                    <div className="absolute top-1 right-1 w-3 h-3 border-r border-t border-[#00D2BE]/30" />
+                    <div className="absolute bottom-1 left-1 w-3 h-3 border-l border-b border-[#00D2BE]/30" />
+                    <div className="absolute bottom-1 right-1 w-3 h-3 border-r border-b border-[#00D2BE]/30" />
+
+                    {/* Sector labels */}
+                    <div className="absolute bottom-2 right-3 text-[10px] font-mono text-[#00D2BE]/50">
+                        SECTOR 1 | SECTOR 2 | SECTOR 3
+                    </div>
                 </div>
             </div>
 
