@@ -245,6 +245,7 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
 
     // Fallback to albert_park if circuit is missing (standard F1 opener)
     const circuitId = raceStatus.circuit || 'albert_park';
+    const nextSeason = raceStatus.nextSeason;
     const { points, loading } = useTrack(circuitId);
 
     const eventName = raceStatus.meeting || raceStatus.meetingName || (isOffSeason ? "Season Opener" : "TBD Event");
