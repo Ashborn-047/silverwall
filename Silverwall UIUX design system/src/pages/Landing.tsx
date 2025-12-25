@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag, Trophy } from 'lucide-react';
 import useRaceStatus from '../hooks/useRaceStatus';
 import useTrack from '../hooks/useTrack';
+import useChampions from '../hooks/useChampions';
 
 // ============================================================================
 // 🏎️ TELEMETRY LIVE VIEWER
@@ -13,6 +14,7 @@ export default function Landing() {
     const [isHovered, setIsHovered] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const raceStatus = useRaceStatus();
+    const champions = useChampions(); // Dynamic from Supabase
 
     // Simulating a pit-wall clock
     useEffect(() => {
@@ -175,7 +177,7 @@ export default function Landing() {
                     <div className="lg:col-span-5 w-full flex flex-col gap-6">
                         <RaceCard currentTime={currentTime} raceStatus={raceStatus} />
 
-                        {/* Champions & Leaders Banner (Dynamic Year) */}
+                        {/* Champions & Leaders Banner (100% Dynamic from Supabase) */}
                         <div className="p-4 rounded-sm border border-[#FFD700]/20 bg-[#FFD700]/5 flex items-center justify-between overflow-hidden relative group transition-all duration-500 hover:border-[#FFD700]/40">
                             <div className="absolute top-0 left-0 w-1 h-full bg-[#FFD700] opacity-50 shadow-[0_0_10px_rgba(255,215,0,0.3)]" />
 
@@ -183,19 +185,25 @@ export default function Landing() {
                                 <div className="flex items-center gap-2 mb-1">
                                     <Trophy size={14} className="text-[#FFD700] animate-pulse" />
                                     <span className="text-[10px] text-[#FFD700] font-mono font-bold tracking-[0.2em] uppercase">
-                                        {raceStatus.status === 'off_season' ? `${new Date().getFullYear()} WORLD CHAMPIONS` : 'CHAMPIONSHIP LEADERS'}
+                                        {raceStatus.status === 'off_season' ? `${champions.year} WORLD CHAMPIONS` : 'CHAMPIONSHIP LEADERS'}
                                     </span>
                                 </div>
 
                                 <div className="flex flex-col gap-1">
+                                    {/* Driver Champion */}
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-xl font-black text-white italic tracking-tight uppercase">
-                                            {raceStatus.status === 'off_season' ? 'LANDO NORRIS' : 'LIVE STANDINGS'}
+                                            {champions.driver?.name || 'Loading...'}
                                         </span>
-                                        <span className="text-[10px] text-[#9CA3AF] font-mono tracking-widest uppercase">/ McLAREN</span>
+                                        <span className="text-[10px] text-[#9CA3AF] font-mono tracking-widest uppercase">
+                                            / {champions.driver?.team || 'TBD'} · DRIVER
+                                        </span>
                                     </div>
+                                    {/* Constructor Champion */}
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-sm font-bold text-[#E0E0E0] uppercase tracking-[0.1em]">McLAREN F1 TEAM</span>
+                                        <span className="text-sm font-bold text-[#E0E0E0] uppercase tracking-[0.1em]">
+                                            {champions.constructor?.name || 'Loading...'} F1 TEAM
+                                        </span>
                                         <span className="text-[10px] text-[#9CA3AF] font-mono tracking-widest uppercase">/ CONSTRUCTORS</span>
                                     </div>
                                 </div>
@@ -249,9 +257,11 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
     const { points, loading } = useTrack(circuitId);
 
     const eventName = raceStatus.meeting || raceStatus.meetingName || (isOffSeason ? "Season Opener" : "TBD Event");
-    const circuitName = raceStatus.circuit_name || raceStatus.circuit || "Circuit de Catalunya";
+    // 100% Dynamic - no hardcoded circuit names
+    const circuitName = raceStatus.circuit_name || raceStatus.circuit?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) || "TBD Circuit";
     const location = raceStatus.location || raceStatus.country || "TBD";
     const country = raceStatus.country || "";
+
 
     // Parse date dynamically
     let dateStr = "TBD";

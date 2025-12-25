@@ -70,6 +70,7 @@ async def get_race_status():
             "status": "waiting",
             "meeting": next_race["name"],
             "circuit": next_race["circuit"],
+            "circuit_name": next_race.get("circuit_name") or next_race["circuit"].replace("_", " ").title(),
             "country": next_race.get("country"),
             "race_date": next_race["race_date"],
             "countdown_seconds": max(0, countdown),

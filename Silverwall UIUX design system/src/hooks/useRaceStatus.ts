@@ -22,6 +22,9 @@ interface RaceStatus {
     sessionName?: string;
     meetingName?: string;
     circuit?: string;
+    circuit_name?: string;
+    location?: string;
+    country?: string;
     nextSession?: string;
     countdown?: {
         days: number;
@@ -68,6 +71,9 @@ export function useRaceStatus(): RaceStatus {
                         status: 'waiting',
                         nextSession: data.next_session?.toUpperCase() || 'NEXT SESSION',
                         meetingName: data.meeting || 'Abu Dhabi Grand Prix',
+                        location: data.circuit_name || 'Melbourne',
+                        country: data.country || 'Australia',
+                        circuit_name: data.circuit_name,
                         countdown: {
                             days,
                             hours,

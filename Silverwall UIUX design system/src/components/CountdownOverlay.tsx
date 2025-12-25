@@ -23,8 +23,12 @@ interface CountdownOverlayProps {
         };
         meetingName?: string;
         nextSession?: string;
+        location?: string;
+        country?: string;
+        circuit_name?: string;
     }
 }
+
 
 const CountdownOverlay: React.FC<CountdownOverlayProps> = ({ raceStatus }) => {
     const isOffSeason = raceStatus.status === 'off_season';
@@ -49,7 +53,10 @@ const CountdownOverlay: React.FC<CountdownOverlayProps> = ({ raceStatus }) => {
 
     const title = isOffSeason ? `PREPARING FOR ${nextSeason?.year} SEASON` : `COUNTDOWN TO ${raceStatus.nextSession}`;
     const subtitle = isOffSeason ? nextSeason?.first_race : raceStatus.meetingName;
-    const location = isOffSeason ? `${nextSeason?.location}, ${nextSeason?.country}` : 'Yas Island, Abu Dhabi';
+    // 100% Dynamic location from API - no hardcoded fallbacks
+    const location = isOffSeason
+        ? `${nextSeason?.location}, ${nextSeason?.country}`
+        : `${raceStatus.circuit_name || raceStatus.location || 'Unknown Circuit'}, ${raceStatus.country || 'Unknown'}`;
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#050608]/90 backdrop-blur-xl">

@@ -168,3 +168,92 @@ async def get_race_by_round(round_num: int, year: Optional[int] = None):
         return {"error": f"Race round {round_num} not found for {year}"}
     
     return result.data
+
+
+@router.get("/champions")
+@router.get("/champions/{year}")
+async def get_champions(year: Optional[int] = None):
+    """
+    Get the World Champions (Driver & Constructor) for a given season.
+    FULLY AUTONOMOUS: Detects the most recent COMPLETED season from race data.
+    No hardcoded years - works for any season automatically.
+    """
+    client = supabase()
+    
+    if year is None:
+        # AUTONOMOUS: Find the most recent season with completed races
+        # A season is "completed" if all its races are marked as 'completed'
+        # Or if it has standings data with a P1 driver
+        
+        # First, try to find a season with standings data, ordered by year
+        standings_res = client.table("driver_standings") \
+            .select("season_year") \
+            .eq("position", 1) \
+            .order("season_year", desc=True) \
+            .limit(1) \
+            .execute()
+        
+        if standings_res.data:
+            year = standings_res.data[0]["season_year"]
+
+        else:
+            # Fallback: use recent season from races table
+            races_res = client.table("races") \
+                .select("season_year") \
+                .eq("status", "completed") \
+                .order("race_date", desc=True) \
+                .limit(1) \
+                .execute()
+            if races_res.data:
+                year = races_res.data[0]["season_year"]
+            else:
+                return {"error": "No completed seasons found", "year": None, "source": "supabase"}
+    
+    # Fetch Season Info        
+    season_res = client.table("seasons").select("*").eq("year", year).single().execute()
+    
+    if not season_res.data:
+        return {"error": f"Season {year} not found", "year": year}
+    
+    season = season_res.data if isinstance(season_res.data, dict) else season_res.data[0]
+    driver_champion = season.get("driver_champion")
+    constructor_champion = season.get("constructor_champion")
+    
+    # For the driver champion, fetch their team from standings
+    # If driver_champion is not set, use the P1 driver from standings as fallback
+    driver_team = None
+    driver_res = client.table("driver_standings") \
+        .select("driver_name, team, team_color") \
+        .eq("season_year", year) \
+        .eq("position", 1) \
+        .single() \
+        .execute()
+    
+    if driver_res.data:
+        driver_team = driver_res.data.get("team")
+        # Fallback: if no explicit champion, use P1 driver
+        if not driver_champion:
+            driver_champion = driver_res.data.get("driver_name")
+    
+    # Fallback for constructor: use P1 constructor if not set
+    if not constructor_champion:
+        cons_res = client.table("constructor_standings") \
+            .select("team") \
+            .eq("season_year", year) \
+            .eq("position", 1) \
+            .single() \
+            .execute()
+        if cons_res.data:
+            constructor_champion = cons_res.data.get("team")
+    
+    return {
+        "year": year,
+        "driver": {
+            "name": driver_champion,
+            "team": driver_team
+        } if driver_champion else None,
+        "constructor": {
+            "name": constructor_champion
+        } if constructor_champion else None,
+        "source": "supabase"
+    }
