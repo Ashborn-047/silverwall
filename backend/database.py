@@ -38,16 +38,26 @@ def supabase() -> Client:
 
 
 # Helper functions for common operations
-async def get_current_season_id() -> str:
-    """Get the current season (2025) ID from database."""
+async def get_current_season_year():
+    """Get the latest season year from database."""
     client = supabase()
-    result = client.table("seasons").select("id").eq("year", 2025).single().execute()
-    return result.data["id"] if result.data else None
+    result = client.table("seasons").select("year").order("year", desc=True).limit(1).single().execute()
+    return result.data['year'] if result.data else 2025
+
+async def get_current_season_id() -> str:
+    """Get the current season ID from database."""
+    year = await get_current_season_year()
+    client = supabase()
+    result = client.table("seasons").select("id").eq("year", year).single().execute()
+    return result.data['id'] if result.data else None
 
 
-async def get_driver_standings(season_year: int = 2025):
+async def get_driver_standings(season_year: int = None):
     """Fetch driver standings for a season."""
     client = supabase()
+    if not season_year:
+        season_year = await get_current_season_year()
+    print(f"Fetching driver standings for {season_year}")
     result = client.table("driver_standings") \
         .select("*") \
         .eq("season_year", season_year) \
@@ -56,9 +66,12 @@ async def get_driver_standings(season_year: int = 2025):
     return result.data
 
 
-async def get_constructor_standings(season_year: int = 2025):
+async def get_constructor_standings(season_year: int = None):
     """Fetch constructor standings for a season."""
     client = supabase()
+    if not season_year:
+        season_year = await get_current_season_year()
+    print(f"Fetching constructor standings for {season_year}")
     result = client.table("constructor_standings") \
         .select("*") \
         .eq("season_year", season_year) \
@@ -67,9 +80,11 @@ async def get_constructor_standings(season_year: int = 2025):
     return result.data
 
 
-async def get_season_races(season_year: int = 2025):
+async def get_season_races(season_year: int = None):
     """Fetch all races for a season with results."""
     client = supabase()
+    if not season_year:
+        season_year = await get_current_season_year()
     result = client.table("races") \
         .select("*, race_results(*)") \
         .eq("season_year", season_year) \
@@ -139,20 +154,7 @@ async def update_standings_from_results(year: int):
 
 async def get_current_season() -> int:
     """Dynamically determine the current season year."""
-    now = datetime.now(timezone.utc)
-    client = supabase()
-    
-    # 1. Try to find an active or upcoming season
-    # We look for the latest season that is NOT completed, or just the latest one
-    result = client.table("seasons").select("year").order("year", desc=True).limit(1).execute()
-    
-    if result.data:
-        # If we have a season in the DB, use its year.
-        # This allows the user to just seed 2026 and the app "becomes" 2026.
-        return result.data[0]["year"]
-    
-    # Fallback to current calendar year if DB is empty
-    return now.year
+    return await get_current_season_year()
 
 async def save_track_geometry(track_data: dict):
     """Save or update track geometry in the database."""

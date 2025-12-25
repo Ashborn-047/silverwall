@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from datetime import datetime, timezone
 from typing import List, Optional
 import httpx
+from database import get_last_race, get_current_season_year
 
 router = APIRouter()
 
@@ -89,102 +90,56 @@ async def fetch_race_results_from_openf1(session_key: str = "latest"):
 
 
 @router.get("/results")
-async def get_race_results(session_key: str = "latest"):
+async def get_race_results():
     """
-    Get race results for podium and standings display.
-    Returns top 3 for podium + full results.
+    Get the latest completed race results.
     """
-    # SIMULATION: Check if race has started yet (Abu Dhabi 2025)
-    # 18:30 IST = 13:00 UTC
-    RACE_START = datetime(2025, 12, 7, 13, 0, tzinfo=timezone.utc)
-    now = datetime.now(timezone.utc)
+    # 1. Fetch the latest completed race from DB
+    last_race = await get_last_race()
     
-    if now < RACE_START:
-        # Race hasn't started -> Show countdown
+    if not last_race:
         return {
             "source": "waiting",
             "status": "waiting",
-            "race": "Abu Dhabi Grand Prix 2025",
-            "message": "Race hasn't started yet. Results will appear after the race.",
+            "race": "Unknown",
+            "message": "No completed races found.",
             "podium": None,
             "standings": None,
         }
 
-    results_data = await fetch_race_results_from_openf1(session_key)
+    # 2. Extract results from the join (races left join race_results)
+    results_data = last_race.get("race_results", [])
+    race_name = last_race.get("name", "Unknown")
+    season_year = last_race.get("season_year")
     
     if not results_data:
-        # No results yet - race hasn't finished
         return {
             "source": "waiting",
             "status": "waiting",
-            "race": "Abu Dhabi Grand Prix 2025",
-            "message": "Race hasn't started yet. Results will appear after the race.",
+            "race": f"{race_name} {season_year}",
+            "message": "Results for the latest race are currently being ingested.",
             "podium": None,
             "standings": None,
         }
-    
-    results_data = await fetch_race_results_from_openf1(session_key)
-    
-    # Fallback to MOCK data if OpenF1 is empty/restricted (e.g. during live session without key)
-    if not results_data and now >= RACE_START:
-        print("⚠️ OpenF1 restricted or empty - using MOCK LIVE RESULTS")
-        results_data = [
-            {"driver_number": 4, "position": 1},  # NOR
-            {"driver_number": 1, "position": 2},  # VER
-            {"driver_number": 81, "position": 3}, # PIA
-            {"driver_number": 63, "position": 4}, # RUS
-            {"driver_number": 16, "position": 5}, # LEC
-            {"driver_number": 44, "position": 6}, # HAM
-            {"driver_number": 12, "position": 7}, # ANT (using 12 for Antonelli mock)
-            {"driver_number": 55, "position": 8}, # SAI
-            {"driver_number": 23, "position": 9}, # ALB
-            {"driver_number": 22, "position": 10}, # TSU
-        ]
-    
-    if not results_data:
-        # No results yet - race hasn't finished
-        return {
-            "source": "waiting",
-            "status": "waiting",
-            "race": "Abu Dhabi Grand Prix 2025",
-            "message": "Race hasn't started yet. Results will appear after the race.",
-            "podium": None,
-            "standings": None,
-        }
-    
-    # Format live results
-    results = []
-    for i, entry in enumerate(results_data[:20]):
-        driver_num = entry.get("driver_number")
-        # Handle Antonelli special case or standard mapping
-        if driver_num == 12:
-            driver_info = {"code": "ANT", "name": "Kimi Antonelli", "team": "Mercedes", "color": "#00D2BE"}
-        else:
-            driver_info = DRIVERS.get(driver_num, {"code": f"#{driver_num}", "name": "Unknown", "team": "Unknown", "color": "#555"})
-        
-        result = {
-            "position": entry.get("position", i + 1),
-            "code": driver_info["code"],
-            "name": driver_info["name"],
-            "team": driver_info["team"],
-            "color": driver_info["color"],
-        }
-        
-        if i == 0:
-            result["time"] = "Interval"  # Leader
-        else:
-            # Simulated gaps for mock data
-            gap_base = i * 2.5
-            result["gap"] = f"+{gap_base:.3f}s"
-        
-        results.append(result)
-    
+
+    # 3. Format results for the frontend
+    formatted_results = []
+    for entry in results_data:
+        formatted_results.append({
+            "position": entry.get("position"),
+            "code": entry.get("driver_code"),
+            "name": entry.get("driver_name"),
+            "team": entry.get("team"),
+            "color": entry.get("team_color"),
+            "points": entry.get("points")
+        })
+
     return {
-        "source": "live" if now < datetime(2025, 12, 7, 15, 0, tzinfo=timezone.utc) else "official",
-        "race": "Abu Dhabi Grand Prix 2025",
-        "podium": results[:3],
-        "standings": results,
-        "fastest_lap": {"driver": results[0]["code"] if results else "—", "time": "1:24.302"},
+        "source": "official",
+        "race": f"{race_name} {season_year}",
+        "podium": formatted_results[:3],
+        "standings": formatted_results,
+        "fastest_lap": {"driver": formatted_results[0]["code"] if formatted_results else "—", "time": "—"},
     }
 
 

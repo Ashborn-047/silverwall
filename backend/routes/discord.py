@@ -5,7 +5,7 @@ import json
 from nacl.signing import VerifyKey
 from nacl.exceptions import BadSignatureError
 from datetime import datetime, timezone
-from database import supabase, get_next_race, get_driver_standings, get_constructor_standings
+from database import supabase, get_next_race, get_driver_standings, get_constructor_standings, get_current_season_year
 
 router = APIRouter(tags=["discord"])
 
@@ -102,8 +102,7 @@ async def handle_standings_command(year: int = None):
         client = supabase()
         if not year:
             # Fallback to current year
-            res = client.table("seasons").select("year").order("year", desc=True).limit(1).execute()
-            year = res.data[0]['year'] if res.data else 2025
+            year = await get_current_season_year()
         
         drivers = await get_driver_standings(year)
         constructors = await get_constructor_standings(year)

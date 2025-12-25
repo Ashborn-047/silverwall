@@ -15,14 +15,12 @@ SilverWall is a fully **autonomous**, **database-driven** F1 telemetry dashboard
 ## ⚡ Autonomous Features
 
 ### 🧠 Year-Agnostic Intelligence
-The backend dynamically queries Supabase to identify the "Active Season" based on your data. As soon as you seed a new season, the entire app transitions automatically—no hardcoded years.
+The backend dynamically identifies the "Active Season" based on Supabase data. As soon as you seed a new season, the entire app transitions—no code changes required.
 
-### 🗺️ Dynamic Track Learning
-- **Zero-Blank Maps**: Fetches geometry from the `tracks` table
-- **Self-Healing**: Autonomously captures and saves new track maps during live sessions
-
-### 🏁 Automated Results Ingestion
-Built-in pipeline (`ingest_results.py`) fetches official positions from OpenF1 and updates championship standings in Supabase.
+### 🏁 Automated Data Lifecycle
+- **Dynamic Results**: The `/api/results` endpoint is 100% database-driven—no more hardcoded placeholders.
+- **Standings Sync**: Automated pipelines fetch official positions and update championship standings.
+- **Track Learning**: Autonomously captures and saves new circuit geometry during live sessions.
 
 ### 💓 Sentinel Monitoring & Interaction
 SilverWall features a dual-layer Discord integration:
@@ -62,13 +60,11 @@ silverwall/
 │   │   ├── commentary.py           # /api/commentary - AI race commentary
 │   │   └── radio.py                # /api/radio - Team radio messages
 │   │
-│   ├── 📂 migrations/              # Supabase SQL Migrations
+│   ├── 📂 migrations/              # Supabase SQL Migrations (Consolidated)
 │   │   ├── 001_create_tables.sql   # Core schema (seasons, races, standings)
-│   │   ├── 002_seed_2025_data.sql  # 2025 race schedule seed
-│   │   ├── 003_seed_2024_data.sql  # 2024 season data
-│   │   ├── 004_2025_final_results.sql # 2025 race results (partial)
-│   │   ├── 005_complete_2025_results.sql # Complete 2025 P1-P10 results
-│   │   └── 006_2024_season_complete.sql  # Complete 2024 season data
+│   │   ├── 002_historical_2024.sql # Complete 2024 season data
+│   │   ├── 003_historical_2025.sql # Complete 2025 season data
+│   │   └── 004_seed_2026_season.sql # 2026 season opener kickoff
 │   │
 │   ├── 📂 pipeline/                # Automation Scripts
 │   │   ├── seed_tracks.py          # Seed track geometry to Supabase
@@ -165,12 +161,13 @@ graph TD
 ## 🚀 Quick Start
 
 ### 1. Database Setup
-```bash
-# Create a Supabase project, then run migrations in order:
-psql -f backend/migrations/001_create_tables.sql
-psql -f backend/migrations/002_seed_2025_data.sql
-# ... continue for all migration files
-```
+SilverWall uses an idempotent **"Delete-then-Insert"** migration strategy. This means you can run these scripts multiple times to reset your data to a clean state without hitting unique constraint errors.
+
+Run the migrations in the following order in your Supabase SQL Editor:
+1.  **`001_create_tables.sql`**: Core schema (tables & constraints).
+2.  **`002_historical_2024.sql`**: Full 2024 archive (Standings & Podium Results).
+3.  **`003_historical_2025.sql`**: Full 2025 archive (Standings & Official Results).
+4.  **`004_seed_2026_season.sql`**: 2026 Season Kickoff (Upcoming events).
 
 ### 2. Environment Variables
 Create `backend/env/.env.supabase`:
