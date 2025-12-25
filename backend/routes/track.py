@@ -41,10 +41,11 @@ async def fetch_current_session():
 
 
 async def fetch_track_from_openf1(session_key: str = "latest") -> list:
-    """Fetch track coordinates from OpenF1 location data."""
+    """Fetch track coordinates from OpenF1 location data with artifact filtering."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             url = f"{OPENF1_API}/location"
+            # We use driver 1 to get a representative lap
             params = {"session_key": session_key, "driver_number": 1}
             
             response = await client.get(url, params=params)
@@ -54,25 +55,62 @@ async def fetch_track_from_openf1(session_key: str = "latest") -> list:
             if not data:
                 return []
             
-            # Fetch up to 2000 points
-            points = [{"x": item["x"], "y": item["y"]} for item in data[:2000] if "x" in item and "y" in item]
+            # 1. Basic Extraction & Zero-Point Filtering
+            # OpenF1 sometimes returns (0,0) for invalid GPS locks which causes horizontal lines
+            points = []
+            for item in data:
+                x, y = item.get("x"), item.get("y")
+                if x is not None and y is not None and (abs(x) > 0.1 or abs(y) > 0.1):
+                    points.append({"x": x, "y": y})
             
-            if not points:
+            if len(points) < 50:
                 return []
-            
+
+            # 2. Outlier Removal (Simple Z-Score approximation)
+            # Find the center and remove extreme jumps that usually represent data errors
             xs = [p["x"] for p in points]
             ys = [p["y"] for p in points]
+            avg_x = sum(xs) / len(xs)
+            avg_y = sum(ys) / len(ys)
+            
+            # Filter points too far from the average (simple way to kill major outliers)
+            # F1 tracks are usually within 5000-10000 units in OpenF1 coords
+            filtered_points = [
+                p for p in points 
+                if abs(p["x"] - avg_x) < 20000 and abs(p["y"] - avg_y) < 20000
+            ]
+
+            if len(filtered_points) < 50:
+                filtered_points = points # Fallback if filtering too aggressive
+
+            # 3. Normalization and Downsampling
+            xs = [p["x"] for p in filtered_points]
+            ys = [p["y"] for p in filtered_points]
             min_x, max_x = min(xs), max(xs)
             min_y, max_y = min(ys), max(ys)
-            max_range = max(max_x - min_x, max_y - min_y) or 1
             
-            step = max(1, len(points) // 200)
+            width = max_x - min_x
+            height = max_y - min_y
+            max_range = max(width, height) or 1
+            
+            # Downsample to ~250 points for efficient SVG rendering
+            target_points = 250
+            step = max(1, len(filtered_points) // target_points)
             normalized = []
-            for i in range(0, len(points), step):
-                p = points[i]
+            
+            for i in range(0, len(filtered_points), step):
+                p = filtered_points[i]
+                # Center the track in the 0-1 coordinate space
+                norm_x = (p["x"] - min_x) / max_range
+                norm_y = (p["y"] - min_y) / max_range
+                
+                # Offset to center it if it's wider than tall or vice versa
+                x_offset = (1.0 - (width / max_range)) / 2 if width < max_range else 0
+                y_offset = (1.0 - (height / max_range)) / 2 if height < max_range else 0
+
                 normalized.append({
-                    "x": round((p["x"] - min_x) / max_range, 4),
-                    "y": round((p["y"] - min_y) / max_range, 4)
+                    "x": round(norm_x + x_offset, 4),
+                    "y": round(norm_y + y_offset, 4)
                 })
             
             return normalized

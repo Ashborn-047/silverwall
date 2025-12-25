@@ -150,7 +150,7 @@ async def save_track_geometry(track_data: dict):
         "country": track_data.get("country"),
         "points": track_data["points"],
         "drs_zones": track_data.get("drs_zones", [])
-    }).execute()
+    }, on_conflict="circuit_key").execute()
     return result.data
 
 async def finalize_race_status(race_id: str):
