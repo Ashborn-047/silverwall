@@ -64,7 +64,8 @@ silverwall/
 │   │   ├── 001_create_tables.sql   # Core schema (seasons, races, standings)
 │   │   ├── 002_historical_2024.sql # Complete 2024 season data
 │   │   ├── 003_historical_2025.sql # Complete 2025 season data
-│   │   └── 004_seed_2026_season.sql # 2026 season opener kickoff
+│   │   ├── 004_seed_2026_season.sql # 2026 season opener kickoff
+│   │   └── 005_seed_tracks.sql     # Bootstrap track geometry maps
 │   │
 │   ├── 📂 pipeline/                # Automation Scripts
 │   │   ├── seed_tracks.py          # Seed track geometry to Supabase
@@ -168,6 +169,7 @@ Run the migrations in the following order in your Supabase SQL Editor:
 2.  **`002_historical_2024.sql`**: Full 2024 archive (Standings & Podium Results).
 3.  **`003_historical_2025.sql`**: Full 2025 archive (Standings & Official Results).
 4.  **`004_seed_2026_season.sql`**: 2026 Season Kickoff (Upcoming events).
+5.  **`005_seed_tracks.sql`**: Bootstrap Track Maps (Geometry data).
 
 ### 2. Environment Variables
 Create `backend/env/.env.supabase`:
