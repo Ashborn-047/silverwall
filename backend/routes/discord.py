@@ -174,8 +174,8 @@ async def handle_results_command():
 async def handle_champions_command():
     """Handle /champions command."""
     try:
-        from routes.standings import get_champions_logic
-        champs = await get_champions_logic()
+        from routes.standings import get_champions
+        champs = await get_champions()
         
         if not champs:
             return JSONResponse(content={"type": CHANNEL_MESSAGE_WITH_SOURCE, "data": {"content": "🏆 No champion data available."}})
