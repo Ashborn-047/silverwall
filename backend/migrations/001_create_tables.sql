@@ -120,18 +120,46 @@ ALTER TABLE races ENABLE ROW LEVEL SECURITY;
 ALTER TABLE race_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tracks ENABLE ROW LEVEL SECURITY;
 
--- Allow public read access (anon key can read)
-CREATE POLICY "Allow public read" ON seasons FOR SELECT USING (true);
-CREATE POLICY "Allow public read" ON driver_standings FOR SELECT USING (true);
-CREATE POLICY "Allow public read" ON constructor_standings FOR SELECT USING (true);
-CREATE POLICY "Allow public read" ON races FOR SELECT USING (true);
-CREATE POLICY "Allow public read" ON race_results FOR SELECT USING (true);
-CREATE POLICY "Allow public read" ON tracks FOR SELECT USING (true);
+-- Idempotent Security Policies
+DO $$ 
+BEGIN 
+    -- Public Read Access
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'seasons' AND policyname = 'Allow public read') THEN
+        CREATE POLICY "Allow public read" ON seasons FOR SELECT USING (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'driver_standings' AND policyname = 'Allow public read') THEN
+        CREATE POLICY "Allow public read" ON driver_standings FOR SELECT USING (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'constructor_standings' AND policyname = 'Allow public read') THEN
+        CREATE POLICY "Allow public read" ON constructor_standings FOR SELECT USING (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'races' AND policyname = 'Allow public read') THEN
+        CREATE POLICY "Allow public read" ON races FOR SELECT USING (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'race_results' AND policyname = 'Allow public read') THEN
+        CREATE POLICY "Allow public read" ON race_results FOR SELECT USING (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tracks' AND policyname = 'Allow public read') THEN
+        CREATE POLICY "Allow public read" ON tracks FOR SELECT USING (true);
+    END IF;
 
--- Only service role can insert/update/delete
-CREATE POLICY "Service role full access" ON seasons FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role full access" ON driver_standings FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role full access" ON constructor_standings FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role full access" ON races FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role full access" ON race_results FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role full access" ON tracks FOR ALL USING (auth.role() = 'service_role');
+    -- Service Role Full Access
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'seasons' AND policyname = 'Service role full access') THEN
+        CREATE POLICY "Service role full access" ON seasons FOR ALL USING (auth.role() = 'service_role');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'driver_standings' AND policyname = 'Service role full access') THEN
+        CREATE POLICY "Service role full access" ON driver_standings FOR ALL USING (auth.role() = 'service_role');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'constructor_standings' AND policyname = 'Service role full access') THEN
+        CREATE POLICY "Service role full access" ON constructor_standings FOR ALL USING (auth.role() = 'service_role');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'races' AND policyname = 'Service role full access') THEN
+        CREATE POLICY "Service role full access" ON races FOR ALL USING (auth.role() = 'service_role');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'race_results' AND policyname = 'Service role full access') THEN
+        CREATE POLICY "Service role full access" ON race_results FOR ALL USING (auth.role() = 'service_role');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tracks' AND policyname = 'Service role full access') THEN
+        CREATE POLICY "Service role full access" ON tracks FOR ALL USING (auth.role() = 'service_role');
+    END IF;
+END $$;
