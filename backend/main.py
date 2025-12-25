@@ -6,12 +6,9 @@ FastAPI application for F1 telemetry streaming
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from ws import router as ws_router
-import ws
-from pipeline.fake_monza_timeline import TIMELINE
 
-# Import Abu Dhabi routers
-from websocket.live import router as abu_dhabi_ws_router
+# Import routers
+from websocket.live import router as live_ws_router
 from routes.track import router as track_router
 from routes.status import router as status_router
 from routes.commentary import router as commentary_router
@@ -35,8 +32,7 @@ app.add_middleware(
 )
 
 # Include WebSocket routers
-app.include_router(ws_router)
-app.include_router(abu_dhabi_ws_router)
+app.include_router(live_ws_router)
 
 # Include REST API routers
 app.include_router(track_router, prefix="/api")
@@ -49,23 +45,14 @@ app.include_router(standings_router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():
-    """Load timeline data on startup"""
+    """System check on startup"""
     print("\n" + "="*60)
     print("SilverWall F1 Telemetry Backend")
     print("="*60)
-    print(f"Loading timeline...")
-    
-    # Load fake timeline into WebSocket module
-    ws.TIMELINE = TIMELINE
-    
-    print(f"v Timeline loaded: {len(TIMELINE)} frames")
-    if TIMELINE:
-        print(f"v Duration: {TIMELINE[-1].t:.1f}s")
-        print(f"v Cars: {len(TIMELINE[0].cars)}")
-    print(f"v Frame rate: 10 fps (0.1s intervals)")
+    print("System: Autonomous Mode Active")
+    print("Source: Supabase + OpenF1 Live")
     print("="*60)
     print("Backend ready at http://127.0.0.1:8000")
-    print("WebSocket endpoint: ws://127.0.0.1:8000/ws/monza")
     print("="*60 + "\n")
 
 
@@ -73,11 +60,9 @@ async def startup_event():
 def root():
     """API status endpoint"""
     return {
-        "status": "SilverWall backend running",
-        "frames": len(TIMELINE),
-        "duration": f"{TIMELINE[-1].t:.1f}s" if TIMELINE else "0s",
-        "cars": len(TIMELINE[0].cars) if TIMELINE else 0,
-        "websocket": "/ws/monza"
+        "status": "SilverWall autonomous backend running",
+        "engine": "v2 (Supabase-driven)",
+        "openf1_proxy": "active",
     }
 
 

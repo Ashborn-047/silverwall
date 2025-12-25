@@ -91,10 +91,13 @@ function getTyreLetter(compound: string | undefined): string {
 export default function TelemetryLive() {
   // WebSocket telemetry hook
   const { frame, status } = useTelemetry();
-  // Track hook - fetches from /track/current explicitly live
-  const { track, points: trackPoints } = useTrack('abu_dhabi', true);
   // Race status from backend API
   const raceStatus = useRaceStatus();
+  const isOffSeason = raceStatus.status === 'off_season';
+  const circuitId = isOffSeason ? 'albert_park' : 'abu_dhabi';
+
+  // Track hook - fetches from /track/current explicitly live
+  const { track, points: trackPoints } = useTrack(circuitId, true);
 
   const sessionTime = '--:--:--';
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);

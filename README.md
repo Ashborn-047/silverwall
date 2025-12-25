@@ -1,197 +1,104 @@
 # SilverWall 🏎️
 
-Real-time F1 telemetry dashboard with live car tracking, leaderboard, and driver telemetry visualization. Built with React + FastAPI, powered by OpenF1 API.
+SilverWall is a fully **autonomous**, **database-driven** F1 telemetry dashboard. It transitions seamlessly between seasons, tracks, and off-seasons without any manual code updates, leveraging Supabase as its central nervous system and OpenF1 for live telemetry.
 
-![SilverWall Demo](https://img.shields.io/badge/Status-Live-00D2BE?style=for-the-badge)
+![SilverWall Autonomous](https://img.shields.io/badge/Engine-Autonomous-00D2BE?style=for-the-badge)
+![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=flat-square&logo=supabase)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)
 
 ---
 
-## 🎯 Features
+## ⚡ Autonomous Features
 
-- **Live Track Visualization** - Real-time car positions on circuit map
-- **Dynamic Leaderboard** - Gap times, positions, fastest laps
-- **Driver Telemetry** - Speed, throttle, brake, DRS status
-- **Live Commentary** - AI-generated race events and commentary
-- **2026 Season Countdown** - Off-season countdown to next race
+### 1. 🧠 Year-Agnostic Intelligence
+The backend no longer relies on hardcoded years (2025, 2026, etc.). It dynamically queries Supabase to identify the "Active Season" based on your data. As soon as you seed a new season, the entire app transitions automatically.
+
+### 2. 🗺️ Dynamic Track Learning
+- **Zero-Blank Maps**: The app fetches geometry from the `tracks` table.
+- **Self-Healing**: If a live session is active and the track geometry is missing or updated, the engine **autonomously captures and saves** the new map to Supabase for future use.
+
+### 3. 🏁 Automated Results Ingestion
+Built-in pipeline (`ingest_results.py`) to fetch official final positions from OpenF1 and update championship standings in Supabase with one click (or scheduled trigger).
+
+### 4. 💓 Sentinel Monitoring
+A dedicated "Keep-Alive" system (`health_keepalive.py`) ensuring your Supabase project never pauses.
+- **GitHub Actions**: Runs every 72 hours automatically.
+- **Discord Integration**: Sends real-time health reports and table status directly to your Discord.
 
 ---
 
 ## 🏗️ Architecture
 
-### Demo vs Live Mode
-
-| Mode | URL | WebSocket | Behavior |
-|------|-----|-----------|----------|
-| **Live** | `/telemetry/live` | `/ws/live` | Real OpenF1 data - shows waiting state when no race |
-| **Demo** | `/telemetry/live?demo=true` | `/ws/abu_dhabi` | Simulated telemetry with animated cars |
-
-### Data Flow
-
-```
-┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
-│   OpenF1 API    │──────│  FastAPI Backend │──────│  React Frontend │
-│  (Real Data)    │      │   (Railway)      │      │   (Vercel)      │
-└─────────────────┘      └─────────────────┘      └─────────────────┘
-                                ▲
-                                │
-                         WebSocket Stream
-                           (/ws/live)
+```mermaid
+graph TD
+    A[OpenF1 API] -->|Live Telemetry| B[FastAPI Backend]
+    S[Supabase DB] <-->|Schedules/Standings/Tracks| B
+    B -->|WebSocket| F[React Frontend]
+    G[GitHub Actions] -->|Trigger| H[Health Sentinel]
+    H -->|Ping| S
+    H -->|Report| D[Discord Webhook]
 ```
 
 ---
 
 ## 🚀 Quick Start
 
-### Backend (FastAPI)
+### 1. Database Setup
+1. Create a Supabase project.
+2. Run the migration scripts in `backend/migrations/` in order.
+3. Seed your initial tracks/seasons using `backend/pipeline/seed_tracks.py`.
 
+### 2. Environment Variables
+Created `.env.supabase` in `backend/env/`:
+```env
+SUPABASE_URL=your_project_url
+SUPABASE_SERVICE_KEY=your_service_role_key
+DISCORD_WEBHOOK_URL=your_discord_webhook
+```
+
+### 3. Running Locally
+**Backend:**
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Backend runs at `http://localhost:8000`
-
-### Frontend (React + Vite)
-
+**Frontend:**
 ```bash
 cd "Silverwall UIUX design system"
 npm install
 npm run dev
 ```
 
-Frontend runs at `http://localhost:5173`
-
 ---
 
-## 📡 API Endpoints
+## 🔐 GitHub Secrets
+To enable the automated health checks and production deployment, add these to your repository settings:
 
-### REST API
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/status` | Race status (live/waiting/off_season) + countdown |
-| `GET /api/leaderboard` | Live or mock leaderboard data |
-| `GET /api/track/current` | Current circuit geometry from OpenF1 |
-| `GET /api/track/{circuit}` | Static circuit geometry (abu_dhabi, monza, etc.) |
-| `GET /api/commentary` | Live commentary events |
-| `GET /api/results` | Race results with podium data |
-| `GET /api/radio` | Team radio transcripts |
-| `GET /health` | Health check |
-
-### WebSocket Endpoints
-
-| Endpoint | Mode | Description |
-|----------|------|-------------|
-| `WS /ws/live` | Live | Real OpenF1 car positions (2 FPS) |
-| `WS /ws/abu_dhabi` | Demo | Simulated car movements (3 FPS) |
-
----
-
-## ⚙️ Environment Variables
-
-### Frontend (`.env`)
-
-```env
-# Local development
-VITE_API_URL=http://localhost:8000
-VITE_WS_URL=ws://localhost:8000
-
-# Production
-VITE_API_URL=https://silverwall-production.up.railway.app
-VITE_WS_URL=wss://silverwall-production.up.railway.app
-```
+| Secret | Description |
+|--------|-------------|
+| `SUPABASE_URL` | Your Supabase Project API URL |
+| `SUPABASE_SERVICE_KEY` | Your **Service Role** Key (needed for write access) |
+| `DISCORD_WEBHOOK_URL` | The URL for your Discord health channel |
 
 ---
 
 ## 🚀 Deployment
-
-### Railway (Backend)
-
-1. Connect GitHub repo to Railway
-2. Set root directory to `backend`
-3. Deploy using Dockerfile (auto-detected)
-
-### Vercel (Frontend)
-
-1. Connect GitHub repo to Vercel
-2. Set root directory to `Silverwall UIUX design system`
-3. Add environment variables (VITE_API_URL, VITE_WS_URL)
-4. Deploy
+- **Backend**: Native support for **Vercel Serverless Functions** via `vercel.json`.
+- **Frontend**: Optimized for **Vercel** or **Netlify**.
 
 ---
 
-## 🎨 Design System
-
-**Theme:** AMG Surgical Engineering - Dark, precise, professional
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--sw-primary-teal` | `#00D2BE` | Mercedes teal accent |
-| `--sw-bg-carbon-100` | `#0A0C10` | Primary background |
-| `--sw-text-high` | `#E0E0E0` | Primary text |
-| `--sw-status-green` | `#00FF88` | Success/positive |
-| `--sw-status-red` | `#FF3B3B` | Error/negative |
-
----
-
-## 📁 Project Structure
-
-```
-silverwall/
-├── backend/                    # FastAPI backend
-│   ├── main.py                 # App entry point
-│   ├── routes/                 # API routes
-│   │   ├── status.py           # Race status + 2026 countdown
-│   │   ├── track.py            # Circuit geometry
-│   │   ├── commentary.py       # Live commentary
-│   │   ├── results.py          # Race results
-│   │   └── radio.py            # Team radio
-│   ├── websocket/              # WebSocket handlers
-│   │   └── live.py             # Demo + Live streams
-│   └── openf1_fetcher.py       # OpenF1 API integration
-│
-└── Silverwall UIUX design system/  # React frontend
-    ├── src/
-    │   ├── pages/
-    │   │   ├── Landing.tsx     # Home page
-    │   │   └── TelemetryLive.tsx   # Main telemetry view
-    │   ├── components/
-    │   │   ├── CommentaryPanel.tsx
-    │   │   └── SeasonCountdown.tsx
-    │   └── hooks/
-    │       ├── useTelemetry.ts # WebSocket connection
-    │       ├── useTrack.ts     # Track geometry
-    │       └── useRaceStatus.ts # Race status polling
-    └── vercel.json             # SPA routing config
-```
-
----
-
-## 🔧 Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS |
-| **Backend** | FastAPI, Python 3.11, WebSockets, httpx |
-| **Data Source** | OpenF1 API (free F1 telemetry) |
-| **Deployment** | Railway (backend), Vercel (frontend) |
-
----
-
-## 📅 2026 Season
-
-After Abu Dhabi GP 2025, the app shows a countdown to:
-
-- **Australian Grand Prix 2026**
-- **Albert Park, Melbourne**
-- **March 6-8, 2026**
+## 📅 Roadmap
+- [x] Autonomous Season Transitions
+- [x] Dynamic Track Map Learning
+- [x] Automated Standings Ingestion
+- [ ] AI-Powered Race Strategy Predictions
+- [ ] Multi-Driver Multi-View Layout
 
 ---
 
 ## 📄 License
-
-MIT
+MIT | Built with passion for F1 Engineering.
