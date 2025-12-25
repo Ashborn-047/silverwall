@@ -15,6 +15,7 @@ from routes.commentary import router as commentary_router
 from routes.radio import router as radio_router
 from routes.results import router as results_router
 from routes.standings import router as standings_router
+from routes.discord import router as discord_router
 
 app = FastAPI(
     title="SilverWall F1 Telemetry",
@@ -41,6 +42,7 @@ app.include_router(commentary_router, prefix="/api")
 app.include_router(radio_router, prefix="/api")
 app.include_router(results_router, prefix="/api")
 app.include_router(standings_router, prefix="/api")
+app.include_router(discord_router, prefix="/api")
 
 
 @app.on_event("startup")
