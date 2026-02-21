@@ -83,8 +83,19 @@ export default function Landing() {
 
                 <div className="flex items-center gap-3">
                     <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-sm border border-[#00D2BE]/20 bg-[#00D2BE]/5">
-                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-[10px] font-mono tracking-wider text-[#00D2BE] uppercase">System Operational</span>
+                        <span className={`w-2 h-2 rounded-full ${raceStatus.status === 'live' ? 'bg-green-500 animate-pulse' :
+                                raceStatus.status === 'waiting' ? 'bg-red-500' :
+                                    raceStatus.status === 'ended' ? 'bg-yellow-500' :
+                                        raceStatus.status === 'off_season' ? 'bg-gray-500' :
+                                            'bg-yellow-500 animate-pulse'
+                            }`} />
+                        <span className="text-[10px] font-mono tracking-wider text-[#00D2BE] uppercase">{
+                            raceStatus.status === 'live' ? 'RACE LIVE' :
+                                raceStatus.status === 'waiting' ? 'NEXT RACE PENDING' :
+                                    raceStatus.status === 'ended' ? 'RACE ENDED' :
+                                        raceStatus.status === 'off_season' ? 'OFF SEASON' :
+                                            'CONNECTING...'
+                        }</span>
                     </div>
                     <span className="text-[10px] text-[#9CA3AF] font-mono border border-[#333] px-2 py-1 rounded">
                         OPEN SOURCE | OpenF1
@@ -326,7 +337,7 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                 {/* Data Grid */}
                 <div className="grid grid-cols-2 gap-y-4 gap-x-8 mb-8 border-t border-b border-[#333] py-4">
                     <DataPoint icon={<Clock size={14} />} label="DATE" value={dateStr} sub={subDate} />
-                    <DataPoint icon={<Flag size={14} />} label="LAPS" value={isOffSeason ? String(nextSeason?.laps || 58) : "58"} sub={isOffSeason ? `${nextSeason?.circuit_length_km || 5.278} KM` : "5.281 KM"} />
+                    <DataPoint icon={<Flag size={14} />} label="LAPS" value={isOffSeason ? String(nextSeason?.laps || 'TBD') : 'TBD'} sub={isOffSeason ? `${nextSeason?.circuit_length_km || 'TBD'} KM` : 'TBD'} />
                     <DataPoint icon={<MapPin size={14} />} label="LOCATION" value={location} sub={country} />
                     <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub={isOffSeason ? "PLANNING" : "LIVE STREAM"} />
                 </div>
