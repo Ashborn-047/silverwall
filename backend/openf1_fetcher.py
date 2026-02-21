@@ -4,10 +4,14 @@ Fetches real-time car positions and telemetry from OpenF1 API
 """
 
 import httpx
+import asyncio
 from datetime import datetime, timezone
 from typing import Optional, List, Dict
 
 OPENF1_API = "https://api.openf1.org/v1"
+
+# Cache for static data
+_driver_cache = {}
 
 
 async def get_latest_session_key() -> Optional[int]:
@@ -59,6 +63,13 @@ async def fetch_car_positions(session_key: int = None) -> List[Dict]:
 
 async def fetch_driver_info(session_key: int = None) -> Dict[int, Dict]:
     """Fetch driver info (name, team) from OpenF1"""
+    global _driver_cache
+
+    # Check cache first if session key is provided
+    cache_key = f"drivers_{session_key}" if session_key else "drivers_latest"
+    if cache_key in _driver_cache:
+        return _driver_cache[cache_key]
+
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             params = {}
@@ -80,6 +91,10 @@ async def fetch_driver_info(session_key: int = None) -> Dict[int, Dict]:
                             "team": d.get("team_name", "Unknown"),
                             "color": d.get("team_colour", "#00D2BE"),
                         }
+
+                # Cache the result if we have drivers
+                if drivers:
+                    _driver_cache[cache_key] = drivers
                 return drivers
     except Exception as e:
         print(f"Error fetching driver info: {e}")
@@ -112,6 +127,58 @@ async def fetch_stints(session_key: int = None) -> Dict[int, Dict]:
     return {}
 
 
+async def fetch_intervals(session_key: int = None) -> List[Dict]:
+    """Fetch gap intervals between drivers for leaderboard"""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            params = {}
+            if session_key:
+                params["session_key"] = session_key
+            else:
+                params["session_key"] = "latest"
+
+            response = await client.get(f"{OPENF1_API}/intervals", params=params)
+            if response.status_code == 200:
+                data = response.json()
+                # Get latest interval for each driver
+                latest = {}
+                for entry in data:
+                    driver_num = entry.get("driver_number")
+                    if driver_num:
+                        if driver_num not in latest or entry.get("date", "") > latest[driver_num].get("date", ""):
+                            latest[driver_num] = entry
+                return list(latest.values())
+    except Exception as e:
+        print(f"Error fetching intervals: {e}")
+    return []
+
+
+async def fetch_position(session_key: int = None) -> List[Dict]:
+    """Fetch current race positions for leaderboard"""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            params = {}
+            if session_key:
+                params["session_key"] = session_key
+            else:
+                params["session_key"] = "latest"
+
+            response = await client.get(f"{OPENF1_API}/position", params=params)
+            if response.status_code == 200:
+                data = response.json()
+                # Get latest position for each driver
+                latest = {}
+                for entry in data:
+                    driver_num = entry.get("driver_number")
+                    if driver_num:
+                        if driver_num not in latest or entry.get("date", "") > latest[driver_num].get("date", ""):
+                            latest[driver_num] = entry
+                return sorted(latest.values(), key=lambda x: x.get("position", 999))
+    except Exception as e:
+        print(f"Error fetching positions: {e}")
+    return []
+
+
 async def fetch_live_telemetry(session_key: int = None) -> Dict:
     """
     Fetch live telemetry data combining positions, intervals, stints, and driver info.
@@ -122,19 +189,27 @@ async def fetch_live_telemetry(session_key: int = None) -> Dict:
     if not session_key:
         return {"status": "offline", "cars": [], "message": "No active session"}
     
-    # Fetch all data in parallel
-    # 1. Positions (Leaderboard order)
-    # 2. Intervals (Gaps)
-    # 3. Locations (Map coordinates)
-    # 4. Drivers (Static info)
-    # 5. Stints (Tyres)
-    
-    # We'll fetch them sequentially for now to keep logic simple, but ideally use asyncio.gather
-    race_positions = await fetch_position(session_key)
-    intervals = await fetch_intervals(session_key)
-    locations = await fetch_car_positions(session_key)
-    drivers = await fetch_driver_info(session_key)
-    stints = await fetch_stints(session_key)
+    # Fetch all data in parallel using asyncio.gather
+    try:
+        results = await asyncio.gather(
+            fetch_position(session_key),
+            fetch_intervals(session_key),
+            fetch_car_positions(session_key),
+            fetch_driver_info(session_key),
+            fetch_stints(session_key),
+            return_exceptions=True # Don't crash if one fails
+        )
+
+        # Unpack results, handling potential exceptions
+        race_positions = results[0] if isinstance(results[0], list) else []
+        intervals = results[1] if isinstance(results[1], list) else []
+        locations = results[2] if isinstance(results[2], list) else []
+        drivers = results[3] if isinstance(results[3], dict) else {}
+        stints = results[4] if isinstance(results[4], dict) else {}
+
+    except Exception as e:
+        print(f"Critical error in parallel fetch: {e}")
+        return {"status": "error", "cars": [], "message": str(e)}
     
     if not race_positions and not locations:
         return {"status": "waiting", "cars": [], "session_key": session_key}
@@ -197,55 +272,3 @@ async def fetch_live_telemetry(session_key: int = None) -> Dict:
         "cars": cars,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-
-
-async def fetch_intervals(session_key: int = None) -> List[Dict]:
-    """Fetch gap intervals between drivers for leaderboard"""
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            params = {}
-            if session_key:
-                params["session_key"] = session_key
-            else:
-                params["session_key"] = "latest"
-
-            response = await client.get(f"{OPENF1_API}/intervals", params=params)
-            if response.status_code == 200:
-                data = response.json()
-                # Get latest interval for each driver
-                latest = {}
-                for entry in data:
-                    driver_num = entry.get("driver_number")
-                    if driver_num:
-                        if driver_num not in latest or entry.get("date", "") > latest[driver_num].get("date", ""):
-                            latest[driver_num] = entry
-                return list(latest.values())
-    except Exception as e:
-        print(f"Error fetching intervals: {e}")
-    return []
-
-
-async def fetch_position(session_key: int = None) -> List[Dict]:
-    """Fetch current race positions for leaderboard"""
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            params = {}
-            if session_key:
-                params["session_key"] = session_key
-            else:
-                params["session_key"] = "latest"
-
-            response = await client.get(f"{OPENF1_API}/position", params=params)
-            if response.status_code == 200:
-                data = response.json()
-                # Get latest position for each driver
-                latest = {}
-                for entry in data:
-                    driver_num = entry.get("driver_number")
-                    if driver_num:
-                        if driver_num not in latest or entry.get("date", "") > latest[driver_num].get("date", ""):
-                            latest[driver_num] = entry
-                return sorted(latest.values(), key=lambda x: x.get("position", 999))
-    except Exception as e:
-        print(f"Error fetching positions: {e}")
-    return []

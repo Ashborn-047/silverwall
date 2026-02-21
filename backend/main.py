@@ -24,9 +24,21 @@ app = FastAPI(
 )
 
 # CORS for frontend
+# Allow production and local development origins
+origins = [
+    "https://silverwall.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+]
+
+# Allow additional origins via environment variable
+env_origins = os.getenv("ALLOWED_ORIGINS")
+if env_origins:
+    origins.extend(env_origins.split(","))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
