@@ -31,7 +31,7 @@ interface UseTrackResult {
     error: string | null;
 }
 
-export function useTrack(circuit: string = 'abu_dhabi', isLiveMode: boolean = false): UseTrackResult {
+export function useTrack(circuit: string = 'latest', isLiveMode: boolean = false): UseTrackResult {
     const [track, setTrack] = useState<TrackData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
