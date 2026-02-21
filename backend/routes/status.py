@@ -78,14 +78,50 @@ async def get_race_status():
         }
     
     # 3. No races found -> Off-season
+    # Query for the first race of the NEXT season so frontend can show countdown
     season_year = await get_current_season()
+    next_year = season_year + 1
+    
+    # Try to find the first race of the next season in the DB
+    client = supabase()
+    first_race_res = client.table("races") \
+        .select("*") \
+        .eq("season_year", next_year) \
+        .order("round") \
+        .limit(1) \
+        .execute()
+    
+    next_season_data = {
+        "year": next_year,
+        "message": "Stay tuned for the next season opener!"
+    }
+    
+    if first_race_res.data:
+        fr = first_race_res.data[0]
+        race_date_str = fr.get("race_date")
+        countdown = 0
+        if race_date_str:
+            try:
+                race_dt = datetime.fromisoformat(race_date_str.replace('Z', '+00:00'))
+                countdown = max(0, int((race_dt - now).total_seconds()))
+            except Exception:
+                pass
+        
+        next_season_data.update({
+            "first_race": fr.get("name", "TBD"),
+            "circuit": fr.get("circuit", "tbd"),
+            "circuit_name": fr.get("circuit_name") or fr.get("circuit", "").replace("_", " ").title(),
+            "location": fr.get("country", "TBD"),
+            "country": fr.get("country", "TBD"),
+            "race_date": race_date_str,
+            "countdown_seconds": countdown,
+            "round": fr.get("round", 1),
+        })
+    
     return {
         "status": "off_season",
         "message": f"{season_year} Season Finalized",
-        "next_season": {
-            "year": season_year + 1,
-            "message": "Stay tuned for the next season opener!"
-        }
+        "next_season": next_season_data
     }
 
 @router.get("/leaderboard")
