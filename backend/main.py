@@ -6,6 +6,9 @@ FastAPI application for F1 telemetry streaming
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 # Import routers
 from websocket.live import router as live_ws_router
@@ -22,6 +25,11 @@ app = FastAPI(
     description="Real-time F1 pit wall telemetry system",
     version="1.0.0"
 )
+
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS for frontend
 # Allow production and local development origins
@@ -71,6 +79,7 @@ async def startup_event():
 
 
 @app.get("/")
+@limiter.limit("60/minute")
 def root():
     """API status endpoint"""
     return {
@@ -81,6 +90,7 @@ def root():
 
 
 @app.get("/health")
+@limiter.limit("120/minute")
 def health():
     """Health check endpoint"""
     return {"status": "ok"}
