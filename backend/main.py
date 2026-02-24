@@ -7,6 +7,10 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Import logging and middleware
+from logger import logger
+from middleware.request_tracking import RequestTrackingMiddleware
+
 # Import routers
 from websocket.live import router as live_ws_router
 from routes.track import router as track_router
@@ -44,6 +48,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add request tracking middleware for observability
+app.add_middleware(RequestTrackingMiddleware)
+
 # Include WebSocket routers
 app.include_router(live_ws_router)
 
@@ -60,14 +67,15 @@ app.include_router(discord_router, prefix="/api")
 @app.on_event("startup")
 async def startup_event():
     """System check on startup"""
-    print("\n" + "="*60)
-    print("SilverWall F1 Telemetry Backend")
-    print("="*60)
-    print("System: Autonomous Mode Active")
-    print("Source: Supabase + OpenF1 Live")
-    print("="*60)
-    print("Backend ready at http://127.0.0.1:8000")
-    print("="*60 + "\n")
+    logger.info("=" * 60)
+    logger.info("SilverWall F1 Telemetry Backend Starting")
+    logger.info("=" * 60)
+    logger.info("System: Autonomous Mode Active")
+    logger.info("Source: Supabase + OpenF1 Live")
+    logger.info("Observability: Request tracking enabled")
+    logger.info("=" * 60)
+    logger.info("Backend ready at http://127.0.0.1:8000")
+    logger.info("=" * 60)
 
 
 @app.get("/")
@@ -82,5 +90,12 @@ def root():
 
 @app.get("/health")
 def health():
-    """Health check endpoint"""
-    return {"status": "ok"}
+    """
+    Health check endpoint with basic system info
+    Used by monitoring systems and load balancers
+    """
+    return {
+        "status": "ok",
+        "service": "silverwall-backend",
+        "version": "1.0.0"
+    }
