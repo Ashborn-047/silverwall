@@ -6,6 +6,7 @@ FastAPI application for F1 telemetry streaming
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 # Import routers
 from websocket.live import router as live_ws_router
@@ -16,6 +17,9 @@ from routes.radio import router as radio_router
 from routes.results import router as results_router
 from routes.standings import router as standings_router
 from routes.discord import router as discord_router
+
+# Import HTTP client cleanup
+from openf1_fetcher import close_http_client
 
 app = FastAPI(
     title="SilverWall F1 Telemetry",
@@ -44,6 +48,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add response compression for responses > 1KB
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 # Include WebSocket routers
 app.include_router(live_ws_router)
 
@@ -65,8 +72,21 @@ async def startup_event():
     print("="*60)
     print("System: Autonomous Mode Active")
     print("Source: Supabase + OpenF1 Live")
+    print("Features: Connection Pooling, Circuit Breaker, Compression")
     print("="*60)
     print("Backend ready at http://127.0.0.1:8000")
+    print("="*60 + "\n")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup resources on shutdown"""
+    print("\n" + "="*60)
+    print("SilverWall Backend Shutting Down")
+    print("="*60)
+    print("Closing HTTP client connections...")
+    await close_http_client()
+    print("Cleanup complete")
     print("="*60 + "\n")
 
 

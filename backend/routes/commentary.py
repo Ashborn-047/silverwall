@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import List, Dict, Optional
 from pydantic import BaseModel
 import random
+import uuid
 
 router = APIRouter()
 
@@ -88,14 +89,11 @@ _previous_positions: Dict[str, int] = {}
 _previous_lap_times: Dict[str, float] = {}
 _fastest_lap: float = 999.0
 _fastest_lap_driver: str = ""
-_event_counter = 0
 
 
 def generate_event_id() -> str:
-    """Generate unique event ID"""
-    global _event_counter
-    _event_counter += 1
-    return f"evt_{_event_counter}_{int(datetime.now().timestamp())}"
+    """Generate unique event ID using UUID4 (thread-safe)"""
+    return f"evt_{uuid.uuid4().hex[:8]}_{int(datetime.now().timestamp())}"
 
 
 def detect_events_from_frame(frame: dict) -> List[CommentaryEvent]:

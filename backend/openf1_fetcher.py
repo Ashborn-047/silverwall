@@ -8,14 +8,47 @@ import asyncio
 import time
 from datetime import datetime, timezone
 from typing import Optional, List, Dict
+from pybreaker import CircuitBreaker
 
 OPENF1_API = "https://api.openf1.org/v1"
+
+# Module-level HTTP client for connection pooling
+_http_client: Optional[httpx.AsyncClient] = None
+
+# Circuit breaker for OpenF1 API
+openf1_breaker = CircuitBreaker(
+    fail_max=5,  # Open circuit after 5 consecutive failures
+    timeout_duration=60,  # Wait 60 seconds before attempting to close circuit
+    exclude=[httpx.HTTPStatusError]  # Don't count HTTP errors as circuit failures
+)
 
 # Cache for static driver data with TTL
 # Format: { "drivers_{session_key}": (data, timestamp) }
 _driver_cache: Dict[str, tuple] = {}
 _CACHE_TTL_SECONDS = 300  # 5 minutes
 _CACHE_MAX_SIZE = 50
+
+
+async def get_http_client() -> httpx.AsyncClient:
+    """Get or create the shared HTTP client with connection pooling."""
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.AsyncClient(
+            timeout=10.0,
+            limits=httpx.Limits(
+                max_connections=50,  # Max concurrent connections
+                max_keepalive_connections=20  # Keep connections alive for reuse
+            )
+        )
+    return _http_client
+
+
+async def close_http_client():
+    """Close the shared HTTP client. Called on shutdown."""
+    global _http_client
+    if _http_client is not None:
+        await _http_client.aclose()
+        _http_client = None
 
 
 def _cache_get(key: str) -> Optional[Dict]:
@@ -41,15 +74,17 @@ def _cache_set(key: str, data: Dict) -> None:
 async def get_latest_session_key() -> Optional[int]:
     """Get the current/latest session key from OpenF1"""
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{OPENF1_API}/sessions", params={"session_key": "latest"})
-            if response.status_code == 200:
-                data = response.json()
-                if data:
-                    session = data[0]
-                    # Only return if session is live (no end time)
-                    if session.get("date_end") is None:
-                        return session.get("session_key")
+        client = await get_http_client()
+        response = await openf1_breaker.call(
+            client.get, f"{OPENF1_API}/sessions", params={"session_key": "latest"}
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if data:
+                session = data[0]
+                # Only return if session is live (no end time)
+                if session.get("date_end") is None:
+                    return session.get("session_key")
     except Exception as e:
         print(f"Error getting session key: {e}")
     return None
@@ -58,28 +93,30 @@ async def get_latest_session_key() -> Optional[int]:
 async def fetch_car_positions(session_key: int = None) -> List[Dict]:
     """Fetch current car positions from OpenF1"""
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            params = {}
-            if session_key:
-                params["session_key"] = session_key
-            else:
-                params["session_key"] = "latest"
-            
-            # Get location data (x, y coordinates)
-            response = await client.get(f"{OPENF1_API}/location", params=params)
-            if response.status_code == 200:
-                data = response.json()
-                if data:
-                    # Group by driver_number and get latest position for each
-                    latest_positions = {}
-                    for entry in data:
-                        driver_num = entry.get("driver_number")
-                        if driver_num:
-                            # Keep the most recent entry for each driver
-                            if driver_num not in latest_positions or entry.get("date", "") > latest_positions[driver_num].get("date", ""):
-                                latest_positions[driver_num] = entry
-                    
-                    return list(latest_positions.values())
+        client = await get_http_client()
+        params = {}
+        if session_key:
+            params["session_key"] = session_key
+        else:
+            params["session_key"] = "latest"
+
+        # Get location data (x, y coordinates)
+        response = await openf1_breaker.call(
+            client.get, f"{OPENF1_API}/location", params=params
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if data:
+                # Group by driver_number and get latest position for each
+                latest_positions = {}
+                for entry in data:
+                    driver_num = entry.get("driver_number")
+                    if driver_num:
+                        # Keep the most recent entry for each driver
+                        if driver_num not in latest_positions or entry.get("date", "") > latest_positions[driver_num].get("date", ""):
+                            latest_positions[driver_num] = entry
+
+                return list(latest_positions.values())
     except Exception as e:
         print(f"Error fetching car positions: {e}")
     return []
@@ -94,31 +131,33 @@ async def fetch_driver_info(session_key: Optional[int] = None) -> Dict[int, Dict
         return cached
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            params = {}
-            if session_key:
-                params["session_key"] = session_key
-            else:
-                params["session_key"] = "latest"
-            
-            response = await client.get(f"{OPENF1_API}/drivers", params=params)
-            if response.status_code == 200:
-                data = response.json()
-                drivers = {}
-                for d in data:
-                    driver_num = d.get("driver_number")
-                    if driver_num:
-                        drivers[driver_num] = {
-                            "code": d.get("name_acronym", f"#{driver_num}"),
-                            "name": d.get("full_name", "Unknown"),
-                            "team": d.get("team_name", "Unknown"),
-                            "color": d.get("team_colour", "#00D2BE"),
-                        }
+        client = await get_http_client()
+        params = {}
+        if session_key:
+            params["session_key"] = session_key
+        else:
+            params["session_key"] = "latest"
 
-                # Cache the result if we have drivers
-                if drivers:
-                    _cache_set(cache_key, drivers)
-                return drivers
+        response = await openf1_breaker.call(
+            client.get, f"{OPENF1_API}/drivers", params=params
+        )
+        if response.status_code == 200:
+            data = response.json()
+            drivers = {}
+            for d in data:
+                driver_num = d.get("driver_number")
+                if driver_num:
+                    drivers[driver_num] = {
+                        "code": d.get("name_acronym", f"#{driver_num}"),
+                        "name": d.get("full_name", "Unknown"),
+                        "team": d.get("team_name", "Unknown"),
+                        "color": d.get("team_colour", "#00D2BE"),
+                    }
+
+            # Cache the result if we have drivers
+            if drivers:
+                _cache_set(cache_key, drivers)
+            return drivers
     except Exception as e:
         print(f"Error fetching driver info: {e}")
     return {}
@@ -127,24 +166,26 @@ async def fetch_driver_info(session_key: Optional[int] = None) -> Dict[int, Dict
 async def fetch_stints(session_key: int = None) -> Dict[int, Dict]:
     """Fetch latest tyre stint for each driver"""
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            params = {}
-            if session_key:
-                params["session_key"] = session_key
-            else:
-                params["session_key"] = "latest"
-            
-            response = await client.get(f"{OPENF1_API}/stints", params=params)
-            if response.status_code == 200:
-                data = response.json()
-                stints = {}
-                for s in data:
-                    driver_num = s.get("driver_number")
-                    if driver_num:
-                        # Keep latest stint
-                        if driver_num not in stints or s.get("stint_number") > stints[driver_num].get("stint_number"):
-                            stints[driver_num] = s
-                return stints
+        client = await get_http_client()
+        params = {}
+        if session_key:
+            params["session_key"] = session_key
+        else:
+            params["session_key"] = "latest"
+
+        response = await openf1_breaker.call(
+            client.get, f"{OPENF1_API}/stints", params=params
+        )
+        if response.status_code == 200:
+            data = response.json()
+            stints = {}
+            for s in data:
+                driver_num = s.get("driver_number")
+                if driver_num:
+                    # Keep latest stint
+                    if driver_num not in stints or s.get("stint_number") > stints[driver_num].get("stint_number"):
+                        stints[driver_num] = s
+            return stints
     except Exception as e:
         print(f"Error fetching stints: {e}")
     return {}
@@ -153,24 +194,26 @@ async def fetch_stints(session_key: int = None) -> Dict[int, Dict]:
 async def fetch_intervals(session_key: Optional[int] = None) -> List[Dict]:
     """Fetch gap intervals between drivers for leaderboard"""
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            params = {}
-            if session_key:
-                params["session_key"] = session_key
-            else:
-                params["session_key"] = "latest"
+        client = await get_http_client()
+        params = {}
+        if session_key:
+            params["session_key"] = session_key
+        else:
+            params["session_key"] = "latest"
 
-            response = await client.get(f"{OPENF1_API}/intervals", params=params)
-            if response.status_code == 200:
-                data = response.json()
-                # Get latest interval for each driver
-                latest = {}
-                for entry in data:
-                    driver_num = entry.get("driver_number")
-                    if driver_num:
-                        if driver_num not in latest or entry.get("date", "") > latest[driver_num].get("date", ""):
-                            latest[driver_num] = entry
-                return list(latest.values())
+        response = await openf1_breaker.call(
+            client.get, f"{OPENF1_API}/intervals", params=params
+        )
+        if response.status_code == 200:
+            data = response.json()
+            # Get latest interval for each driver
+            latest = {}
+            for entry in data:
+                driver_num = entry.get("driver_number")
+                if driver_num:
+                    if driver_num not in latest or entry.get("date", "") > latest[driver_num].get("date", ""):
+                        latest[driver_num] = entry
+            return list(latest.values())
     except Exception as e:
         print(f"Error fetching intervals: {e}")
     return []
@@ -179,24 +222,26 @@ async def fetch_intervals(session_key: Optional[int] = None) -> List[Dict]:
 async def fetch_position(session_key: Optional[int] = None) -> List[Dict]:
     """Fetch current race positions for leaderboard"""
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            params = {}
-            if session_key:
-                params["session_key"] = session_key
-            else:
-                params["session_key"] = "latest"
+        client = await get_http_client()
+        params = {}
+        if session_key:
+            params["session_key"] = session_key
+        else:
+            params["session_key"] = "latest"
 
-            response = await client.get(f"{OPENF1_API}/position", params=params)
-            if response.status_code == 200:
-                data = response.json()
-                # Get latest position for each driver
-                latest = {}
-                for entry in data:
-                    driver_num = entry.get("driver_number")
-                    if driver_num:
-                        if driver_num not in latest or entry.get("date", "") > latest[driver_num].get("date", ""):
-                            latest[driver_num] = entry
-                return sorted(latest.values(), key=lambda x: x.get("position", 999))
+        response = await openf1_breaker.call(
+            client.get, f"{OPENF1_API}/position", params=params
+        )
+        if response.status_code == 200:
+            data = response.json()
+            # Get latest position for each driver
+            latest = {}
+            for entry in data:
+                driver_num = entry.get("driver_number")
+                if driver_num:
+                    if driver_num not in latest or entry.get("date", "") > latest[driver_num].get("date", ""):
+                        latest[driver_num] = entry
+            return sorted(latest.values(), key=lambda x: x.get("position", 999))
     except Exception as e:
         print(f"Error fetching positions: {e}")
     return []
