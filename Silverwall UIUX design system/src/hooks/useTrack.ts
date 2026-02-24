@@ -1,12 +1,13 @@
 /**
  * useTrack - REST API hook for track geometry
- * 
+ *
  * MODES:
  * - Demo mode: Fetches static track from /api/track/{circuit}
  * - Live mode: Fetches current race track from /api/track/current (auto-detects circuit)
  */
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../utils/apiClient';
 
 export interface TrackPoint {
     x: number;
@@ -38,34 +39,31 @@ export function useTrack(circuit: string = 'latest', isLiveMode: boolean = false
 
     useEffect(() => {
         const fetchTrack = async () => {
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            setLoading(true);
+            setError(null);
 
-            try {
-                setLoading(true);
-                setError(null);
+            // Use different endpoints for demo vs live mode
+            const endpoint = isLiveMode
+                ? '/api/track/current'  // Live: auto-detect current race
+                : `/api/track/${circuit}`;  // Demo: use specified circuit
 
-                // Use different endpoints for demo vs live mode
-                const endpoint = isLiveMode
-                    ? `${apiUrl}/api/track/current`  // Live: auto-detect current race
-                    : `${apiUrl}/api/track/${circuit}`;  // Demo: use specified circuit
+            console.log(`📍 Fetching track: ${endpoint} (${isLiveMode ? 'LIVE' : 'DEMO'} mode)`);
 
-                console.log(`📍 Fetching track: ${endpoint} (${isLiveMode ? 'LIVE' : 'DEMO'} mode)`);
-                const response = await fetch(endpoint);
+            const { data, error: fetchError } = await apiFetch<TrackData>(endpoint);
 
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch track: ${response.status}`);
-                }
+            if (fetchError) {
+                console.error('Failed to fetch track data:', fetchError);
+                setError(fetchError);
+                setLoading(false);
+                return;
+            }
 
-                const data = await response.json();
+            if (data) {
                 console.log(`✅ Track loaded: ${data.name} (${data.points?.length || 0} points, source: ${data.source || 'static'})`);
                 setTrack(data);
-            } catch (e) {
-                const message = e instanceof Error ? e.message : 'Unknown error';
-                console.error('Failed to fetch track data:', message);
-                setError(message);
-            } finally {
-                setLoading(false);
             }
+
+            setLoading(false);
         };
 
         fetchTrack();

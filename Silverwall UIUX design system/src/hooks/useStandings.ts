@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../utils/apiClient';
 
 interface DriverStanding {
     position: number;
@@ -32,45 +33,55 @@ export function useStandings(year?: number): StandingsData {
 
     useEffect(() => {
         const fetchStandings = async () => {
-            try {
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-                // If no year specified, fetch current season standings
-                const url = year
-                    ? `${apiUrl}/api/standings/drivers/${year}`
-                    : `${apiUrl}/api/standings/drivers`;
+            // Build endpoint based on year parameter
+            const endpoint = year
+                ? `/api/standings/drivers/${year}`
+                : '/api/standings/drivers';
 
-                const response = await fetch(url);
-                const result = await response.json();
+            const { data: result, error } = await apiFetch<any>(endpoint);
 
-                // If empty standings (e.g., 2026), try previous year
-                if (!result.standings || result.standings.length === 0) {
-                    const prevYear = (year || new Date().getFullYear()) - 1;
-                    const prevResponse = await fetch(`${apiUrl}/api/standings/drivers/${prevYear}`);
-                    const prevResult = await prevResponse.json();
-
-                    setData({
-                        season: prevResult.season || prevYear,
-                        standings: prevResult.standings || [],
-                        loading: false,
-                        error: null
-                    });
-                    return;
-                }
-
-                setData({
-                    season: result.season,
-                    standings: result.standings || [],
-                    loading: false,
-                    error: null
-                });
-            } catch (error) {
+            if (error) {
                 console.error('Failed to fetch standings:', error);
                 setData(prev => ({
                     ...prev,
                     loading: false,
                     error: 'Unable to fetch standings'
                 }));
+                return;
             }
+
+            // If empty standings (e.g., 2026), try previous year
+            if (!result?.standings || result.standings.length === 0) {
+                const prevYear = (year || new Date().getFullYear()) - 1;
+                const { data: prevResult, error: prevError } = await apiFetch<any>(
+                    `/api/standings/drivers/${prevYear}`
+                );
+
+                if (prevError) {
+                    console.error('Failed to fetch previous year standings:', prevError);
+                    setData(prev => ({
+                        ...prev,
+                        loading: false,
+                        error: 'Unable to fetch standings'
+                    }));
+                    return;
+                }
+
+                setData({
+                    season: prevResult?.season || prevYear,
+                    standings: prevResult?.standings || [],
+                    loading: false,
+                    error: null
+                });
+                return;
+            }
+
+            setData({
+                season: result.season,
+                standings: result.standings || [],
+                loading: false,
+                error: null
+            });
         };
 
         fetchStandings();
