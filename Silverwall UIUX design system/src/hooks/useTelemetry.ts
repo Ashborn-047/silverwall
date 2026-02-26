@@ -35,8 +35,10 @@ interface TelemetryState {
 export function useTelemetry(): TelemetryState {
     const [frame, setFrame] = useState<TelemetryFrame | null>(null);
     const [status, setStatus] = useState<ConnectionStatus>('connecting');
+    const [retryCount, setRetryCount] = useState(0);
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<number | null>(null);
+    const maxRetries = 10;
 
     const connect = useCallback(() => {
         const baseUrl = getWsUrl();
@@ -52,6 +54,7 @@ export function useTelemetry(): TelemetryState {
             ws.onopen = () => {
                 console.log('✅ Live WebSocket connected');
                 setStatus('connected');
+                setRetryCount(0); // Reset retry count on successful connection
             };
 
             ws.onmessage = (event) => {
@@ -84,14 +87,24 @@ export function useTelemetry(): TelemetryState {
                 console.log('🔌 Live WebSocket disconnected');
                 setStatus('disconnected');
 
-                // Attempt to reconnect after 2 seconds
+                // Check if max retries reached
+                if (retryCount >= maxRetries) {
+                    console.error(`❌ Max reconnection attempts (${maxRetries}) reached`);
+                    setStatus('error');
+                    return;
+                }
+
+                // Exponential backoff: 2s → 4s → 8s → 16s → max 30s
+                const backoffDelay = Math.min(2000 * Math.pow(2, retryCount), 30000);
+                console.log(`🔄 Reconnecting in ${backoffDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+
                 reconnectTimeoutRef.current = window.setTimeout(() => {
                     if (wsRef.current?.readyState === WebSocket.CLOSED) {
-                        console.log('🔄 Attempting to reconnect...');
                         setStatus('connecting');
+                        setRetryCount(prev => prev + 1);
                         connect();
                     }
-                }, 2000);
+                }, backoffDelay);
             };
         } catch (error) {
             console.error('Failed to create WebSocket:', error);
