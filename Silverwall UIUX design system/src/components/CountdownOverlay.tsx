@@ -84,7 +84,11 @@ const CountdownOverlay: React.FC<CountdownOverlayProps> = ({ raceStatus }) => {
                     {isOffSeason && (
                         <div className="flex items-center gap-2">
                             <Calendar size={16} className="text-[#00D2BE]" />
-                            <span className="text-sm font-medium tracking-wide">MARCH 15, 2026</span>
+                            <span className="text-sm font-medium tracking-wide">{
+                                nextSeason?.race_date
+                                    ? new Date(nextSeason.race_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()
+                                    : 'TBD'
+                            }</span>
                         </div>
                     )}
                 </div>

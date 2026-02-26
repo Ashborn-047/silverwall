@@ -16,7 +16,7 @@ from openf1_fetcher import fetch_live_telemetry, fetch_driver_info, _driver_cach
 class TestLiveFetch(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
-        # Clear cache before each test
+        """Clear cache before each test"""
         _driver_cache.clear()
 
     @patch('openf1_fetcher.httpx.AsyncClient')

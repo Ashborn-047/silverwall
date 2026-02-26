@@ -93,8 +93,7 @@ export default function TelemetryLive() {
   const { frame, status } = useTelemetry();
   // Race status from backend API
   const raceStatus = useRaceStatus();
-  const isOffSeason = raceStatus.status === 'off_season';
-  const circuitId = isOffSeason ? 'albert_park' : 'abu_dhabi';
+  const circuitId = raceStatus.circuit || raceStatus.nextSeason?.circuit || 'latest';
 
   // Track hook - fetches from /track/current explicitly live
   const { track, points: trackPoints } = useTrack(circuitId, true);
@@ -244,7 +243,7 @@ export default function TelemetryLive() {
             </span>
             <span className="text-[#333]">·</span>
             <span className="text-[#9CA3AF] uppercase">
-              {raceStatus.meetingName || 'Abu Dhabi GP'}
+              {raceStatus.meetingName || '—'}
             </span>
             <span className="text-[#333] mx-2">|</span>
 
@@ -265,7 +264,7 @@ export default function TelemetryLive() {
               </>
             ) : raceStatus.status === 'off_season' ? (
               <>
-                <span className="text-[#9CA3AF]">2026 SEASON</span>
+                <span className="text-[#9CA3AF]">{raceStatus.nextSeason?.year || 'NEXT'} SEASON</span>
                 <span className="text-[#00D2BE] font-bold ml-2">
                   {raceStatus.nextSeason ? `${Math.floor(raceStatus.nextSeason.countdown_seconds / 86400)}D` : 'SOON'}
                 </span>
@@ -422,15 +421,10 @@ export default function TelemetryLive() {
                 </>
               ) : (
                 /* Fallback static track */
-                <path
-                  d="M 200 550 L 650 550 L 675 525 L 700 400 L 675 375 L 500 375 L 450 325 L 200 325 L 150 375 L 150 500 Z"
-                  fill="none"
-                  stroke="#00D2BE"
-                  strokeWidth="4"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                  opacity="0.8"
-                />
+                <g>
+                  <text x="400" y="480" textAnchor="middle" fill="#555" fontSize="14" fontFamily="monospace">NO TRACK DATA</text>
+                  <text x="400" y="500" textAnchor="middle" fill="#333" fontSize="10" fontFamily="monospace">Waiting for geometry...</text>
+                </g>
               )}
 
               {/* Start/Finish Line */}
@@ -482,10 +476,10 @@ export default function TelemetryLive() {
 
           <div className="absolute bottom-8 right-8 text-right">
             <h2 className="text-[#555] text-xs font-mono tracking-[0.2em] uppercase mb-1">
-              {track?.name || 'Yas Marina Circuit'}
+              {track?.name || 'Loading...'}
             </h2>
             <h1 className="text-[#00D2BE] text-2xl font-bold uppercase tracking-wider">
-              {track?.location || 'Abu Dhabi'}
+              {track?.location || '—'}
             </h1>
           </div>
         </section>

@@ -1,6 +1,6 @@
 /**
- * SeasonCountdown - 2026 Season Waiting Display
- * Shows countdown to the next F1 season after Abu Dhabi
+ * SeasonCountdown - Season Waiting Display
+ * Shows countdown to the next F1 season dynamically
  */
 
 import { useState, useEffect } from 'react';
@@ -8,13 +8,14 @@ import { Calendar, MapPin, Flag, Timer, Trophy } from 'lucide-react';
 
 interface NextSeason {
     year: number;
-    first_race: string;
-    location: string;
-    country: string;
-    circuit: string;
-    circuit_length_km: number;
-    laps: number;
-    race_date: string;
+    first_race?: string;
+    location?: string;
+    country?: string;
+    circuit?: string;
+    circuit_name?: string;
+    circuit_length_km?: number;
+    laps?: number;
+    race_date?: string;
     countdown_seconds: number;
 }
 
@@ -47,7 +48,7 @@ export default function SeasonCountdown({ nextSeason }: SeasonCountdownProps) {
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[#00D2BE]/10 border border-[#00D2BE]/30 mb-4">
                     <Trophy size={16} className="text-[#00D2BE]" />
                     <span className="text-[#00D2BE] font-mono text-sm tracking-wider uppercase">
-                        2025 Season Complete
+                        {nextSeason.year - 1} Season Complete
                     </span>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold text-white tracking-wide mb-2">
@@ -115,24 +116,24 @@ export default function SeasonCountdown({ nextSeason }: SeasonCountdownProps) {
                                 <Calendar size={12} />
                                 <span className="text-[10px] font-bold tracking-wider">DATE</span>
                             </div>
-                            <span className="font-mono text-sm text-[#E0E0E0]">MAR 08, 2026</span>
-                            <span className="font-mono text-[10px] text-[#00D2BE]">15:00 LOCAL</span>
+                            <span className="font-mono text-sm text-[#E0E0E0]">{nextSeason.race_date ? new Date(nextSeason.race_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase() : 'TBD'}</span>
+                            <span className="font-mono text-[10px] text-[#00D2BE]">{nextSeason.race_date ? new Date(nextSeason.race_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' LOCAL' : 'TBD'}</span>
                         </div>
                         <div className="flex flex-col">
                             <div className="flex items-center gap-2 text-[#555] mb-1">
                                 <Timer size={12} />
                                 <span className="text-[10px] font-bold tracking-wider">CIRCUIT</span>
                             </div>
-                            <span className="font-mono text-sm text-[#E0E0E0]">{nextSeason.circuit_length_km} KM</span>
-                            <span className="font-mono text-[10px] text-[#00D2BE]">{nextSeason.laps} LAPS</span>
+                            <span className="font-mono text-sm text-[#E0E0E0]">{nextSeason.circuit_length_km ? `${nextSeason.circuit_length_km} KM` : 'TBD'}</span>
+                            <span className="font-mono text-[10px] text-[#00D2BE]">{nextSeason.laps ? `${nextSeason.laps} LAPS` : 'TBD'}</span>
                         </div>
                         <div className="flex flex-col">
                             <div className="flex items-center gap-2 text-[#555] mb-1">
                                 <Trophy size={12} />
                                 <span className="text-[10px] font-bold tracking-wider">DEFENDING</span>
                             </div>
-                            <span className="font-mono text-sm text-[#E0E0E0]">VER</span>
-                            <span className="font-mono text-[10px] text-[#00D2BE]">4x CHAMPION</span>
+                            <span className="font-mono text-sm text-[#E0E0E0]">TBD</span>
+                            <span className="font-mono text-[10px] text-[#00D2BE]">DEFENDING</span>
                         </div>
                     </div>
                 </div>

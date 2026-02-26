@@ -29,12 +29,17 @@ export function useChampions(): Champions {
     });
 
     useEffect(() => {
+        const controller = new AbortController();
+
         const fetchChampions = async () => {
             try {
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
                 // Try /champions endpoint first
-                let response = await fetch(`${apiUrl}/api/champions`);
+                let response = await fetch(`${apiUrl}/api/champions`, { signal: controller.signal });
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch champions: ${response.status} ${response.statusText}`);
+                }
                 let data = await response.json();
 
                 // If no driver from champions, fallback to standings leader
@@ -44,9 +49,16 @@ export function useChampions(): Champions {
 
                     // Fetch from current year's standings which has the champion
                     const [driversRes, constructorsRes] = await Promise.all([
-                        fetch(`${apiUrl}/api/standings/drivers/${currentYear}`),
-                        fetch(`${apiUrl}/api/standings/constructors/${currentYear}`)
+                        fetch(`${apiUrl}/api/standings/drivers/${currentYear}`, { signal: controller.signal }),
+                        fetch(`${apiUrl}/api/standings/constructors/${currentYear}`, { signal: controller.signal })
                     ]);
+
+                    if (!driversRes.ok) {
+                        throw new Error(`Failed to fetch driver standings: ${driversRes.status} ${driversRes.statusText}`);
+                    }
+                    if (!constructorsRes.ok) {
+                        throw new Error(`Failed to fetch constructor standings: ${constructorsRes.status} ${constructorsRes.statusText}`);
+                    }
 
                     const driversData = await driversRes.json();
                     const constructorsData = await constructorsRes.json();
@@ -81,6 +93,9 @@ export function useChampions(): Champions {
                     error: null
                 });
             } catch (error) {
+                if (error instanceof Error && error.name === 'AbortError') {
+                    return; // Request was cancelled, ignore
+                }
                 console.error('Failed to fetch champions:', error);
                 setChampions(prev => ({
                     ...prev,
@@ -91,6 +106,7 @@ export function useChampions(): Champions {
         };
 
         fetchChampions();
+        return () => controller.abort();
     }, []);
 
     return champions;

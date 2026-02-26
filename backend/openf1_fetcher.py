@@ -5,17 +5,53 @@ Fetches real-time car positions and telemetry from OpenF1 API
 
 import httpx
 import asyncio
+import time
 from datetime import datetime, timezone
 from typing import Optional, List, Dict
 
 OPENF1_API = "https://api.openf1.org/v1"
 
-# Cache for static data
-_driver_cache = {}
+# Cache for static driver data with TTL
+# Format: { "drivers_{session_key}": (data, timestamp) }
+_driver_cache: Dict[str, tuple] = {}
+_CACHE_TTL_SECONDS = 300  # 5 minutes
+_CACHE_MAX_SIZE = 50
+
+# Cache for session key with shorter TTL
+_session_key_cache: Optional[tuple] = None  # (session_key, timestamp)
+_SESSION_KEY_TTL = 30  # 30 seconds - reduce repeated API calls
+
+
+def _cache_get(key: str) -> Optional[Dict]:
+    """Get a value from cache if it exists and hasn't expired."""
+    if key in _driver_cache:
+        data, ts = _driver_cache[key]
+        if time.time() - ts < _CACHE_TTL_SECONDS:
+            return data
+        else:
+            del _driver_cache[key]
+    return None
+
+
+def _cache_set(key: str, data: Dict) -> None:
+    """Set a value in cache with TTL, evicting oldest if max size reached."""
+    # Evict oldest entries if cache is too large
+    while len(_driver_cache) >= _CACHE_MAX_SIZE:
+        oldest_key = min(_driver_cache, key=lambda k: _driver_cache[k][1])
+        del _driver_cache[oldest_key]
+    _driver_cache[key] = (data, time.time())
 
 
 async def get_latest_session_key() -> Optional[int]:
-    """Get the current/latest session key from OpenF1"""
+    """Get the current/latest session key from OpenF1. Results are cached for 30s."""
+    global _session_key_cache
+
+    # Check cache first
+    if _session_key_cache is not None:
+        session_key, ts = _session_key_cache
+        if time.time() - ts < _SESSION_KEY_TTL:
+            return session_key
+
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(f"{OPENF1_API}/sessions", params={"session_key": "latest"})
@@ -25,7 +61,10 @@ async def get_latest_session_key() -> Optional[int]:
                     session = data[0]
                     # Only return if session is live (no end time)
                     if session.get("date_end") is None:
-                        return session.get("session_key")
+                        session_key = session.get("session_key")
+                        # Cache the result
+                        _session_key_cache = (session_key, time.time())
+                        return session_key
     except Exception as e:
         print(f"Error getting session key: {e}")
     return None
@@ -61,14 +100,13 @@ async def fetch_car_positions(session_key: int = None) -> List[Dict]:
     return []
 
 
-async def fetch_driver_info(session_key: int = None) -> Dict[int, Dict]:
-    """Fetch driver info (name, team) from OpenF1"""
-    global _driver_cache
-
-    # Check cache first if session key is provided
+async def fetch_driver_info(session_key: Optional[int] = None) -> Dict[int, Dict]:
+    """Fetch driver info (name, team) from OpenF1. Results are cached per session."""
+    # Check cache first
     cache_key = f"drivers_{session_key}" if session_key else "drivers_latest"
-    if cache_key in _driver_cache:
-        return _driver_cache[cache_key]
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -94,7 +132,7 @@ async def fetch_driver_info(session_key: int = None) -> Dict[int, Dict]:
 
                 # Cache the result if we have drivers
                 if drivers:
-                    _driver_cache[cache_key] = drivers
+                    _cache_set(cache_key, drivers)
                 return drivers
     except Exception as e:
         print(f"Error fetching driver info: {e}")
@@ -127,7 +165,7 @@ async def fetch_stints(session_key: int = None) -> Dict[int, Dict]:
     return {}
 
 
-async def fetch_intervals(session_key: int = None) -> List[Dict]:
+async def fetch_intervals(session_key: Optional[int] = None) -> List[Dict]:
     """Fetch gap intervals between drivers for leaderboard"""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -153,7 +191,7 @@ async def fetch_intervals(session_key: int = None) -> List[Dict]:
     return []
 
 
-async def fetch_position(session_key: int = None) -> List[Dict]:
+async def fetch_position(session_key: Optional[int] = None) -> List[Dict]:
     """Fetch current race positions for leaderboard"""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -188,7 +226,7 @@ async def fetch_live_telemetry(session_key: int = None) -> Dict:
     
     if not session_key:
         return {"status": "offline", "cars": [], "message": "No active session"}
-    
+
     # Fetch all data in parallel using asyncio.gather
     try:
         results = await asyncio.gather(
@@ -197,7 +235,7 @@ async def fetch_live_telemetry(session_key: int = None) -> Dict:
             fetch_car_positions(session_key),
             fetch_driver_info(session_key),
             fetch_stints(session_key),
-            return_exceptions=True # Don't crash if one fails
+            return_exceptions=True  # Don't crash if one fails
         )
 
         # Unpack results, handling potential exceptions
@@ -213,43 +251,35 @@ async def fetch_live_telemetry(session_key: int = None) -> Dict:
     
     if not race_positions and not locations:
         return {"status": "waiting", "cars": [], "session_key": session_key}
-    
-    # helper maps
-    interval_map = {i.get("driver_number"): i for i in intervals}
-    location_map = {l.get("driver_number"): l for l in locations}
-    
+
+    # Build lookup maps with None filtering (single pass, more efficient)
+    interval_map = {i["driver_number"]: i for i in intervals if i.get("driver_number")}
+    location_map = {loc["driver_number"]: loc for loc in locations if loc.get("driver_number")}
+
     # If we have race positions, use that as the primary list
     # If not (e.g. practice session where position might be weird or missing), fall back to location keys
-    
+
     primary_list = race_positions if race_positions else [{"driver_number": k} for k in location_map.keys()]
-    
-    cars = []
-    for entry in primary_list:
+
+    # Build car data with list comprehension (pre-filter invalid entries)
+    def build_car_data(entry):
+        """Helper function to build car data dictionary"""
         driver_num = entry.get("driver_number")
         if not driver_num:
-            continue
-            
+            return None
+
         driver_info = drivers.get(driver_num, {"code": f"#{driver_num}", "team": "Unknown", "color": "#555"})
         loc = location_map.get(driver_num, {})
         interval_data = interval_map.get(driver_num, {})
         stint_data = stints.get(driver_num, {})
-        
-        # Calculate gap
-        gap = interval_data.get("gap_to_leader")
-        if gap is None:
-            gap = interval_data.get("interval") # Fallback
-            
-        # Format gap string
-        gap_str = ""
-        if entry.get("position") == 1:
-            gap_str = "LEADER"
-        elif gap:
-             gap_str = f"+{gap}s"
-        else:
-            gap_str = "--"
-            
-        cars.append({
-            "position": entry.get("position", 0),
+
+        # Simplified gap calculation
+        position = entry.get("position", 0)
+        gap = interval_data.get("gap_to_leader") or interval_data.get("interval")
+        gap_str = "LEADER" if position == 1 else (f"+{gap}s" if gap is not None else "--")
+
+        return {
+            "position": position,
             "driver_number": driver_num,
             "code": driver_info["code"],
             "team": driver_info["team"],
@@ -260,11 +290,14 @@ async def fetch_live_telemetry(session_key: int = None) -> Dict:
             "gap": gap_str,
             "interval": interval_data.get("interval"),
             "tyre": stint_data.get("compound", "UNKNOWN"),
-            "tyre_age": stint_data.get("tyre_age_at_start", 0), # This might be laps?
-        })
-        
-    # Sort by position just in case
-    cars.sort(key=lambda x: x["position"] if x["position"] > 0 else 999)
+            "tyre_age": stint_data.get("tyre_age_at_start", 0),
+        }
+
+    # Build and filter cars list in one pass
+    cars = [car for car in (build_car_data(entry) for entry in primary_list) if car is not None]
+
+    # Sort by position (using optimized key function)
+    cars.sort(key=lambda x: x["position"] or 999)
     
     return {
         "status": "live",
