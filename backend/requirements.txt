@@ -6,3 +6,4 @@ httpx
 python-dotenv
 supabase
 pynacl
+slowapi>=0.1.9
