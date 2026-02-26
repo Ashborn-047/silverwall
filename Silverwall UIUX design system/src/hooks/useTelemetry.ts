@@ -1,11 +1,12 @@
 /**
  * useTelemetry - WebSocket hook for live F1 telemetry
- * 
+ *
  * Connected strictly to real race data (/ws/live).
  * Shows empty/waiting state if no live session is active.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { getWsUrl } from '../utils/apiClient';
 
 interface Car {
     code: string;
@@ -38,7 +39,7 @@ export function useTelemetry(): TelemetryState {
     const reconnectTimeoutRef = useRef<number | null>(null);
 
     const connect = useCallback(() => {
-        const baseUrl = import.meta.env.VITE_WS_URL?.replace('/ws/abu_dhabi', '') || 'ws://localhost:8000';
+        const baseUrl = getWsUrl();
         const wsEndpoint = '/ws/live';
         const wsUrl = `${baseUrl}${wsEndpoint}`;
 
