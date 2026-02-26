@@ -4,8 +4,10 @@ Wrapper for Supabase connection with environment configuration
 """
 
 import os
+import time
 from datetime import datetime, timezone
 from functools import lru_cache
+from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
@@ -37,12 +39,44 @@ def supabase() -> Client:
     return get_supabase_client()
 
 
+# Query result cache with TTL
+_query_cache: Dict[str, tuple] = {}
+_CACHE_TTL = 300  # 5 minutes default
+
+
+def _get_cache(key: str, ttl: int = _CACHE_TTL) -> Optional[Any]:
+    """Get cached query result if not expired."""
+    if key in _query_cache:
+        data, timestamp = _query_cache[key]
+        if time.time() - timestamp < ttl:
+            return data
+        else:
+            del _query_cache[key]
+    return None
+
+
+def _set_cache(key: str, data: Any) -> None:
+    """Cache query result with timestamp."""
+    _query_cache[key] = (data, time.time())
+
+
 # Helper functions for common operations
 async def get_current_season_year():
-    """Get the latest season year from database."""
+    """
+    Get the latest season year from database.
+    Cached for 5 minutes to reduce database load.
+    """
+    cache_key = "current_season_year"
+    cached = _get_cache(cache_key)
+    if cached is not None:
+        return cached
+
     client = supabase()
     result = client.table("seasons").select("year").order("year", desc=True).limit(1).single().execute()
-    return result.data['year'] if result.data else 2025
+    year = result.data['year'] if result.data else 2025
+
+    _set_cache(cache_key, year)
+    return year
 
 async def get_current_season_id() -> str:
     """Get the current season ID from database."""
@@ -53,30 +87,52 @@ async def get_current_season_id() -> str:
 
 
 async def get_driver_standings(season_year: int = None):
-    """Fetch driver standings for a season."""
-    client = supabase()
+    """
+    Fetch driver standings for a season.
+    Cached for 60 seconds to reduce load on frequent polling.
+    """
     if not season_year:
         season_year = await get_current_season_year()
+
+    cache_key = f"driver_standings_{season_year}"
+    cached = _get_cache(cache_key, ttl=60)  # 1 minute cache
+    if cached is not None:
+        return cached
+
+    client = supabase()
     print(f"Fetching driver standings for {season_year}")
     result = client.table("driver_standings") \
         .select("*") \
         .eq("season_year", season_year) \
         .order("position") \
         .execute()
+
+    _set_cache(cache_key, result.data)
     return result.data
 
 
 async def get_constructor_standings(season_year: int = None):
-    """Fetch constructor standings for a season."""
-    client = supabase()
+    """
+    Fetch constructor standings for a season.
+    Cached for 60 seconds to reduce load on frequent polling.
+    """
     if not season_year:
         season_year = await get_current_season_year()
+
+    cache_key = f"constructor_standings_{season_year}"
+    cached = _get_cache(cache_key, ttl=60)  # 1 minute cache
+    if cached is not None:
+        return cached
+
+    client = supabase()
     print(f"Fetching constructor standings for {season_year}")
     result = client.table("constructor_standings") \
         .select("*") \
         .eq("season_year", season_year) \
         .order("position") \
         .execute()
+
+    _set_cache(cache_key, result.data)
     return result.data
 
 
@@ -94,7 +150,15 @@ async def get_season_races(season_year: int = None):
 
 
 async def get_track_geometry(circuit_key: str):
-    """Fetch track geometry from database."""
+    """
+    Fetch track geometry from database.
+    Cached for 1 hour as track data rarely changes.
+    """
+    cache_key = f"track_geometry_{circuit_key}"
+    cached = _get_cache(cache_key, ttl=3600)  # 1 hour cache
+    if cached is not None:
+        return cached
+
     try:
         client = supabase()
         result = client.table("tracks") \
@@ -102,6 +166,8 @@ async def get_track_geometry(circuit_key: str):
             .eq("circuit_key", circuit_key) \
             .single() \
             .execute()
+
+        _set_cache(cache_key, result.data)
         return result.data
     except Exception as e:
         print(f"[WARN] Track geometry fetch failed for {circuit_key}: {e}")
@@ -112,10 +178,16 @@ async def get_next_race():
     """
     Fetch the next upcoming race from the database.
     Autonomously filters out races that have already passed (past their UTC date).
+    Cached for 5 minutes as race schedule doesn't change frequently.
     """
+    cache_key = "next_race"
+    cached = _get_cache(cache_key, ttl=300)  # 5 minute cache
+    if cached is not None:
+        return cached
+
     now = datetime.now(timezone.utc).isoformat()
     client = supabase()
-    
+
     # Query for the first race whose date is in the future
     # This automatically skips past "2025" if it's already over
     result = client.table("races") \
@@ -124,8 +196,10 @@ async def get_next_race():
         .order("race_date") \
         .limit(1) \
         .execute()
-    
-    return result.data[0] if result.data else None
+
+    next_race = result.data[0] if result.data else None
+    _set_cache(cache_key, next_race)
+    return next_race
 
 
 async def get_last_race():

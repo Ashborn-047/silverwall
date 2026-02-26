@@ -44,10 +44,12 @@ export function useRaceStatus(): RaceStatus {
     const [raceStatus, setRaceStatus] = useState<RaceStatus>({ status: 'loading' });
 
     useEffect(() => {
+        const controller = new AbortController();
+
         const fetchStatus = async () => {
             try {
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-                const response = await fetch(`${apiUrl}/api/status`);
+                const response = await fetch(`${apiUrl}/api/status`, { signal: controller.signal });
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch status');
@@ -107,6 +109,9 @@ export function useRaceStatus(): RaceStatus {
                     });
                 }
             } catch (error) {
+                if (error instanceof Error && error.name === 'AbortError') {
+                    return; // Request was cancelled, ignore
+                }
                 console.error('Failed to fetch race status:', error);
                 setRaceStatus({
                     status: 'error',
@@ -121,7 +126,10 @@ export function useRaceStatus(): RaceStatus {
         // Poll every 30 seconds for live updates
         const interval = setInterval(fetchStatus, 30000);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            controller.abort();
+        };
     }, []);
 
     return raceStatus;
