@@ -32,6 +32,8 @@ export function useStandings(year?: number): StandingsData {
     });
 
     useEffect(() => {
+        const controller = new AbortController();
+
         const fetchStandings = async () => {
             // Build endpoint based on year parameter
             const endpoint = year
@@ -85,6 +87,7 @@ export function useStandings(year?: number): StandingsData {
         };
 
         fetchStandings();
+        return () => controller.abort();
     }, [year]);
 
     return data;

@@ -45,6 +45,8 @@ export function useRaceStatus(): RaceStatus {
     const [raceStatus, setRaceStatus] = useState<RaceStatus>({ status: 'loading' });
 
     useEffect(() => {
+        const controller = new AbortController();
+
         const fetchStatus = async () => {
             const { data, error } = await apiFetch<any>('/api/status');
 
@@ -116,7 +118,10 @@ export function useRaceStatus(): RaceStatus {
         // Poll every 30 seconds for live updates
         const interval = setInterval(fetchStatus, 30000);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            controller.abort();
+        };
     }, []);
 
     return raceStatus;

@@ -6,6 +6,13 @@ FastAPI application for F1 telemetry streaming
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+# Import logging and middleware
+from logger import logger
+from middleware.request_tracking import RequestTrackingMiddleware
 
 # Import routers
 from websocket.live import router as live_ws_router
@@ -22,6 +29,11 @@ app = FastAPI(
     description="Real-time F1 pit wall telemetry system",
     version="1.0.0"
 )
+
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS for frontend
 # Allow production and local development origins
@@ -44,6 +56,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add request tracking middleware for observability
+app.add_middleware(RequestTrackingMiddleware)
+
 # Include WebSocket routers
 app.include_router(live_ws_router)
 
@@ -60,17 +75,19 @@ app.include_router(discord_router, prefix="/api")
 @app.on_event("startup")
 async def startup_event():
     """System check on startup"""
-    print("\n" + "="*60)
-    print("SilverWall F1 Telemetry Backend")
-    print("="*60)
-    print("System: Autonomous Mode Active")
-    print("Source: Supabase + OpenF1 Live")
-    print("="*60)
-    print("Backend ready at http://127.0.0.1:8000")
-    print("="*60 + "\n")
+    logger.info("=" * 60)
+    logger.info("SilverWall F1 Telemetry Backend Starting")
+    logger.info("=" * 60)
+    logger.info("System: Autonomous Mode Active")
+    logger.info("Source: Supabase + OpenF1 Live")
+    logger.info("Observability: Request tracking enabled")
+    logger.info("=" * 60)
+    logger.info("Backend ready at http://127.0.0.1:8000")
+    logger.info("=" * 60)
 
 
 @app.get("/")
+@limiter.limit("60/minute")
 def root():
     """API status endpoint"""
     return {
@@ -81,6 +98,14 @@ def root():
 
 
 @app.get("/health")
+@limiter.limit("120/minute")
 def health():
-    """Health check endpoint"""
-    return {"status": "ok"}
+    """
+    Health check endpoint with basic system info
+    Used by monitoring systems and load balancers
+    """
+    return {
+        "status": "ok",
+        "service": "silverwall-backend",
+        "version": "1.0.0"
+    }

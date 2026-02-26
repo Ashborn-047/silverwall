@@ -30,6 +30,8 @@ export function useChampions(): Champions {
     });
 
     useEffect(() => {
+        const controller = new AbortController();
+
         const fetchChampions = async () => {
             // Try /champions endpoint first
             const { data, error } = await apiFetch<any>('/api/champions');
@@ -92,6 +94,7 @@ export function useChampions(): Champions {
         };
 
         fetchChampions();
+        return () => controller.abort();
     }, []);
 
     return champions;
