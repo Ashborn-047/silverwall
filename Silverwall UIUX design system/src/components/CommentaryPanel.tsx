@@ -46,17 +46,20 @@ export default function CommentaryPanel({ isConnected }: CommentaryPanelProps) {
     useEffect(() => {
         if (!isConnected) return;
 
-        const interval = setInterval(() => {
-            // Poll API for new events
-            fetch(`${apiUrl}/api/commentary?demo=false`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.events?.length > 0) {
-                        setEvents(prev => [...data.events, ...prev.slice(0, 19)]);
-                    }
-                })
-                .catch(console.error);
-        }, 3000); // Check every 3 seconds
+        const interval = setInterval(async () => {
+            try {
+                const response = await fetch(`${apiUrl}/api/commentary?demo=false`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                if (data.events?.length > 0) {
+                    setEvents(prev => [...data.events, ...prev.slice(0, 19)]);
+                }
+            } catch (error) {
+                console.error('Commentary fetch failed:', error instanceof Error ? error.message : error);
+            }
+        }, 10000); // Check every 10 seconds (reduced from 3s)
 
         return () => clearInterval(interval);
     }, [isConnected, apiUrl]);

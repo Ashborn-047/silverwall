@@ -7,3 +7,4 @@ python-dotenv
 supabase
 pynacl
 pybreaker>=1.0.1
+slowapi>=0.1.9

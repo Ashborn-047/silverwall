@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from datetime import datetime, timezone, timedelta
 import httpx
 from database import get_next_race, supabase, get_current_season
+from logger import logger
 
 router = APIRouter()
 
@@ -31,10 +32,10 @@ async def fetch_live_session():
                         now = datetime.now(timezone.utc)
                         if (now - end_time).total_seconds() < 1800:
                             return session
-                    except:
-                        pass
+                    except Exception as parse_error:
+                        logger.warning(f"Failed to parse session end time: {parse_error}")
     except Exception as e:
-        print(f"[ERR] Live session fetch failed: {e}")
+        logger.error(f"Live session fetch failed: {e}")
     return None
 
 @router.get("/status")

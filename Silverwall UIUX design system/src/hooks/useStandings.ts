@@ -31,6 +31,8 @@ export function useStandings(year?: number): StandingsData {
     });
 
     useEffect(() => {
+        const controller = new AbortController();
+
         const fetchStandings = async () => {
             try {
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -39,13 +41,19 @@ export function useStandings(year?: number): StandingsData {
                     ? `${apiUrl}/api/standings/drivers/${year}`
                     : `${apiUrl}/api/standings/drivers`;
 
-                const response = await fetch(url);
+                const response = await fetch(url, { signal: controller.signal });
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch standings: ${response.status} ${response.statusText}`);
+                }
                 const result = await response.json();
 
                 // If empty standings (e.g., 2026), try previous year
                 if (!result.standings || result.standings.length === 0) {
                     const prevYear = (year || new Date().getFullYear()) - 1;
-                    const prevResponse = await fetch(`${apiUrl}/api/standings/drivers/${prevYear}`);
+                    const prevResponse = await fetch(`${apiUrl}/api/standings/drivers/${prevYear}`, { signal: controller.signal });
+                    if (!prevResponse.ok) {
+                        throw new Error(`Failed to fetch previous year standings: ${prevResponse.status} ${prevResponse.statusText}`);
+                    }
                     const prevResult = await prevResponse.json();
 
                     setData({
@@ -64,6 +72,9 @@ export function useStandings(year?: number): StandingsData {
                     error: null
                 });
             } catch (error) {
+                if (error instanceof Error && error.name === 'AbortError') {
+                    return; // Request was cancelled, ignore
+                }
                 console.error('Failed to fetch standings:', error);
                 setData(prev => ({
                     ...prev,
@@ -74,6 +85,7 @@ export function useStandings(year?: number): StandingsData {
         };
 
         fetchStandings();
+        return () => controller.abort();
     }, [year]);
 
     return data;
