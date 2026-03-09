@@ -1,9 +1,13 @@
 # SilverWall 🏎️
 
+> [!IMPORTANT]
+> **UNDER MAINTENANCE**: SilverWall is currently undergoing a major architectural pivot. We are migrating from the legacy Python/Supabase stack to a **Full TypeScript + SpacetimeDB** architecture to resolve 2026 season parity issues and enhance real-time performance.
+
 **Engineering-Grade F1 Telemetry Dashboard**
 
-SilverWall is a fully **autonomous**, **database-driven** F1 telemetry dashboard. It transitions seamlessly between seasons, tracks, and off-seasons without any manual code updates, leveraging Supabase as its central nervous system and OpenF1 for live telemetry.
+SilverWall is transitioning to a **SpacetimeDB-powered** reactive engine. It provides ultra-low latency F1 telemetry, session tracking, and historical data with zero polling overhead.
 
+---
 ![SilverWall Autonomous](https://img.shields.io/badge/Engine-Autonomous-00D2BE?style=for-the-badge)
 ![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=flat-square&logo=supabase)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)

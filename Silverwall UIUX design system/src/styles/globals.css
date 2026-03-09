@@ -49,3 +49,15 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--sw-text-mid);
 }
+
+/* Marquee Animation for Maintenance Banner */
+@keyframes sw-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-sw-marquee {
+  display: flex;
+  width: max-content;
+  animation: sw-marquee 60s linear infinite;
+}

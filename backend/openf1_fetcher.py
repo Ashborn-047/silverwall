@@ -18,7 +18,7 @@ _http_client: Optional[httpx.AsyncClient] = None
 # Circuit breaker for OpenF1 API
 openf1_breaker = CircuitBreaker(
     fail_max=5,  # Open circuit after 5 consecutive failures
-    timeout_duration=60,  # Wait 60 seconds before attempting to close circuit
+    reset_timeout=60,  # Wait 60 seconds before attempting to close circuit
     exclude=[httpx.HTTPStatusError]  # Don't count HTTP errors as circuit failures
 )
 

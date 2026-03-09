@@ -84,10 +84,10 @@ export default function Landing() {
                 <div className="flex items-center gap-3">
                     <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-sm border border-[#00D2BE]/20 bg-[#00D2BE]/5">
                         <span className={`w-2 h-2 rounded-full ${raceStatus.status === 'live' ? 'bg-green-500 animate-pulse' :
-                                raceStatus.status === 'waiting' ? 'bg-red-500' :
-                                    raceStatus.status === 'ended' ? 'bg-yellow-500' :
-                                        raceStatus.status === 'off_season' ? 'bg-gray-500' :
-                                            'bg-yellow-500 animate-pulse'
+                            raceStatus.status === 'waiting' ? 'bg-red-500' :
+                                raceStatus.status === 'ended' ? 'bg-yellow-500' :
+                                    raceStatus.status === 'off_season' ? 'bg-gray-500' :
+                                        'bg-yellow-500 animate-pulse'
                             }`} />
                         <span className="text-[10px] font-mono tracking-wider text-[#00D2BE] uppercase">{
                             raceStatus.status === 'live' ? 'RACE LIVE' :
@@ -102,6 +102,23 @@ export default function Landing() {
                     </span>
                 </div>
             </header>
+
+            {/* ========================================================================
+          MAINTENANCE BANNER
+      ======================================================================== */}
+            <div className="w-full bg-[#FFD700]/5 border-y border-[#FFD700]/10 py-2 relative z-20 overflow-hidden shrink-0">
+                <div className="animate-sw-marquee whitespace-nowrap flex items-center">
+                    {[...Array(8)].map((_, i) => (
+                        <div key={i} className="flex items-center gap-6 px-4">
+                            <ShieldAlert size={14} className="text-[#FFD700]" />
+                            <span className="text-[10px] font-mono text-[#FFD700] font-bold tracking-[0.2em] uppercase">
+                                SYSTEM MIGRATION IN PROGRESS: TRANSITIONING TO SPACETIMEDB (FULL TYPESCRIPT) // 2026 SEASON PARITY FIX UNDERWAY
+                            </span>
+                            <div className="w-1 h-1 bg-[#FFD700]/30 rounded-full" />
+                        </div>
+                    ))}
+                </div>
+            </div>
 
             {/* ========================================================================
           MAIN CONTENT AREA

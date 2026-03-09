@@ -4,7 +4,7 @@ FastAPI application for F1 telemetry streaming
 """
 
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -107,7 +107,7 @@ async def shutdown_event():
 
 @app.get("/")
 @limiter.limit("60/minute")
-def root():
+def root(request: Request):
     """API status endpoint"""
     return {
         "status": "SilverWall autonomous backend running",
@@ -118,7 +118,7 @@ def root():
 
 @app.get("/health")
 @limiter.limit("120/minute")
-def health():
+def health(request: Request):
     """
     Health check endpoint with basic system info
     Used by monitoring systems and load balancers
