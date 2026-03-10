@@ -3,6 +3,9 @@
 > [!IMPORTANT]
 > **UNDER MAINTENANCE**: SilverWall is currently undergoing a major architectural pivot. We are migrating from the legacy Python/Supabase stack to a **Full TypeScript + SpacetimeDB** architecture to resolve 2026 season parity issues and enhance real-time performance.
 
+> [!NOTE]
+> **MIGRATION IN PROGRESS**: The backend telemetry engine has been migrated to SpacetimeDB. The frontend integration for Track Geometry and Championship Standings is currently being developed and is available for review on the `feat/spacetime-standings-migration` branch.
+
 **Engineering-Grade F1 Telemetry Dashboard**
 
 SilverWall is transitioning to a **SpacetimeDB-powered** reactive engine. It provides ultra-low latency F1 telemetry, session tracking, and historical data with zero polling overhead.
