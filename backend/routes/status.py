@@ -8,6 +8,8 @@ from datetime import datetime, timezone, timedelta
 import httpx
 from database import get_next_race, supabase, get_current_season
 from logger import logger
+from limiter import limiter
+from fastapi import Request
 
 router = APIRouter()
 
@@ -39,7 +41,8 @@ async def fetch_live_session():
     return None
 
 @router.get("/status")
-async def get_race_status():
+@limiter.limit("60/minute")
+async def get_race_status(request: Request):
     """
     Returns current race status:
     - "live": Race/session is active on OpenF1
@@ -126,7 +129,8 @@ async def get_race_status():
     }
 
 @router.get("/leaderboard")
-async def get_leaderboard():
+@limiter.limit("60/minute")
+async def get_leaderboard(request: Request):
     """
     Returns current leaderboard from live session or DB final results
     """

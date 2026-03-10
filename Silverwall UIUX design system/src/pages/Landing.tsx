@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag, Trophy } from 'lucide-react';
-import useRaceStatus from '../hooks/useRaceStatus';
+import useSpacetimeStatus from '../hooks/useSpacetimeStatus';
 import useTrack from '../hooks/useTrack';
 import useChampions from '../hooks/useChampions';
 import ResultsModal from '../components/ResultsModal';
@@ -15,7 +15,7 @@ export default function Landing() {
     const [isHovered, setIsHovered] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [showStandings, setShowStandings] = useState(false);
-    const raceStatus = useRaceStatus();
+    const raceStatus = useSpacetimeStatus();
     const champions = useChampions(); // Dynamic from Supabase
 
     // Simulating a pit-wall clock
@@ -299,10 +299,10 @@ export default function Landing() {
 const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: any }) => {
     const isOffSeason = raceStatus.status === 'off_season';
 
-    // Fallback to albert_park if circuit is missing (standard F1 opener)
-    const circuitId = raceStatus.circuit || 'albert_park';
+    // SpacetimeDB uses integer circuit keys, use 49 (Bahrain) as default fallback
+    const parsedCircuitId = raceStatus.circuit ? parseInt(raceStatus.circuit, 10) : 49;
     const nextSeason = raceStatus.nextSeason;
-    const { points, loading } = useTrack(circuitId);
+    const { points, loading } = useTrack(parsedCircuitId);
 
     const eventName = raceStatus.meeting || raceStatus.meetingName || (isOffSeason ? "Season Opener" : "TBD Event");
     // 100% Dynamic - no hardcoded circuit names

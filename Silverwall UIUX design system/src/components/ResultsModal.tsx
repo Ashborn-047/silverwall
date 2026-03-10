@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Trophy, Flag, Users, ChevronDown, ChevronUp, Crown, Timer, Flame, Swords, Rocket, Clock } from 'lucide-react';
+import { useSpacetime } from '../contexts/SpacetimeContext';
 
 interface Driver {
     position: number;
@@ -55,6 +56,8 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
     const RACE_TIME = new Date('2025-12-07T13:00:00Z');
     const RACE_DURATION_MS = 2 * 60 * 60 * 1000; // ~2 hours for race
 
+    const { conn, isReady } = useSpacetime();
+
     // Live countdown effect
     useEffect(() => {
         const updateCountdown = () => {
@@ -86,46 +89,86 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
     }, []);
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen || !isReady || !conn) return;
 
         const fetchData = async () => {
             setLoading(true);
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
             try {
-                // Fetch all data in parallel
-                const [driversRes, constructorsRes, racesRes, resultsRes] = await Promise.all([
-                    fetch(`${apiUrl}/api/standings/drivers/${selectedYear}`),
-                    fetch(`${apiUrl}/api/standings/constructors/${selectedYear}`),
-                    fetch(`${apiUrl}/api/season/races/${selectedYear}`),
-                    fetch(`${apiUrl}/api/results`),
-                ]);
+                // Fetch Standings from SpacetimeDB natively
+                const drivers = Array.from(conn.db.driver_standings.iter()).filter(d => d.seasonYear === selectedYear);
+                const sortedDrivers = drivers.sort((a, b) => a.position - b.position).map(d => {
+                    let color = '#FFFFFF';
+                    const driverMeta = Array.from(conn.db.driver.iter()).find(dm => dm.driverNumber === d.driverNumber);
+                    if (driverMeta && driverMeta.teamColor) {
+                        color = driverMeta.teamColor.startsWith('#') ? driverMeta.teamColor : `#${driverMeta.teamColor}`;
+                    }
 
-                if (driversRes.ok) {
-                    const data = await driversRes.json();
-                    setDriverStandings(data.standings || []);
+                    const names = d.driverName.split(' ');
+                    const lastName = names.length > 1 ? names[names.length - 1] : d.driverName;
+
+                    return {
+                        position: d.position,
+                        code: lastName.substring(0, 3).toUpperCase(),
+                        name: d.driverName,
+                        team: d.team,
+                        points: d.points,
+                        color,
+                    };
+                });
+                setDriverStandings(sortedDrivers);
+
+                const constructors = Array.from(conn.db.constructor_standings.iter()).filter(c => c.seasonYear === selectedYear);
+                const sortedConstructors = constructors.sort((a, b) => a.position - b.position).map(c => {
+                    let color = '#FFFFFF';
+                    const driverMeta = Array.from(conn.db.driver.iter()).find(dm => dm.team === c.team);
+                    if (driverMeta && driverMeta.teamColor) {
+                        color = driverMeta.teamColor.startsWith('#') ? driverMeta.teamColor : `#${driverMeta.teamColor}`;
+                    }
+
+                    return {
+                        position: c.position,
+                        team: c.team,
+                        points: c.points,
+                        color,
+                        champion: c.position === 1,
+                    };
+                });
+                setConstructorStandings(sortedConstructors);
+
+                // Fetch Races and Today Result from Python API (Fallback for now)
+                try {
+                    const [racesRes, resultsRes] = await Promise.all([
+                        fetch(`${apiUrl}/api/season/races/${selectedYear}`).catch(() => null),
+                        fetch(`${apiUrl}/api/results`).catch(() => null),
+                    ]);
+
+                    if (racesRes && racesRes.ok) {
+                        const data = await racesRes.json();
+                        setSeasonRaces(data.races || []);
+                    } else {
+                        setSeasonRaces([]);
+                    }
+                    if (resultsRes && resultsRes.ok) {
+                        const data = await resultsRes.json();
+                        setTodayResult(data);
+                    } else {
+                        setTodayResult(null);
+                    }
+                } catch (e) {
+                    console.error("API error for races/results", e);
                 }
-                if (constructorsRes.ok) {
-                    const data = await constructorsRes.json();
-                    setConstructorStandings(data.standings || []);
-                }
-                if (racesRes.ok) {
-                    const data = await racesRes.json();
-                    setSeasonRaces(data.races || []);
-                }
-                if (resultsRes.ok) {
-                    const data = await resultsRes.json();
-                    setTodayResult(data);
-                }
+
             } catch (error) {
-                console.error('Failed to fetch standings:', error);
+                console.error('Failed to process modal data:', error);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchData();
-    }, [isOpen, selectedYear]);
+    }, [isOpen, selectedYear, conn, isReady]);
 
     if (!isOpen) return null;
 

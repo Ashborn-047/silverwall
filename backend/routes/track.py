@@ -4,8 +4,9 @@ Dynamic circuit detection and geometry fetching from Supabase
 """
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from database import get_track_geometry, get_next_race, save_track_geometry
+from limiter import limiter
 
 router = APIRouter()
 
@@ -121,7 +122,8 @@ async def fetch_track_from_openf1(session_key: str = "latest") -> list:
 
 
 @router.get("/track/current")
-async def get_current_track():
+@limiter.limit("60/minute")
+async def get_current_track(request: Request):
     """Get track for current F1 session (LIVE mode)"""
     # 1. Try Live OpenF1 Data
     try:
@@ -174,7 +176,8 @@ async def get_current_track():
 
 
 @router.get("/track/{circuit}")
-async def get_track(circuit: str, use_openf1: bool = False, session_key: str = "latest"):
+@limiter.limit("60/minute")
+async def get_track(request: Request, circuit: str, use_openf1: bool = False, session_key: str = "latest"):
     """Return track geometry for a specific circuit"""
     # 1. Prefer database
     try:
