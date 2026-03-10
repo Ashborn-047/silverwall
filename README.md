@@ -6,6 +6,17 @@
 > [!NOTE]
 > **MIGRATION IN PROGRESS**: The backend telemetry engine has been migrated to SpacetimeDB. The frontend integration for Track Geometry and Championship Standings is currently being developed and is available for review on the `feat/spacetime-standings-migration` branch.
 
+### 🚀 Next-Gen Architecture (SpacetimeDB)
+```mermaid
+graph TD
+    A[OpenF1 API] -->|Telemetry & Standings| I[TS Ingestor Worker]
+    I -->|Low Latency Push| S[(SpacetimeDB Core)]
+    C[Clerk Auth] -->|Authenticate SDK| F[React Frontend]
+    S <-->|Direct Multiplexed Sync| F
+    S <-->|Slash Commands| B[Discord Bot Service]
+    U[Discord User] <-->|Interactions| B
+```
+
 **Engineering-Grade F1 Telemetry Dashboard**
 
 SilverWall is transitioning to a **SpacetimeDB-powered** reactive engine. It provides ultra-low latency F1 telemetry, session tracking, and historical data with zero polling overhead.
