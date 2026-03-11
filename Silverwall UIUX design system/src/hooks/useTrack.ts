@@ -45,10 +45,23 @@ export function useTrack(circuitKey: number): UseTrackResult {
 
                 if (dbPoints.length > 0) {
                     const sortedPoints = dbPoints.sort((a, b) => a.order - b.order);
+                    
+                    // Normalize points to fit between 0 and 1
+                    const minX = Math.min(...sortedPoints.map(p => p.x));
+                    const maxX = Math.max(...sortedPoints.map(p => p.x));
+                    const minY = Math.min(...sortedPoints.map(p => p.y));
+                    const maxY = Math.max(...sortedPoints.map(p => p.y));
+                    
+                    const rangeX = maxX - minX;
+                    const rangeY = maxY - minY;
+                    const maxRange = Math.max(rangeX, rangeY) || 1;
+
+                    // Pad slightly and scale to 1x1 box
                     const frontendPoints = sortedPoints.map(p => ({
-                        x: p.x,
-                        y: p.y
+                        x: (p.x - minX) / maxRange,
+                        y: (p.y - minY) / maxRange
                     }));
+                    
                     setPoints(frontendPoints);
                     // Clear loading once we have data
                     setLoading(false);

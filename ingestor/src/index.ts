@@ -11,7 +11,8 @@ const POLL_INTERVAL_MS = 3000;
 const TIME_WINDOW_STEP_MS = 5000; // Small chunks for 422 fix
 
 let lastSyncedTimestamp: Date | null = null;
-let currentSessionKey = 9500; // Default or fetched
+let currentSessionKey = 9673; // Default or fetched
+let isIngesting = false;
 
 const conn = DbConnection.builder()
     .withUri(SPACETIME_URI)
@@ -42,32 +43,56 @@ app.listen(PORT, () => {
 });
 
 async function startIngestion() {
-    console.log(`Starting telemetry ingestion...`);
-
-    // Fetch and sync all sessions for 2024-2026 to populate the 'race' table
-    const years = [2024, 2025, 2026];
-    for (const year of years) {
-        await syncYearRaces(year);
-        await syncYearDrivers(year);
+    if (isIngesting) {
+        console.log("Ingestion already in progress, skipping...");
+        return;
     }
+    isIngesting = true;
+    console.log(`Starting prioritized telemetry ingestion...`);
 
-    // Backfill historical session data
-    const yearsToBackfill = [2024, 2025];
-    for (const year of yearsToBackfill) {
-        await backfillYear(year);
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    console.log("Waiting 10s for API rate limits to clear...");
+    await sleep(10000);
+
+    // PRIORITY 1: Seed Shanghai Track Geometry (Circuit 49) immediately
+    // This resolves the 'GEOMETRY_ERROR' on the Landing Page
+    console.log(">>> PRIORITY: Seeding Circuit 49 (Shanghai) track geometry...");
+    try {
+        await syncTrack(9673); 
+    } catch (e) {
+        console.error("Failed priority seed for Shanghai, retrying with fallback session 9663...");
+        await syncTrack(9663); // FP1
     }
+    await sleep(5000);
 
-    // Sync Championship Standings (baseline for new season)
-    await syncStandings(2025);
-
-    // Fetch and sync track geometry for the current session (placeholder 9500)
-    await syncTrack(9500);
-
-    // Also sync Bahrain (Circuit 49) via 2024 opening session so the fallback UI has geometry
+    // PRIORITY 2: Seed Bahrain Track Geometry (Circuit 63)
+    console.log("Seeding Circuit 63 (Bahrain) track geometry...");
     await syncTrack(9472);
+    await sleep(2000);
 
-    // Start live ingestion for 2026 (placeholder session 9500)
-    setupLiveIngestion(9500);
+    // Seed/Update 2026 data
+    await syncYearRaces(2026);
+    await sleep(2000);
+    await syncYearDrivers(2026);
+    await sleep(2000);
+
+    // Sync Championship Standings (baseline for 2025/2026)
+    await syncStandings(2025);
+    await sleep(2000);
+
+    console.log("Background: Syncing historical metadata (throttled)...");
+    // Move heavy metadata syncs to follow-up to avoid blocking priorities
+    const otherYears = [2024, 2025];
+    for (const year of otherYears) {
+        await syncYearRaces(year);
+        await sleep(5000); // Heavy throttle
+        await syncYearDrivers(year);
+        await sleep(5000);
+    }
+
+    // Start live ingestion for 2026
+    setupLiveIngestion(9673);
 }
 
 async function syncStandings(year: number) {
@@ -117,12 +142,23 @@ async function syncYearRaces(year: number) {
         });
         const sessions = resp.data;
         for (const s of sessions) {
+            let status = 'upcoming';
+            const now = new Date().getTime();
+            const start = new Date(s.date_start).getTime();
+            const end = s.date_end ? new Date(s.date_end).getTime() : start + (2 * 60 * 60 * 1000); // Guess 2 hours if no end date
+            
+            if (now > end) {
+                status = 'ended';
+            } else if (now >= start && now <= end) {
+                status = 'live';
+            }
+
             conn.reducers.seedRace({
                 raceKey: s.session_key,
                 name: s.session_name || s.meeting_name || 'Race',
                 date: s.date_start,
                 circuitKey: s.circuit_key,
-                status: s.session_key === 9500 ? 'live' : 'upcoming',
+                status: status,
                 year: year
             });
         }
@@ -171,21 +207,36 @@ async function syncTrack(sessionKey: number) {
         }
         const circuitKey = session.circuit_key;
 
-        // 2. Fetch location data for a single driver (driver 1 is usually a safe bet)
-        // We only need ~1-2 laps of data. 3 minutes is usually enough.
+        // 2. Fetch location data for a single driver
+        // We use a 45-minute offset to ensure cars are running laps.
         const start = new Date(session.date_start);
-        const end = new Date(start.getTime() + 3 * 60000); // 3 minutes
+        const driversToTry = [1, 44, 16, 4, 63];
+        let locations = [];
+        let successDriver = -1;
 
-        const locationResp = await axios.get(`${OPENF1_BASE_URL}/location`, {
-            params: {
-                session_key: sessionKey,
-                driver_number: 1, // Max Verstappen
-                date: `>${start.toISOString()}`,
-                date_to: `<${end.toISOString()}`
+        for (const drv of driversToTry) {
+            console.log(`Attempting to fetch track points for circuit ${circuitKey} using driver ${drv}...`);
+            try {
+                // Fetch first ~10k location points without date constraints to guarantee data
+                const locationResp = await axios.get(`${OPENF1_BASE_URL}/location`, {
+                    params: {
+                        session_key: sessionKey,
+                        driver_number: drv
+                    }
+                });
+                if (locationResp.data && locationResp.data.length > 0) {
+                    locations = locationResp.data;
+                    successDriver = drv;
+                    break;
+                }
+            } catch (e: any) {
+                if (e.response?.status === 429) {
+                    console.warn("Rate limited during track sync, waiting 10s...");
+                    await new Promise(r => setTimeout(r, 10000));
+                }
+                console.warn(`Driver ${drv} failed or no data: ${e.message}`);
             }
-        });
-
-        const locations = locationResp.data;
+        }
         if (!locations || locations.length === 0) {
             console.warn(`No location data found to build track for session ${sessionKey}`);
             return;

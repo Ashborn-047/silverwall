@@ -6,6 +6,7 @@ interface RaceStatus {
     sessionName?: string;
     meetingName?: string;
     circuit?: string;
+    circuitName?: string;
     location?: string;
     country?: string;
     race_date?: string;
@@ -31,6 +32,20 @@ interface RaceStatus {
         race_date?: string;
     };
 }
+
+export const CIRCUIT_METADATA: Record<number, { name: string, location: string, country: string }> = {
+    49: { name: "Shanghai International Circuit", location: "Shanghai", country: "China" },
+    63: { name: "Bahrain International Circuit", location: "Sakhir", country: "Bahrain" },
+    22: { name: "Suzuka International Racing Course", location: "Suzuka", country: "Japan" },
+    144: { name: "Jeddah Corniche Circuit", location: "Jeddah", country: "Saudi Arabia" },
+    70: { name: "Red Bull Ring", location: "Spielberg", country: "Austria" },
+    4: { name: "Circuit de Barcelona-Catalunya", location: "Barcelona", country: "Spain" },
+    14: { name: "Monza Circuit", location: "Monza", country: "Italy" },
+    9: { name: "Silverstone Circuit", location: "Silverstone", country: "UK" },
+    7: { name: "Circuit de Spa-Francorchamps", location: "Spa", country: "Belgium" },
+    15: { name: "Marina Bay Street Circuit", location: "Marina Bay", country: "Singapore" },
+    155: { name: "Las Vegas Strip Circuit", location: "Las Vegas", country: "USA" }
+};
 
 export function useSpacetimeStatus(): RaceStatus {
     const { conn, isReady } = useSpacetime();
@@ -60,11 +75,15 @@ export function useSpacetimeStatus(): RaceStatus {
             // Find live race
             const liveRace = races.find(r => r.status === 'live');
             if (liveRace) {
+                const meta = CIRCUIT_METADATA[liveRace.circuitKey];
                 setStatus({
                     status: 'live',
                     sessionName: liveRace.name,
-                    meetingName: liveRace.name,
+                    meetingName: meta ? `${meta.location} Grand Prix` : 'FORMULA 1 GRAND PRIX',
                     circuit: liveRace.circuitKey.toString(),
+                    circuitName: meta ? meta.name : `Circuit ${liveRace.circuitKey}`,
+                    location: meta ? `${meta.location}, ${meta.country}` : `Circuit ${liveRace.circuitKey}`,
+                    country: meta?.country,
                     race_date: liveRace.date
                 });
                 return;
@@ -86,13 +105,16 @@ export function useSpacetimeStatus(): RaceStatus {
                 const minutes = Math.floor((seconds % 3600) / 60);
                 const secs = seconds % 60;
 
+                const meta = CIRCUIT_METADATA[next.circuitKey];
+
                 setStatus({
                     status: 'waiting',
-                    meetingName: 'FORMULA 1 GRAND PRIX', // Fallback for aesthetic layout
-                    nextSession: next.name.toUpperCase(), // Passes "PRACTICE 1", "RACE", etc.
+                    meetingName: meta ? `${meta.location} Grand Prix` : 'FORMULA 1 GRAND PRIX', 
+                    nextSession: next.name.toUpperCase(), 
                     circuit: next.circuitKey.toString(),
-                    location: `Circuit ${next.circuitKey}`,
-                    country: '2026 Season',
+                    circuitName: meta ? meta.name : `Circuit ${next.circuitKey}`,
+                    location: meta ? `${meta.location}, ${meta.country}` : `Circuit ${next.circuitKey}`,
+                    country: meta?.country || 'Unknown',
                     race_date: next.date,
                     countdown: {
                         days,

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Trophy, Flag, Users, ChevronDown, ChevronUp, Crown, Timer, Flame, Swords, Rocket, Clock } from 'lucide-react';
+import { X, Trophy, Flag, Users, ChevronDown, ChevronUp, Crown, Timer, Clock } from 'lucide-react';
 import { useSpacetime } from '../contexts/SpacetimeContext';
+import useSpacetimeStatus, { CIRCUIT_METADATA } from '../hooks/useSpacetimeStatus';
 
 interface Driver {
     position: number;
@@ -43,50 +44,18 @@ type TabType = 'today' | 'season' | 'drivers' | 'constructors';
 
 export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
     const [activeTab, setActiveTab] = useState<TabType>('today');
-    const [selectedYear, setSelectedYear] = useState<number>(2025);
+    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
     const [driverStandings, setDriverStandings] = useState<Driver[]>([]);
     const [constructorStandings, setConstructorStandings] = useState<Constructor[]>([]);
     const [seasonRaces, setSeasonRaces] = useState<Race[]>([]);
     const [todayResult, setTodayResult] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [expandedRace, setExpandedRace] = useState<number | null>(null);
-    const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0, isLive: false, isPast: false });
 
-    // Race time: 18:30 IST = 13:00 UTC on Dec 7, 2025
-    const RACE_TIME = new Date('2025-12-07T13:00:00Z');
-    const RACE_DURATION_MS = 2 * 60 * 60 * 1000; // ~2 hours for race
-
+    const raceStatus = useSpacetimeStatus();
     const { conn, isReady } = useSpacetime();
 
-    // Live countdown effect
-    useEffect(() => {
-        const updateCountdown = () => {
-            const now = new Date();
-            const diff = RACE_TIME.getTime() - now.getTime();
-            const raceEndTime = RACE_TIME.getTime() + RACE_DURATION_MS;
-
-            if (diff > 0) {
-                // Race hasn't started
-                setCountdown({
-                    hours: Math.floor(diff / (1000 * 60 * 60)),
-                    minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-                    seconds: Math.floor((diff % (1000 * 60)) / 1000),
-                    isLive: false,
-                    isPast: false
-                });
-            } else if (now.getTime() < raceEndTime) {
-                // Race is in progress
-                setCountdown({ hours: 0, minutes: 0, seconds: 0, isLive: true, isPast: false });
-            } else {
-                // Race has ended
-                setCountdown({ hours: 0, minutes: 0, seconds: 0, isLive: false, isPast: true });
-            }
-        };
-
-        updateCountdown();
-        const interval = setInterval(updateCountdown, 1000);
-        return () => clearInterval(interval);
-    }, []);
+    // Removed hardcoded local countdown. Realtime countdown handled by raceStatus.
 
     useEffect(() => {
         if (!isOpen || !isReady || !conn) return;
@@ -137,19 +106,29 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                 });
                 setConstructorStandings(sortedConstructors);
 
-                // Fetch Races and Today Result from Python API (Fallback for now)
-                try {
-                    const [racesRes, resultsRes] = await Promise.all([
-                        fetch(`${apiUrl}/api/season/races/${selectedYear}`).catch(() => null),
-                        fetch(`${apiUrl}/api/results`).catch(() => null),
-                    ]);
+                // Read Races directly from SpacetimeDB Table (Filters for Races and Sprints)
+                const dbRaces = Array.from(conn.db.race.iter()).filter(r => 
+                    r.seasonYear === selectedYear && (r.name === 'Race' || r.name === 'Sprint')
+                );
+                const sortedRaces = dbRaces.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                
+                const mappedRaces = sortedRaces.map((r, idx) => {
+                    const meta = CIRCUIT_METADATA[r.circuitKey];
+                    return {
+                        round: idx + 1,
+                        name: r.name,
+                        circuit: meta ? meta.name : `Circuit ${r.circuitKey}`,
+                        date: r.date,
+                        status: r.status,
+                        podium: null // We rely entirely on SpacetimeDB now, historical podiums will be added in a future update
+                    };
+                });
+                
+                setSeasonRaces(mappedRaces);
 
-                    if (racesRes && racesRes.ok) {
-                        const data = await racesRes.json();
-                        setSeasonRaces(data.races || []);
-                    } else {
-                        setSeasonRaces([]);
-                    }
+                // Fetch Today Result from Python API (Fallback for now)
+                try {
+                    const resultsRes = await fetch(`${apiUrl}/api/results`).catch(() => null);
                     if (resultsRes && resultsRes.ok) {
                         const data = await resultsRes.json();
                         setTodayResult(data);
@@ -157,7 +136,7 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                         setTodayResult(null);
                     }
                 } catch (e) {
-                    console.error("API error for races/results", e);
+                    console.error("API error for results", e);
                 }
 
             } catch (error) {
@@ -174,7 +153,7 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
 
     // Dynamic tab label for Today's Race
     const getTodayTabLabel = () => {
-        if (countdown.isLive) return 'Live Race';
+        if (raceStatus.status === 'live') return 'Live Race';
         if (todayResult?.podium) return 'Last Race';
         return 'Next Race';
     };
@@ -252,31 +231,8 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                             {activeTab === 'today' && (
                                 <div className="space-y-6">
                                     <div className="text-center mb-8">
-                                        <h3 className="text-2xl font-bold text-white mb-2">Abu Dhabi Grand Prix</h3>
-                                        <p className="text-[#9CA3AF] font-mono text-sm">Round 24 • Season Finale • TITLE DECIDER</p>
-                                    </div>
-
-                                    {/* Title Fight Banner */}
-                                    <div className="bg-gradient-to-r from-[#FF8000]/20 via-[#3671C6]/20 to-[#FF8000]/20 border border-[#00D2BE]/30 rounded-lg p-4 mb-6">
-                                        <div className="flex items-center justify-center gap-2 font-mono text-sm text-[#00D2BE] uppercase tracking-wider mb-2">
-                                            <Trophy size={16} className="text-[#FFD700]" />
-                                            <span>THREE-WAY TITLE FIGHT</span>
-                                            <Trophy size={16} className="text-[#FFD700]" />
-                                        </div>
-                                        <div className="flex justify-center gap-8 text-sm">
-                                            <div className="text-center">
-                                                <span className="text-[#FF8000] font-bold">NOR</span>
-                                                <span className="text-[#9CA3AF] ml-2">408 pts</span>
-                                            </div>
-                                            <div className="text-center">
-                                                <span className="text-[#3671C6] font-bold">VER</span>
-                                                <span className="text-[#9CA3AF] ml-2">396 pts</span>
-                                            </div>
-                                            <div className="text-center">
-                                                <span className="text-[#FF8000] font-bold">PIA</span>
-                                                <span className="text-[#9CA3AF] ml-2">392 pts</span>
-                                            </div>
-                                        </div>
+                                        <h3 className="text-2xl font-bold text-white mb-2">{raceStatus.meetingName || "Upcoming Grand Prix"}</h3>
+                                        <p className="text-[#9CA3AF] font-mono text-sm">{raceStatus.circuitName || (raceStatus.circuit ? `Circuit ${raceStatus.circuit}` : "TBD Circuit")}</p>
                                     </div>
 
                                     {/* Podium OR Countdown */}
@@ -319,7 +275,7 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                                                 </div>
                                             </div>
                                         </div>
-                                    ) : countdown.isLive ? (
+                                    ) : raceStatus.status === 'live' ? (
                                         // Race is in progress
                                         <div className="text-center py-12">
                                             <div className="flex justify-center gap-2 mb-4">
@@ -331,10 +287,10 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                                                 <div className="w-3 h-3 rounded-full bg-[#FF4444] animate-pulse" />
                                             </div>
                                             <div className="text-[#00D2BE] text-lg mb-4">
-                                                History is being written at Yas Marina!
+                                                Real-time Telemetry Active
                                             </div>
                                             <div className="text-[#9CA3AF] text-sm">
-                                                Who will be crowned 2025 World Champion?
+                                                Watch the live pit-wall for current status.
                                             </div>
                                         </div>
                                     ) : (
@@ -346,47 +302,35 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                                             </div>
 
                                             {/* Catchy tagline */}
-                                            <div className="text-[#FF8000] font-bold text-sm sm:text-lg mb-3 sm:mb-4 tracking-wide">
-                                                THE SHOWDOWN OF THE CENTURY
+                                            <div className="text-[#FF8000] font-bold text-sm sm:text-lg mb-3 sm:mb-4 tracking-wide uppercase">
+                                                {raceStatus.nextSession || "Next Session Scheduled"}
                                             </div>
 
                                             {/* Live Countdown */}
-                                            <div className="flex justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
-                                                <div className="bg-[#1A1A1A] border border-[#00D2BE]/30 rounded-lg px-3 sm:px-6 py-2 sm:py-4">
-                                                    <div className="text-2xl sm:text-4xl font-mono font-bold text-[#00D2BE]">{countdown.hours}</div>
-                                                    <div className="text-[8px] sm:text-[10px] text-[#9CA3AF] uppercase tracking-wider">Hours</div>
+                                            {raceStatus.countdown ? (
+                                                <div className="flex justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
+                                                    <div className="bg-[#1A1A1A] border border-[#00D2BE]/30 rounded-lg px-3 sm:px-6 py-2 sm:py-4">
+                                                        <div className="text-2xl sm:text-4xl font-mono font-bold text-[#00D2BE]">{raceStatus.countdown.days}</div>
+                                                        <div className="text-[8px] sm:text-[10px] text-[#9CA3AF] uppercase tracking-wider">Days</div>
+                                                    </div>
+                                                    <div className="text-xl sm:text-3xl text-[#00D2BE] self-center">:</div>
+                                                    <div className="bg-[#1A1A1A] border border-[#00D2BE]/30 rounded-lg px-3 sm:px-6 py-2 sm:py-4">
+                                                        <div className="text-2xl sm:text-4xl font-mono font-bold text-[#00D2BE]">{String(raceStatus.countdown.hours).padStart(2, '0')}</div>
+                                                        <div className="text-[8px] sm:text-[10px] text-[#9CA3AF] uppercase tracking-wider">Hours</div>
+                                                    </div>
+                                                    <div className="text-xl sm:text-3xl text-[#00D2BE] self-center">:</div>
+                                                    <div className="bg-[#1A1A1A] border border-[#00D2BE]/30 rounded-lg px-3 sm:px-6 py-2 sm:py-4">
+                                                        <div className="text-2xl sm:text-4xl font-mono font-bold text-[#00D2BE]">{String(raceStatus.countdown.minutes).padStart(2, '0')}</div>
+                                                        <div className="text-[8px] sm:text-[10px] text-[#9CA3AF] uppercase tracking-wider">Minutes</div>
+                                                    </div>
                                                 </div>
-                                                <div className="text-xl sm:text-3xl text-[#00D2BE] self-center">:</div>
-                                                <div className="bg-[#1A1A1A] border border-[#00D2BE]/30 rounded-lg px-3 sm:px-6 py-2 sm:py-4">
-                                                    <div className="text-2xl sm:text-4xl font-mono font-bold text-[#00D2BE]">{String(countdown.minutes).padStart(2, '0')}</div>
-                                                    <div className="text-[8px] sm:text-[10px] text-[#9CA3AF] uppercase tracking-wider">Minutes</div>
-                                                </div>
-                                                <div className="text-xl sm:text-3xl text-[#00D2BE] self-center">:</div>
-                                                <div className="bg-[#1A1A1A] border border-[#00D2BE]/30 rounded-lg px-3 sm:px-6 py-2 sm:py-4">
-                                                    <div className="text-2xl sm:text-4xl font-mono font-bold text-[#00D2BE]">{String(countdown.seconds).padStart(2, '0')}</div>
-                                                    <div className="text-[8px] sm:text-[10px] text-[#9CA3AF] uppercase tracking-wider">Seconds</div>
-                                                </div>
-                                            </div>
+                                            ) : (
+                                                <div className="text-[#00D2BE]/50 font-mono tracking-widest uppercase">Waiting for session...</div>
+                                            )}
 
-                                            {/* Drama lines */}
-                                            <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                                                <div className="flex items-center justify-center gap-2 text-white">
-                                                    <Flame size={14} className="text-[#FF8000]" />
-                                                    <span><span className="text-[#FF8000]">Norris</span> leads by just <span className="text-[#00D2BE] font-bold">12 points</span></span>
-                                                </div>
-                                                <div className="flex items-center justify-center gap-2 text-white">
-                                                    <Swords size={14} className="text-[#3671C6]" />
-                                                    <span><span className="text-[#3671C6]">Verstappen</span> hungry for his 5th title</span>
-                                                </div>
-                                                <div className="flex items-center justify-center gap-2 text-white">
-                                                    <Rocket size={14} className="text-[#FF8000]" />
-                                                    <span><span className="text-[#FF8000]">Piastri</span> just <span className="text-[#00D2BE] font-bold">4 points</span> behind Max</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center justify-center gap-2 mt-6 text-[#9CA3AF] text-sm font-mono">
+                                            <div className="flex items-center justify-center gap-2 mt-6 text-[#9CA3AF] text-sm font-mono uppercase">
                                                 <Clock size={14} />
-                                                <span>LIGHTS OUT AT 18:30 IST</span>
+                                                <span>Data Sync Ready for {raceStatus.meetingName || "Upcoming Event"}</span>
                                             </div>
                                         </div>
                                     )}
@@ -397,14 +341,6 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                             {activeTab === 'season' && (
                                 <div className="space-y-4">
                                     {renderSeasonSelector()}
-
-                                    {selectedYear === 2026 && (
-                                        <div className="text-center py-8 mb-4 border border-[#00D2BE]/30 rounded-lg bg-[#00D2BE]/5">
-                                            <Trophy className="w-8 h-8 mx-auto mb-2 text-[#00D2BE]" />
-                                            <div className="text-lg font-bold text-white mb-1">2026 Season Schedule</div>
-                                            <div className="text-[#9CA3AF] text-sm">Season starts March 2026</div>
-                                        </div>
-                                    )}
 
                                     <div className="space-y-2">
                                         {seasonRaces.map((race) => (
@@ -473,14 +409,7 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                             {activeTab === 'drivers' && (
                                 <div className="space-y-4">
                                     {renderSeasonSelector()}
-                                    {selectedYear === 2026 ? (
-                                        <div className="text-center py-12 text-[#9CA3AF]">
-                                            <Timer className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                                            <div className="text-xl font-bold text-white mb-2">2026 Season Coming Soon</div>
-                                            <div>New regulations. New cars. New drama.</div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
+                                    <div className="space-y-2">
                                             {driverStandings.map((driver, index) => (
                                                 <div
                                                     key={driver.code}
@@ -512,28 +441,22 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                                                 </div>
                                             ))}
                                         </div>
-                                    )}
-                                </div>
-                            )}
+                                    </div>
+                                )}
 
                             {/* Constructors Championship Tab */}
                             {activeTab === 'constructors' && (
                                 <div className="space-y-4">
                                     {renderSeasonSelector()}
-                                    {selectedYear === 2026 ? (
-                                        <div className="text-center py-12 text-[#9CA3AF]">
-                                            <Timer className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                                            <div className="text-xl font-bold text-white mb-2">2026 Season Coming Soon</div>
-                                            <div>New regulations. New cars. New drama.</div>
-                                        </div>
-                                    ) : (
                                         <div className="space-y-2">
-                                            {/* McLaren Champion Banner */}
-                                            <div className="bg-gradient-to-r from-[#FF8000]/20 to-[#FF8000]/5 border border-[#FF8000]/50 rounded-lg p-4 mb-4 text-center">
-                                                <div className="text-2xl mb-2">🏆</div>
-                                                <div className="text-[#FF8000] font-bold text-lg">McLaren</div>
-                                                <div className="text-[#9CA3AF] text-sm font-mono">{selectedYear} CONSTRUCTORS' WORLD CHAMPIONS</div>
-                                            </div>
+                                            {/* Dynamic Constructor Title */}
+                                            {constructorStandings.length > 0 && selectedYear < new Date().getFullYear() && (
+                                                <div className="bg-gradient-to-r from-[#FFD700]/20 to-[#FFD700]/5 border border-[#FFD700]/50 rounded-lg p-4 mb-4 text-center">
+                                                    <div className="text-2xl mb-2">🏆</div>
+                                                    <div className="text-[#FFD700] font-bold text-lg">{constructorStandings[0]?.team}</div>
+                                                    <div className="text-[#9CA3AF] text-sm font-mono">{selectedYear} CONSTRUCTORS' WORLD CHAMPIONS</div>
+                                                </div>
+                                            )}
 
                                             {constructorStandings.map((team, index) => (
                                                 <div
@@ -563,7 +486,6 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                                                 </div>
                                             ))}
                                         </div>
-                                    )}
                                 </div>
                             )}
                         </>

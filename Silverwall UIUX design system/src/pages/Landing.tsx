@@ -208,41 +208,43 @@ export default function Landing() {
                         <RaceCard currentTime={currentTime} raceStatus={raceStatus} />
 
                         {/* Champions & Leaders Banner (100% Dynamic from Supabase) */}
-                        <div className="p-4 rounded-sm border border-[#FFD700]/20 bg-[#FFD700]/5 flex items-center justify-between overflow-hidden relative group transition-all duration-500 hover:border-[#FFD700]/40">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-[#FFD700] opacity-50 shadow-[0_0_10px_rgba(255,215,0,0.3)]" />
+                        {!champions.isEarlySeason && (
+                            <div className="p-4 rounded-sm border border-[#FFD700]/20 bg-[#FFD700]/5 flex items-center justify-between overflow-hidden relative group transition-all duration-500 hover:border-[#FFD700]/40">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-[#FFD700] opacity-50 shadow-[0_0_10px_rgba(255,215,0,0.3)]" />
 
-                            <div className="flex flex-col relative z-10">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Trophy size={14} className="text-[#FFD700] animate-pulse" />
-                                    <span className="text-[10px] text-[#FFD700] font-mono font-bold tracking-[0.2em] uppercase">
-                                        {raceStatus.status === 'off_season' ? `${champions.year} WORLD CHAMPIONS` : 'CHAMPIONSHIP LEADERS'}
-                                    </span>
-                                </div>
-
-                                <div className="flex flex-col gap-1">
-                                    {/* Driver Champion */}
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-xl font-black text-white italic tracking-tight uppercase">
-                                            {champions.driver?.name || 'Loading...'}
-                                        </span>
-                                        <span className="text-[10px] text-[#9CA3AF] font-mono tracking-widest uppercase">
-                                            / {champions.driver?.team || 'TBD'} · DRIVER
+                                <div className="flex flex-col relative z-10">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Trophy size={14} className="text-[#FFD700] animate-pulse" />
+                                        <span className="text-[10px] text-[#FFD700] font-mono font-bold tracking-[0.2em] uppercase">
+                                            {raceStatus.status === 'off_season' ? `${champions.displayYear - 1} WORLD CHAMPIONS` : 'CHAMPIONSHIP LEADERS'}
                                         </span>
                                     </div>
-                                    {/* Constructor Champion */}
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-sm font-bold text-[#E0E0E0] uppercase tracking-[0.1em]">
-                                            {champions.constructor?.name || 'Loading...'} F1 TEAM
-                                        </span>
-                                        <span className="text-[10px] text-[#9CA3AF] font-mono tracking-widest uppercase">/ CONSTRUCTORS</span>
+
+                                    <div className="flex flex-col gap-1">
+                                        {/* Driver Champion */}
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-xl font-black text-white italic tracking-tight uppercase">
+                                                {champions.driver?.name || 'Loading...'}
+                                            </span>
+                                            <span className="text-[10px] text-[#9CA3AF] font-mono tracking-widest uppercase">
+                                                / {champions.driver?.team || 'TBD'} · DRIVER
+                                            </span>
+                                        </div>
+                                        {/* Constructor Champion */}
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-sm font-bold text-[#E0E0E0] uppercase tracking-[0.1em]">
+                                                {champions.constructor?.name || 'Loading...'} F1 TEAM
+                                            </span>
+                                            <span className="text-[10px] text-[#9CA3AF] font-mono tracking-widest uppercase">/ CONSTRUCTORS</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="opacity-10 group-hover:opacity-30 transition-all duration-700 transform group-hover:scale-110 -rotate-12 group-hover:rotate-0">
-                                <Trophy size={72} className="text-[#FFD700]" strokeWidth={1} />
+                                <div className="opacity-10 group-hover:opacity-30 transition-all duration-700 transform group-hover:scale-110 -rotate-12 group-hover:rotate-0">
+                                    <Trophy size={72} className="text-[#FFD700]" strokeWidth={1} />
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* View Season Results Button */}
                         <button
@@ -252,7 +254,7 @@ export default function Landing() {
                             <div className="flex items-center gap-2">
                                 <Trophy size={14} className="text-[#00D2BE]" />
                                 <span className="text-[11px] text-[#E0E0E0] font-mono tracking-widest uppercase">
-                                    VIEW {champions.year} SEASON RESULTS
+                                    VIEW {champions.displayYear} SEASON RESULTS
                                 </span>
                             </div>
                             <ChevronRight size={16} className="text-[#00D2BE] group-hover:translate-x-1 transition-transform" />
@@ -305,10 +307,9 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
     const { points, loading } = useTrack(parsedCircuitId);
 
     const eventName = raceStatus.meeting || raceStatus.meetingName || (isOffSeason ? "Season Opener" : "TBD Event");
-    // 100% Dynamic - no hardcoded circuit names
-    const circuitName = raceStatus.circuit_name || raceStatus.circuit?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) || "TBD Circuit";
-    const location = raceStatus.location || raceStatus.country || "TBD";
-    const country = raceStatus.country || "";
+    const circuitName = raceStatus.circuitName || (raceStatus.circuit ? `Circuit ${raceStatus.circuit}` : "TBD Circuit");
+    let location = raceStatus.location || raceStatus.country || "TBD";
+    let country = raceStatus.country || "";
 
 
     // Parse date dynamically
@@ -322,6 +323,16 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
         dateStr = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
         subDate = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) + " UTC";
     }
+
+    const getTrackTransform = (circuitId: number) => {
+        // SVG's Y-axis is inverted vs geographic north. We mirror Y first with scale(1, -1).
+        // Then we rotate to match the standard canonical mapping of the track.
+        switch (circuitId) {
+            case 49: return 'scale(1, -1) rotate(-140deg)'; // Shanghai
+            case 63: return 'scale(1, -1) rotate(-90deg)';  // Bahrain
+            default: return 'scale(1, -1) rotate(-90deg)';
+        }
+    };
 
     return (
         <div className="relative w-full bg-[#0A0C10] border border-[#00D2BE]/20 rounded-sm overflow-hidden">
@@ -368,7 +379,7 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                             <svg
                                 viewBox="0 0 1.1 1.1"
                                 className="max-w-full max-h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)] z-10"
-                                style={{ transform: 'rotate(-90deg)', width: 'auto', height: '90%' }}
+                                style={{ transform: getTrackTransform(parsedCircuitId), width: 'auto', height: '90%' }}
                                 preserveAspectRatio="xMidYMid meet"
                             >
                                 {/* Main track outline */}

@@ -14,7 +14,7 @@ try {
     // Run publish
     // We explicitly pass the project path with quotes
     console.log('Running publish...');
-    execSync(`spacetime publish -y --project-path "${projectDir}" ${dbName}`, { stdio: 'inherit' });
+    execSync(`spacetime publish -y ${dbName}`, { stdio: 'inherit' });
 
     console.log('Publish successful!');
 } catch (err) {

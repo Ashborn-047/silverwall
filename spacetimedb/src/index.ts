@@ -82,6 +82,26 @@ const spacetimedb = schema({
       wins: t.i32(),
     }
   ),
+  race_result: table(
+    { public: true },
+    {
+      race_key: t.i32().index(),
+      position: t.i32(),
+      driver_number: t.i32(),
+      driver_name: t.string(),
+      team: t.string(),
+      time_status: t.string(), // e.g. "+1.234s" or "Finished"
+    }
+  ),
+  commentary: table(
+    { public: true },
+    {
+      session_key: t.i32().index(),
+      timestamp: t.string().index(),
+      content: t.string(),
+      commentator_type: t.string(), // 'tech', 'hype', 'strat'
+    }
+  ),
 });
 
 export default spacetimedb;
@@ -99,6 +119,12 @@ export const init = spacetimedb.init(ctx => {
 export const seed_race = spacetimedb.reducer(
   { race_key: t.i32(), name: t.string(), date: t.string(), circuit_key: t.i32(), status: t.string(), year: t.i32() },
   (ctx, { race_key, name, date, circuit_key, status, year }) => {
+    for (const r of ctx.db.race.iter()) {
+      if (r.race_key === race_key) {
+        ctx.db.race.delete(r);
+        break;
+      }
+    }
     ctx.db.race.insert({ race_key, name, date, circuit_key, status, season_year: year });
   }
 );
@@ -161,6 +187,20 @@ export const seed_constructor_standings = spacetimedb.reducer(
   { season_year: t.i32(), position: t.i32(), team: t.string(), points: t.f64(), wins: t.i32() },
   (ctx, args) => {
     ctx.db.constructor_standings.insert(args);
+  }
+);
+
+export const seed_race_result = spacetimedb.reducer(
+  { race_key: t.i32(), position: t.i32(), driver_number: t.i32(), driver_name: t.string(), team: t.string(), time_status: t.string() },
+  (ctx, args) => {
+    ctx.db.race_result.insert(args);
+  }
+);
+
+export const add_commentary = spacetimedb.reducer(
+  { session_key: t.i32(), timestamp: t.string(), content: t.string(), type: t.string() },
+  (ctx, { session_key, timestamp, content, type }) => {
+    ctx.db.commentary.insert({ session_key, timestamp, content, commentator_type: type });
   }
 );
 
