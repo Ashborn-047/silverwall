@@ -55,9 +55,18 @@ async function startIngestion() {
     console.log("Waiting 10s for API rate limits to clear...");
     await sleep(10000);
 
-    // PRIORITY 1: Seed Shanghai Track Geometry (Circuit 49) immediately
+    // PRIORITY 1: Seed 2026 data & Standings immediately for UI responsiveness
+    console.log(">>> PRIORITY: Syncing 2026 Races and 2025 Standings baseline...");
+    await syncYearRaces(2026);
+    await sleep(2000);
+    await syncYearDrivers(2026);
+    await sleep(2000);
+    await syncStandings(2025);
+    await sleep(2000);
+
+    // PRIORITY 2: Seed Shanghai Track Geometry (Circuit 49) 
     // This resolves the 'GEOMETRY_ERROR' on the Landing Page
-    console.log(">>> PRIORITY: Seeding Circuit 49 (Shanghai) track geometry...");
+    console.log("Syncing Circuit 49 (Shanghai) track geometry...");
     try {
         await syncTrack(9673); 
     } catch (e) {
@@ -66,19 +75,9 @@ async function startIngestion() {
     }
     await sleep(5000);
 
-    // PRIORITY 2: Seed Bahrain Track Geometry (Circuit 63)
+    // PRIORITY 3: Seed Bahrain Track Geometry (Circuit 63)
     console.log("Seeding Circuit 63 (Bahrain) track geometry...");
     await syncTrack(9472);
-    await sleep(2000);
-
-    // Seed/Update 2026 data
-    await syncYearRaces(2026);
-    await sleep(2000);
-    await syncYearDrivers(2026);
-    await sleep(2000);
-
-    // Sync Championship Standings (baseline for 2025/2026)
-    await syncStandings(2025);
     await sleep(2000);
 
     console.log("Background: Syncing historical metadata (throttled)...");

@@ -128,7 +128,12 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
 
                 // Fetch Today Result from Python API (Fallback for now)
                 try {
-                    const resultsRes = await fetch(`${apiUrl}/api/results`).catch(() => null);
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+                    
+                    const resultsRes = await fetch(`${apiUrl}/api/results`, { signal: controller.signal }).catch(() => null);
+                    clearTimeout(timeoutId);
+
                     if (resultsRes && resultsRes.ok) {
                         const data = await resultsRes.json();
                         setTodayResult(data);
@@ -136,7 +141,7 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                         setTodayResult(null);
                     }
                 } catch (e) {
-                    console.error("API error for results", e);
+                    console.error("API error for results or timeout:", e);
                 }
 
             } catch (error) {
