@@ -6,6 +6,8 @@ const spacetimedb = schema({
     {
       race_key: t.i32(),
       name: t.string(),
+      meeting_name: t.string(),
+      location: t.string(),
       date: t.string(), // ISO String
       circuit_key: t.i32(),
       status: t.string(), // 'upcoming', 'live', 'ended'
@@ -117,15 +119,15 @@ export const init = spacetimedb.init(ctx => {
 });
 
 export const seed_race = spacetimedb.reducer(
-  { race_key: t.i32(), name: t.string(), date: t.string(), circuit_key: t.i32(), status: t.string(), year: t.i32() },
-  (ctx, { race_key, name, date, circuit_key, status, year }) => {
+  { race_key: t.i32(), name: t.string(), meeting_name: t.string(), location: t.string(), date: t.string(), circuit_key: t.i32(), status: t.string(), year: t.i32() },
+  (ctx, { race_key, name, meeting_name, location, date, circuit_key, status, year }) => {
     for (const r of ctx.db.race.iter()) {
       if (r.race_key === race_key) {
         ctx.db.race.delete(r);
         break;
       }
     }
-    ctx.db.race.insert({ race_key, name, date, circuit_key, status, season_year: year });
+    ctx.db.race.insert({ race_key, name, meeting_name, location, date, circuit_key, status, season_year: year });
   }
 );
 

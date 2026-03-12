@@ -112,15 +112,27 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                 );
                 const sortedRaces = dbRaces.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                 
+                const allResults = Array.from(conn.db.race_result.iter());
+                
                 const mappedRaces = sortedRaces.map((r, idx) => {
                     const meta = CIRCUIT_METADATA[r.circuitKey];
+                    const podiumResults = allResults
+                        .filter(res => res.raceKey === r.raceKey)
+                        .sort((a, b) => a.position - b.position)
+                        .slice(0, 3)
+                        .map(res => ({
+                            pos: res.position,
+                            code: res.driverName.split(' ').pop()?.substring(0, 3).toUpperCase() || '???',
+                            name: res.driverName
+                        }));
+
                     return {
                         round: idx + 1,
-                        name: r.name,
-                        circuit: meta ? meta.name : `Circuit ${r.circuitKey}`,
+                        name: r.meetingName || r.name,
+                        circuit: meta ? meta.name : r.location || `Circuit ${r.circuitKey}`,
                         date: r.date,
                         status: r.status,
-                        podium: null // We rely entirely on SpacetimeDB now, historical podiums will be added in a future update
+                        podium: podiumResults.length > 0 ? podiumResults : null
                     };
                 });
                 

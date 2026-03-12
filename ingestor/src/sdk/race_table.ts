@@ -13,6 +13,8 @@ import {
 export default __t.row({
   raceKey: __t.i32().name("race_key"),
   name: __t.string(),
+  meetingName: __t.string().name("meeting_name"),
+  location: __t.string(),
   date: __t.string(),
   circuitKey: __t.i32().name("circuit_key"),
   status: __t.string(),

@@ -13,6 +13,8 @@ import {
 export default {
   raceKey: __t.i32(),
   name: __t.string(),
+  meetingName: __t.string(),
+  location: __t.string(),
   date: __t.string(),
   circuitKey: __t.i32(),
   status: __t.string(),

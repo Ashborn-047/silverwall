@@ -34,11 +34,13 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AddCommentaryReducer from "./add_commentary_reducer";
 import AuthenticateReducer from "./authenticate_reducer";
 import InsertTelemetryReducer from "./insert_telemetry_reducer";
 import SeedConstructorStandingsReducer from "./seed_constructor_standings_reducer";
 import SeedDriverStandingsReducer from "./seed_driver_standings_reducer";
 import SeedRaceReducer from "./seed_race_reducer";
+import SeedRaceResultReducer from "./seed_race_result_reducer";
 import SeedTrackReducer from "./seed_track_reducer";
 import UpsertDriverReducer from "./upsert_driver_reducer";
 
@@ -46,11 +48,13 @@ import UpsertDriverReducer from "./upsert_driver_reducer";
 
 // Import all table schema definitions
 import AuthMappingRow from "./auth_mapping_table";
+import CommentaryRow from "./commentary_table";
 import ConfigRow from "./config_table";
 import ConstructorStandingsRow from "./constructor_standings_table";
 import DriverRow from "./driver_table";
 import DriverStandingsRow from "./driver_standings_table";
 import RaceRow from "./race_table";
+import RaceResultRow from "./race_result_table";
 import TelemetryRow from "./telemetry_table";
 import TrackPointRow from "./track_point_table";
 
@@ -65,6 +69,19 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, AuthMappingRow),
+  commentary: __table({
+    name: 'commentary',
+    indexes: [
+      { name: 'session_key', algorithm: 'btree', columns: [
+        'sessionKey',
+      ] },
+      { name: 'timestamp', algorithm: 'btree', columns: [
+        'timestamp',
+      ] },
+    ],
+    constraints: [
+    ],
+  }, CommentaryRow),
   config: __table({
     name: 'config',
     indexes: [
@@ -106,6 +123,16 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, RaceRow),
+  race_result: __table({
+    name: 'race_result',
+    indexes: [
+      { name: 'race_key', algorithm: 'btree', columns: [
+        'raceKey',
+      ] },
+    ],
+    constraints: [
+    ],
+  }, RaceResultRow),
   telemetry: __table({
     name: 'telemetry',
     indexes: [
@@ -136,11 +163,13 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("add_commentary", AddCommentaryReducer),
   __reducerSchema("authenticate", AuthenticateReducer),
   __reducerSchema("insert_telemetry", InsertTelemetryReducer),
   __reducerSchema("seed_constructor_standings", SeedConstructorStandingsReducer),
   __reducerSchema("seed_driver_standings", SeedDriverStandingsReducer),
   __reducerSchema("seed_race", SeedRaceReducer),
+  __reducerSchema("seed_race_result", SeedRaceResultReducer),
   __reducerSchema("seed_track", SeedTrackReducer),
   __reducerSchema("upsert_driver", UpsertDriverReducer),
 );

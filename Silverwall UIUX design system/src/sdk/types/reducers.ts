@@ -6,19 +6,23 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AddCommentaryReducer from "../add_commentary_reducer";
 import AuthenticateReducer from "../authenticate_reducer";
 import InsertTelemetryReducer from "../insert_telemetry_reducer";
 import SeedConstructorStandingsReducer from "../seed_constructor_standings_reducer";
 import SeedDriverStandingsReducer from "../seed_driver_standings_reducer";
 import SeedRaceReducer from "../seed_race_reducer";
+import SeedRaceResultReducer from "../seed_race_result_reducer";
 import SeedTrackReducer from "../seed_track_reducer";
 import UpsertDriverReducer from "../upsert_driver_reducer";
 
+export type AddCommentaryParams = __Infer<typeof AddCommentaryReducer>;
 export type AuthenticateParams = __Infer<typeof AuthenticateReducer>;
 export type InsertTelemetryParams = __Infer<typeof InsertTelemetryReducer>;
 export type SeedConstructorStandingsParams = __Infer<typeof SeedConstructorStandingsReducer>;
 export type SeedDriverStandingsParams = __Infer<typeof SeedDriverStandingsReducer>;
 export type SeedRaceParams = __Infer<typeof SeedRaceReducer>;
+export type SeedRaceResultParams = __Infer<typeof SeedRaceResultReducer>;
 export type SeedTrackParams = __Infer<typeof SeedTrackReducer>;
 export type UpsertDriverParams = __Infer<typeof UpsertDriverReducer>;
 

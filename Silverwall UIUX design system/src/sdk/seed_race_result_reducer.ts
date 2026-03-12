@@ -10,13 +10,11 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-export default __t.row({
-  raceKey: __t.i32().name("race_key"),
-  name: __t.string(),
-  meetingName: __t.string().name("meeting_name"),
-  location: __t.string(),
-  date: __t.string(),
-  circuitKey: __t.i32().name("circuit_key"),
-  status: __t.string(),
-  seasonYear: __t.i32().name("season_year"),
-});
+export default {
+  raceKey: __t.i32(),
+  position: __t.i32(),
+  driverNumber: __t.i32(),
+  driverName: __t.string(),
+  team: __t.string(),
+  timeStatus: __t.string(),
+};

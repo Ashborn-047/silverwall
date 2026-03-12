@@ -85,13 +85,58 @@ async function startIngestion() {
     const otherYears = [2024, 2025];
     for (const year of otherYears) {
         await syncYearRaces(year);
-        await sleep(5000); // Heavy throttle
+        await sleep(2000);
+        await syncPodiums(year);
+        await sleep(2000);
         await syncYearDrivers(year);
         await sleep(5000);
     }
 
     // Start live ingestion for 2026
     setupLiveIngestion(9673);
+}
+
+async function syncPodiums(year: number) {
+    console.log(`Syncing race results (podiums) for ${year}...`);
+    try {
+        // 1. Get all races for this year from SpacetimeDB to create a lookup
+        const dbRaces = Array.from(conn.db.race.iter()).filter(r => r.seasonYear === year);
+        const lookup = new Map<string, number>();
+        for (const r of dbRaces) {
+            // Match by meeting name (ignoring case/extra spaces)
+            const cleanName = r.meetingName.toLowerCase().trim();
+            if (r.name === 'Race') {
+                lookup.set(cleanName, r.raceKey);
+            }
+        }
+
+        // 2. Fetch podiums from Jolpi
+        const resp = await axios.get(`https://api.jolpi.ca/ergast/f1/${year}/results.json?limit=1000`);
+        const races = resp.data.MRData.RaceTable.Races;
+
+        for (const race of races) {
+            const cleanJolpiName = race.raceName.toLowerCase().trim();
+            const raceKey = lookup.get(cleanJolpiName);
+
+            if (raceKey) {
+                const results = race.Results.slice(0, 3); // Get Top 3
+                for (const res of results) {
+                    conn.reducers.seedRaceResult({
+                        raceKey: raceKey,
+                        position: parseInt(res.position, 10),
+                        driverNumber: parseInt(res.Driver.permanentNumber || '0', 10),
+                        driverName: `${res.Driver.givenName} ${res.Driver.familyName}`,
+                        team: res.Constructor.name,
+                        timeStatus: res.Time?.time || res.status
+                    });
+                }
+            } else {
+                console.warn(`Could not find raceKey for Jolpi race: ${race.raceName} (${year})`);
+            }
+        }
+    } catch (err) {
+        console.error(`Failed to sync podiums for ${year}:`, err);
+    }
 }
 
 async function syncStandings(year: number) {
@@ -154,7 +199,9 @@ async function syncYearRaces(year: number) {
 
             conn.reducers.seedRace({
                 raceKey: s.session_key,
-                name: s.session_name || s.meeting_name || 'Race',
+                name: s.session_name || 'Race',
+                meetingName: s.meeting_name || 'Grand Prix',
+                location: s.location || 'Unknown',
                 date: s.date_start,
                 circuitKey: s.circuit_key,
                 status: status,
@@ -165,6 +212,8 @@ async function syncYearRaces(year: number) {
         console.error(`Failed to sync races for ${year}:`, err);
     }
 }
+
+
 
 async function syncYearDrivers(year: number) {
     console.log(`Syncing drivers for ${year}...`);

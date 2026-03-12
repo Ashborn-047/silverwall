@@ -16,6 +16,14 @@ export const AuthMapping = __t.object("AuthMapping", {
 });
 export type AuthMapping = __Infer<typeof AuthMapping>;
 
+export const Commentary = __t.object("Commentary", {
+  sessionKey: __t.i32(),
+  timestamp: __t.string(),
+  content: __t.string(),
+  commentatorType: __t.string(),
+});
+export type Commentary = __Infer<typeof Commentary>;
+
 export const Config = __t.object("Config", {
   key: __t.string(),
   value: __t.string(),
@@ -53,12 +61,24 @@ export type DriverStandings = __Infer<typeof DriverStandings>;
 export const Race = __t.object("Race", {
   raceKey: __t.i32(),
   name: __t.string(),
+  meetingName: __t.string(),
+  location: __t.string(),
   date: __t.string(),
   circuitKey: __t.i32(),
   status: __t.string(),
   seasonYear: __t.i32(),
 });
 export type Race = __Infer<typeof Race>;
+
+export const RaceResult = __t.object("RaceResult", {
+  raceKey: __t.i32(),
+  position: __t.i32(),
+  driverNumber: __t.i32(),
+  driverName: __t.string(),
+  team: __t.string(),
+  timeStatus: __t.string(),
+});
+export type RaceResult = __Infer<typeof RaceResult>;
 
 export const Telemetry = __t.object("Telemetry", {
   driverNumber: __t.i32(),
