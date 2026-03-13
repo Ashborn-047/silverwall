@@ -370,7 +370,8 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                     <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub={isOffSeason ? "PLANNING" : "LIVE STREAM"} />
                 </div>
 
-                {/* Dynamic Track Map Visualization */}
+                {/* Dynamic Track Map Visualization - DISABLED PER USER REQUEST */}
+                {/* 
                 <div className="relative w-full bg-[#050608]/50 rounded border border-[#333]/50 overflow-hidden" style={{ aspectRatio: '16/9' }}>
                     <div className="absolute inset-0 flex items-center justify-center p-4">
                         {loading ? (
@@ -382,7 +383,6 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                                 style={{ transform: getTrackTransform(parsedCircuitId), width: 'auto', height: '90%' }}
                                 preserveAspectRatio="xMidYMid meet"
                             >
-                                {/* Main track outline */}
                                 <path
                                     d={`M ${points[0].x} ${points[0].y} ${points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')} Z`}
                                     fill="none"
@@ -393,7 +393,6 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                                     className="transition-all duration-1000"
                                 />
 
-                                {/* Inner glow / detail path */}
                                 <path
                                     d={`M ${points[0].x} ${points[0].y} ${points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')} Z`}
                                     fill="none"
@@ -402,7 +401,6 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                                     opacity="0.3"
                                 />
 
-                                {/* Start/Finish Line Indicator */}
                                 <circle cx={points[0].x} cy={points[0].y} r="0.01" fill="white" />
                                 <text x={points[0].x + 0.02} y={points[0].y} fill="white" fontSize="0.03" className="font-mono">S/F</text>
                             </svg>
@@ -411,17 +409,16 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                         )}
                     </div>
 
-                    {/* Track container corner accents */}
                     <div className="absolute top-1 left-1 w-3 h-3 border-l border-t border-[#00D2BE]/30" />
                     <div className="absolute top-1 right-1 w-3 h-3 border-r border-t border-[#00D2BE]/30" />
                     <div className="absolute bottom-1 left-1 w-3 h-3 border-l border-b border-[#00D2BE]/30" />
                     <div className="absolute bottom-1 right-1 w-3 h-3 border-r border-b border-[#00D2BE]/30" />
 
-                    {/* Sector labels */}
                     <div className="absolute bottom-2 right-3 text-[10px] font-mono text-[#00D2BE]/50">
                         SECTOR 1 | SECTOR 2 | SECTOR 3
                     </div>
                 </div>
+                */}
             </div>
 
             {/* 2026 Regulation Highlight */}
