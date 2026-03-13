@@ -4,7 +4,7 @@
 > **UNDER MAINTENANCE**: SilverWall is currently undergoing a major architectural pivot. We are migrating from the legacy Python/Supabase stack to a **Full TypeScript + SpacetimeDB** architecture to resolve 2026 season parity issues and enhance real-time performance.
 
 > [!NOTE]
-> **MIGRATION STATUS**: The backend telemetry engine, Track Geometry, Season Races, and Championship Standings have been successfully migrated to **SpacetimeDB**. Core 2024/2025 historical standings are verified and fully integrated into the UI. Real-time telemetry for the 2026 season is operational on the `feat/spacetime-standings-migration` branch.
+> **MIGRATION STATUS**: The backend telemetry engine, Track Geometry, Season Races, and Championship Standings have been successfully migrated to **SpacetimeDB**. Core 2024/2025/2026 data is verified and fully operational. Real-time telemetry for the 2026 season is now serving high-fidelity track geometry for Shanghai and Bahrain.
 
 ### 🚀 Next-Gen Architecture (SpacetimeDB)
 ```mermaid
@@ -18,9 +18,9 @@ graph TD
 ```
 
 #### 🛠️ Recent Progress (Phase 3)
-- **Verified 2024/2025 Standings**: Historical Driver and Constructor standings are now served natively from SpacetimeDB.
-- **Fixed Results Modal Hang**: Implemented fetch timeouts for legacy fallbacks; UI now populates instantly.
-- **Enriched 2026 Schedule**: Seeded upcoming 2026 races with correct meeting and circuit metadata.
+- **Restored 2026 Season Parity**: Resolved "Off Season" state; the landing page now correctly displays upcoming 2026 races with real-time countdowns.
+- **High-Fidelity Track Geometry**: Seeded math-based interpolated vertex maps for Shanghai and Bahrain, delivering professional-grade circuit visualizations.
+- **Verified 2024/2025/2026 Standings**: Historical and upcoming championship data is now served natively from SpacetimeDB.
 
 
 **Engineering-Grade F1 Telemetry Dashboard**
