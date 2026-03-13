@@ -59,7 +59,7 @@ export function useSpacetimeStatus(): RaceStatus {
             .onApplied(() => {
                 updateStatus();
             })
-            .subscribe(["SELECT * FROM race", "SELECT * FROM config"]);
+            .subscribe(["SELECT * FROM race", "SELECT * FROM config", "SELECT * FROM race_result", "SELECT * FROM constructor_standings"]);
 
         // Listen for table updates
         conn.db.race.onInsert((_) => updateStatus());
@@ -75,15 +75,14 @@ export function useSpacetimeStatus(): RaceStatus {
             // Find live race
             const liveRace = races.find(r => r.status === 'live');
             if (liveRace) {
-                const meta = CIRCUIT_METADATA[liveRace.circuitKey];
                 setStatus({
                     status: 'live',
                     sessionName: liveRace.name,
-                    meetingName: meta ? `${meta.location} Grand Prix` : 'FORMULA 1 GRAND PRIX',
+                    meetingName: liveRace.meetingName || 'FORMULA 1 GRAND PRIX',
                     circuit: liveRace.circuitKey.toString(),
-                    circuitName: meta ? meta.name : `Circuit ${liveRace.circuitKey}`,
-                    location: meta ? `${meta.location}, ${meta.country}` : `Circuit ${liveRace.circuitKey}`,
-                    country: meta?.country,
+                    circuitName: liveRace.meetingName || `Circuit ${liveRace.circuitKey}`,
+                    location: liveRace.location || `Circuit ${liveRace.circuitKey}`,
+                    country: liveRace.location?.split(',').pop()?.trim(),
                     race_date: liveRace.date
                 });
                 return;
@@ -105,16 +104,14 @@ export function useSpacetimeStatus(): RaceStatus {
                 const minutes = Math.floor((seconds % 3600) / 60);
                 const secs = seconds % 60;
 
-                const meta = CIRCUIT_METADATA[next.circuitKey];
-
                 setStatus({
                     status: 'waiting',
-                    meetingName: meta ? `${meta.location} Grand Prix` : 'FORMULA 1 GRAND PRIX', 
+                    meetingName: next.meetingName || 'FORMULA 1 GRAND PRIX', 
                     nextSession: next.name.toUpperCase(), 
                     circuit: next.circuitKey.toString(),
-                    circuitName: meta ? meta.name : `Circuit ${next.circuitKey}`,
-                    location: meta ? `${meta.location}, ${meta.country}` : `Circuit ${next.circuitKey}`,
-                    country: meta?.country || 'Unknown',
+                    circuitName: next.meetingName || `Circuit ${next.circuitKey}`,
+                    location: next.location || `Circuit ${next.circuitKey}`,
+                    country: next.location?.split(',').pop()?.trim() || 'Unknown',
                     race_date: next.date,
                     countdown: {
                         days,
@@ -135,11 +132,12 @@ export function useSpacetimeStatus(): RaceStatus {
                 message: `${currentSeason} Season Mode`,
                 nextSeason: {
                     year: 2026,
-                    first_race: 'Australian Grand Prix',
-                    location: 'Melbourne',
-                    country: 'Australia',
-                    circuit: 'albert_park',
-                    countdown_seconds: 0 // Will be updated by real dates later
+                    first_race: 'Chinese Grand Prix',
+                    location: 'Shanghai, China',
+                    country: 'China',
+                    circuit: '49',
+                    countdown_seconds: 0,
+                    race_date: '2026-03-15T07:00:00Z'
                 }
             });
         };

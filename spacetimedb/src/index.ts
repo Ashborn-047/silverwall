@@ -178,6 +178,17 @@ export const seed_track = spacetimedb.reducer(
   }
 );
 
+export const clear_track_geometry = spacetimedb.reducer(
+  { circuit_key: t.i32() },
+  (ctx, { circuit_key }) => {
+    for (const p of ctx.db.track_point.iter()) {
+      if (p.circuit_key === circuit_key) {
+        ctx.db.track_point.delete(p);
+      }
+    }
+  }
+);
+
 export const seed_driver_standings = spacetimedb.reducer(
   { season_year: t.i32(), position: t.i32(), driver_number: t.i32(), driver_name: t.string(), team: t.string(), points: t.f64(), wins: t.i32() },
   (ctx, args) => {

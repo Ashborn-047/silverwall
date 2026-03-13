@@ -112,10 +112,12 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                 );
                 const sortedRaces = dbRaces.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                 
+                // Fetch podium results from race_result table
                 const allResults = Array.from(conn.db.race_result.iter());
-                
+
                 const mappedRaces = sortedRaces.map((r, idx) => {
-                    const meta = CIRCUIT_METADATA[r.circuitKey];
+
+                    // Get podium top 3 for this race from SpacetimeDB
                     const podiumResults = allResults
                         .filter(res => res.raceKey === r.raceKey)
                         .sort((a, b) => a.position - b.position)
@@ -129,7 +131,7 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                     return {
                         round: idx + 1,
                         name: r.meetingName || r.name,
-                        circuit: meta ? meta.name : r.location || `Circuit ${r.circuitKey}`,
+                        circuit: r.location || `Circuit ${r.circuitKey}`,
                         date: r.date,
                         status: r.status,
                         podium: podiumResults.length > 0 ? podiumResults : null
