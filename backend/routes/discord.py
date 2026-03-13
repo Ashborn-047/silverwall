@@ -6,6 +6,7 @@ from nacl.signing import VerifyKey
 from nacl.exceptions import BadSignatureError
 from datetime import datetime, timezone
 from database import supabase, get_next_race, get_driver_standings, get_constructor_standings, get_current_season_year
+from limiter import limiter
 
 router = APIRouter(tags=["discord"])
 
@@ -36,6 +37,7 @@ async def verify_signature(request: Request):
         raise HTTPException(status_code=401, detail="Invalid request signature")
 
 @router.post("/discord/interactions")
+@limiter.limit("30/minute")
 async def discord_interactions(request: Request):
     # 1. Security Verification
     await verify_signature(request)

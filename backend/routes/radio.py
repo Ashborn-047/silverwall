@@ -3,10 +3,11 @@ SilverWall - Radio Transcripts API
 Fetches team radio messages from OpenF1 API
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from datetime import datetime, timezone
 from typing import List, Optional
 import httpx
+from limiter import limiter
 
 router = APIRouter()
 
@@ -53,9 +54,9 @@ async def fetch_radio_from_openf1(session_key: str = "latest", limit: int = 10):
         print(f"Error fetching radio: {e}")
     return []
 
-
 @router.get("/radio")
-async def get_radio_messages(session_key: str = "latest", limit: int = 10):
+@limiter.limit("60/minute")
+async def get_radio_messages(request: Request, session_key: str = "latest", limit: int = 10):
     """
     Get team radio messages from the current session.
     
@@ -87,9 +88,9 @@ async def get_radio_messages(session_key: str = "latest", limit: int = 10):
         "count": len(formatted),
     }
 
-
 @router.get("/radio/demo")
-async def get_demo_radio():
+@limiter.limit("60/minute")
+async def get_demo_radio(request: Request):
     """Get demo radio messages for testing UI"""
     demo_messages = [
         {"driver": "HAM", "message": "These tyres are completely gone!", "team": "Mercedes"},

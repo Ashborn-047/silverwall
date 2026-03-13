@@ -1,15 +1,15 @@
 /**
- * useTrack - REST API hook for track geometry
+ * useTrack - SpacetimeDB hook for track geometry
  *
- * MODES:
- * - Demo mode: Fetches static track from /api/track/{circuit}
- * - Live mode: Fetches current race track from /api/track/current (auto-detects circuit)
+ * Fetches the ordered track points for a given circuit directly from
+ * the SpacetimeDB `track_point` table.
  */
 
 import { useState, useEffect } from 'react';
-import { apiFetch } from '../utils/apiClient';
+import { TrackPoint } from '../sdk/types';
+import { useSpacetime } from '../contexts/SpacetimeContext';
 
-export interface TrackPoint {
+export interface FrontendTrackPoint {
     x: number;
     y: number;
 }
@@ -17,62 +17,97 @@ export interface TrackPoint {
 interface TrackData {
     name: string;
     location: string;
-    points: TrackPoint[];
-    circuit_key?: string;
-    session_name?: string;
-    source?: string;
-    drs_zones?: { start: number; end: number }[];
-    sectors?: { name: string; start: number; end: number }[];
+    points: FrontendTrackPoint[];
+    circuit_key?: number;
 }
 
 interface UseTrackResult {
     track: TrackData | null;
-    points: TrackPoint[];
+    points: FrontendTrackPoint[];
     loading: boolean;
     error: string | null;
 }
 
-export function useTrack(circuit: string = 'latest', isLiveMode: boolean = false): UseTrackResult {
-    const [track, setTrack] = useState<TrackData | null>(null);
+export function useTrack(circuitKey: number): UseTrackResult {
+    const { conn, isReady } = useSpacetime();
+    const [points, setPoints] = useState<FrontendTrackPoint[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchTrack = async () => {
-            setLoading(true);
-            setError(null);
+        if (!isReady || !conn) return;
 
-            // Use different endpoints for demo vs live mode
-            const endpoint = isLiveMode
-                ? '/api/track/current'  // Live: auto-detect current race
-                : `/api/track/${circuit}`;  // Demo: use specified circuit
+        setLoading(true);
+        try {
+            const updatePoints = () => {
+                const dbPoints = Array.from(conn.db.track_point.iter())
+                    .filter(p => p.circuitKey === circuitKey);
 
-            console.log(`📍 Fetching track: ${endpoint} (${isLiveMode ? 'LIVE' : 'DEMO'} mode)`);
+                if (dbPoints.length > 0) {
+                    const sortedPoints = dbPoints.sort((a, b) => a.order - b.order);
 
-            const { data, error: fetchError } = await apiFetch<TrackData>(endpoint);
+                    // Normalize points to fit between 0 and 1
+                    const minX = Math.min(...sortedPoints.map(p => p.x));
+                    const maxX = Math.max(...sortedPoints.map(p => p.x));
+                    const minY = Math.min(...sortedPoints.map(p => p.y));
+                    const maxY = Math.max(...sortedPoints.map(p => p.y));
 
-            if (fetchError) {
-                console.error('Failed to fetch track data:', fetchError);
-                setError(fetchError);
-                setLoading(false);
-                return;
-            }
+                    const rangeX = maxX - minX;
+                    const rangeY = maxY - minY;
+                    const maxRange = Math.max(rangeX, rangeY) || 1;
 
-            if (data) {
-                console.log(`✅ Track loaded: ${data.name} (${data.points?.length || 0} points, source: ${data.source || 'static'})`);
-                setTrack(data);
-            }
+                    // Pad slightly and scale to 1x1 box
+                    const frontendPoints = sortedPoints.map(p => ({
+                        x: (p.x - minX) / maxRange,
+                        y: (p.y - minY) / maxRange
+                    }));
 
+                    setPoints(frontendPoints);
+                    // Clear loading once we have data
+                    setLoading(false);
+                }
+            };
+
+            // Initial immediate update if we already have it cached
+            updatePoints();
+
+            // Subscribe to track_point table if not already globally fetched
+            conn.subscriptionBuilder()
+                .onApplied(() => {
+                    updatePoints();
+                    setLoading(false); // Clear loading when subscription finishes, even if empty
+                })
+                .subscribe(["SELECT * FROM track_point"]);
+
+            // Watch for new points arriving
+            const onInsert = (ctx: any, p: TrackPoint) => {
+                if (p.circuitKey === circuitKey) {
+                    updatePoints();
+                }
+            };
+
+            conn.db.track_point.onInsert(onInsert);
+
+        } catch (err: any) {
+            console.error('Failed to query track points from SpacetimeDB:', err);
+            setError(err.message);
             setLoading(false);
-        };
+        }
 
-        fetchTrack();
-    }, [circuit, isLiveMode]);
+    }, [circuitKey, isReady, conn]);
+
+    // Create a mock TrackData object to satisfy the existing UI components
+    const trackData: TrackData | null = points.length > 0 ? {
+        name: `Circuit ${circuitKey}`,
+        location: 'SpacetimeDB',
+        points: points,
+        circuit_key: circuitKey
+    } : null;
 
     return {
-        track,
-        points: track?.points ?? [],
-        loading,
+        track: trackData,
+        points: points,
+        loading: loading && points.length === 0,
         error
     };
 }

@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Wifi, Activity, Radio, Trophy } from 'lucide-react';
-import useTelemetry from '../hooks/useTelemetry';
-import { useTrack, TrackPoint } from '../hooks/useTrack';
-import useRaceStatus from '../hooks/useRaceStatus';
+import useSpacetimeTelemetry from '../hooks/useSpacetimeTelemetry';
+import { useTrack, FrontendTrackPoint as TrackPoint } from '../hooks/useTrack';
+import useSpacetimeStatus from '../hooks/useSpacetimeStatus';
 import CountdownOverlay from '../components/CountdownOverlay';
 import CommentaryPanel from '../components/CommentaryPanel';
 import ResultsModal from '../components/ResultsModal';
@@ -89,14 +89,16 @@ function getTyreLetter(compound: string | undefined): string {
 }
 
 export default function TelemetryLive() {
-  // WebSocket telemetry hook
-  const { frame, status } = useTelemetry();
-  // Race status from backend API
-  const raceStatus = useRaceStatus();
-  const circuitId = raceStatus.circuit || raceStatus.nextSeason?.circuit || 'latest';
+  // SpacetimeDB telemetry hook
+  const { frame, status } = useSpacetimeTelemetry();
+  // Race status from SpacetimeDB
+  const raceStatus = useSpacetimeStatus();
+  // Provide a safe fallback for circuitId since useTrack now expects a number
+  const circuitId = typeof raceStatus.circuit === 'number' ? raceStatus.circuit :
+    (typeof raceStatus.nextSeason?.circuit === 'number' ? raceStatus.nextSeason.circuit : 22); // Default to a known circuit (e.g., 22) if not available yet
 
-  // Track hook - fetches from /track/current explicitly live
-  const { track, points: trackPoints } = useTrack(circuitId, true);
+  // Track hook - fetches directly from SpacetimeDB track_point table
+  const { track, points: trackPoints } = useTrack(circuitId);
 
   const sessionTime = '--:--:--';
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
@@ -209,12 +211,10 @@ export default function TelemetryLive() {
     }
   }, [leaderboard]);
 
-  const showCountdown = raceStatus.status === 'waiting' || raceStatus.status === 'off_season';
-
   return (
     <div className="flex flex-col h-screen bg-[#050608] text-[#E0E0E0] select-none overflow-hidden font-inter">
-      {/* Countdown Overlay */}
-      {showCountdown && <CountdownOverlay raceStatus={raceStatus} />}
+      {/* Countdown Overlay (Off-Season Fullscreen) */}
+      {raceStatus.status === 'off_season' && <CountdownOverlay raceStatus={raceStatus} isFullScreen={true} />}
 
       {/* ========================================================================
           TOP HEADER BAR
@@ -381,7 +381,10 @@ export default function TelemetryLive() {
         </aside>
 
         {/* CENTER PANEL: TRACK MAP */}
-        <section className="relative bg-[#050608] flex items-center justify-center p-8">
+        <section className="relative bg-[#050608] flex items-center justify-center p-8 overflow-hidden">
+          {/* Active Session Countdown Overlay */}
+          {raceStatus.status === 'waiting' && <CountdownOverlay raceStatus={raceStatus} isFullScreen={false} />}
+
           {/* Background Grid */}
           <div
             className="absolute inset-0 pointer-events-none opacity-5"

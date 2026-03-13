@@ -1,14 +1,14 @@
 /**
  * useChampions - Hook to fetch current World Champions from backend
- * Returns driver and constructor champions from Supabase
- * Falls back to /standings endpoints if /champions doesn't have complete data
+ * Returns driver and constructor champions from SpacetimeDB
  */
 
 import { useState, useEffect } from 'react';
-import { apiFetch } from '../utils/apiClient';
+import { useSpacetime } from '../contexts/SpacetimeContext';
 
 interface Champions {
-    year: number;
+    displayYear: number;
+    isEarlySeason: boolean;
     driver: {
         name: string;
         team: string;
@@ -21,8 +21,10 @@ interface Champions {
 }
 
 export function useChampions(): Champions {
+    const { conn, isReady } = useSpacetime();
     const [champions, setChampions] = useState<Champions>({
-        year: new Date().getFullYear(),
+        displayYear: new Date().getFullYear(),
+        isEarlySeason: false,
         driver: null,
         constructor: null,
         loading: true,
@@ -30,72 +32,72 @@ export function useChampions(): Champions {
     });
 
     useEffect(() => {
-        const controller = new AbortController();
+        if (!isReady || !conn) return;
 
-        const fetchChampions = async () => {
-            // Try /champions endpoint first
-            const { data, error } = await apiFetch<any>('/api/champions');
+        const updateChampions = () => {
+            try {
+                // Find all driver and constructor standings
+                const drivers = Array.from(conn.db.driver_standings.iter());
+                const constructors = Array.from(conn.db.constructor_standings.iter());
 
-            if (error) {
-                console.error('Failed to fetch champions:', error);
-                setChampions(prev => ({
-                    ...prev,
+                if (drivers.length === 0) {
+                    setChampions(prev => ({ ...prev, loading: false }));
+                    return;
+                }
+
+                // Get config and races to determine season progress
+                const config = Array.from(conn.db.config?.iter() || []);
+                const currentSeasonStr = config.find(c => c.key === 'current_season')?.value || new Date().getFullYear().toString();
+                const currentSeason = parseInt(currentSeasonStr, 10);
+
+                const races = Array.from(conn.db.race?.iter() || []);
+                const completedRacesThisSeason = races.filter(r =>
+                    new Date(r.date).getFullYear() === currentSeason &&
+                    r.status === 'ended' &&
+                    r.name === 'Race'
+                );
+
+                // Hide leaders if we are in the current season but have less than 5 completed races
+                const isEarlySeason = completedRacesThisSeason.length < 5;
+
+                // Find the P1 driver and P1 constructor for that year
+                const maxYear = drivers.length > 0 ? Math.max(...drivers.map(d => d.seasonYear)) : currentSeason;
+                const driverChamp = drivers.find(d => d.seasonYear === maxYear && d.position === 1);
+                const constChamp = constructors.find(c => c.seasonYear === maxYear && c.position === 1);
+
+                setChampions({
+                    displayYear: currentSeason,
+                    isEarlySeason,
+                    driver: driverChamp ? {
+                        name: driverChamp.driverName,
+                        team: driverChamp.team
+                    } : null,
+                    constructor: constChamp ? {
+                        name: constChamp.team
+                    } : null,
                     loading: false,
-                    error: 'Unable to fetch champions'
-                }));
-                return;
+                    error: null
+                });
+            } catch (err: any) {
+                console.error("Failed to parse champions from SpacetimeDB", err);
+                setChampions(prev => ({ ...prev, error: err.message, loading: false }));
             }
-
-            let championsData = data;
-
-            // If no driver from champions, fallback to standings leader
-            if (!championsData?.driver && !championsData?.error) {
-                // Fetch current year's standings (2025 season is completed)
-                const currentYear = new Date().getFullYear();
-
-                // Fetch from current year's standings which has the champion
-                const [driversResult, constructorsResult] = await Promise.all([
-                    apiFetch<any>(`/api/standings/drivers/${currentYear}`),
-                    apiFetch<any>(`/api/standings/constructors/${currentYear}`)
-                ]);
-
-                const driversData = driversResult.data;
-                const constructorsData = constructorsResult.data;
-
-                // Use P1 from previous year standings as "champion"
-                if (driversData?.leader) {
-                    championsData = {
-                        ...championsData,
-                        year: driversData.season,
-                        driver: {
-                            name: driversData.leader.name,
-                            team: driversData.leader.team
-                        }
-                    };
-                }
-
-                if (constructorsData?.standings?.[0]) {
-                    championsData = {
-                        ...championsData,
-                        constructor: {
-                            name: constructorsData.standings[0].team
-                        }
-                    };
-                }
-            }
-
-            setChampions({
-                year: championsData?.year || new Date().getFullYear(),
-                driver: championsData?.driver,
-                constructor: championsData?.constructor,
-                loading: false,
-                error: null
-            });
         };
 
-        fetchChampions();
-        return () => controller.abort();
-    }, []);
+        // Subscribe to the standings tables
+        conn.subscriptionBuilder()
+            .onApplied(() => updateChampions())
+            .subscribe([
+                "SELECT * FROM driver_standings",
+                "SELECT * FROM constructor_standings",
+                "SELECT * FROM race",
+                "SELECT * FROM config"
+            ]);
+
+        // Initial check in case data is already synced
+        updateChampions();
+
+    }, [conn, isReady]);
 
     return champions;
 }

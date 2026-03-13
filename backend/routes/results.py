@@ -3,11 +3,12 @@ SilverWall - Race Results API
 Fetches race results from OpenF1 for podium display
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from datetime import datetime, timezone
 from typing import List, Optional
 import httpx
 from database import get_last_race, get_current_season_year
+from limiter import limiter
 
 router = APIRouter()
 
@@ -90,7 +91,8 @@ async def fetch_race_results_from_openf1(session_key: str = "latest"):
 
 
 @router.get("/results")
-async def get_race_results():
+@limiter.limit("60/minute")
+async def get_race_results(request: Request):
     """
     Get the latest completed race results.
     """
@@ -144,10 +146,11 @@ async def get_race_results():
 
 
 @router.get("/results/podium")
-async def get_podium():
+@limiter.limit("60/minute")
+async def get_podium(request: Request):
     """Get just the podium (top 3) for quick display"""
     # Simply reuse the main logic to ensure consistency
-    full_results = await get_race_results()
+    full_results = await get_race_results(request)
     return {
         "race": full_results.get("race"),
         "podium": full_results.get("podium", []),

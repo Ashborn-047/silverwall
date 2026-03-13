@@ -11,7 +11,7 @@ interface CountdownOverlayProps {
             location: string;
             country: string;
             circuit: string;
-            race_date: string;
+            race_date?: string;
             countdown_seconds: number;
         };
         countdown?: {
@@ -26,12 +26,14 @@ interface CountdownOverlayProps {
         location?: string;
         country?: string;
         circuit_name?: string;
-    }
+    },
+    isFullScreen?: boolean;
 }
 
 
-const CountdownOverlay: React.FC<CountdownOverlayProps> = ({ raceStatus }) => {
+const CountdownOverlay: React.FC<CountdownOverlayProps> = ({ raceStatus, isFullScreen }) => {
     const isOffSeason = raceStatus.status === 'off_season';
+    const fullScreenMode = isFullScreen ?? isOffSeason;
 
     // For off-season (2026)
     const nextSeason = raceStatus.nextSeason;
@@ -59,7 +61,7 @@ const CountdownOverlay: React.FC<CountdownOverlayProps> = ({ raceStatus }) => {
         : `${raceStatus.circuit_name || raceStatus.location || 'Unknown Circuit'}, ${raceStatus.country || 'Unknown'}`;
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#050608]/90 backdrop-blur-xl">
+        <div className={`absolute inset-0 z-50 flex items-center justify-center ${fullScreenMode ? 'bg-[#050608]/90 backdrop-blur-xl' : 'bg-[#050608]/60 backdrop-blur-md'}`}>
             {/* Ambient Background Glow */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#00D2BE]/10 rounded-full blur-[120px] pointer-events-none" />
 

@@ -24,3 +24,9 @@ venv/
 
 # Secrets
 backend/env/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+__pycache__/
+**/__pycache__/
