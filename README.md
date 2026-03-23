@@ -22,7 +22,6 @@ graph TD
 - **Verified 2024/2025/2026 Standings**: Historical and upcoming championship data is now served natively from the new TypeScript engine.
 - **Track Geometry Modernization**: Initiated migration of circuit maps to high-fidelity vertex-based rendering (feature currently in refinement).
 
-
 **Engineering-Grade F1 Telemetry Dashboard**
 
 SilverWall is transitioning to a **SpacetimeDB-powered** reactive engine. It provides ultra-low latency F1 telemetry, session tracking, and historical data with zero polling overhead.

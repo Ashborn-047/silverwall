@@ -3,15 +3,17 @@ SilverWall - Season Standings API
 Autonomous standings and race history driven by Supabase
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from typing import Optional
 from database import supabase, get_current_season
+from limiter import limiter
 
 router = APIRouter()
 
 @router.get("/standings/drivers")
 @router.get("/standings/drivers/{year}")
-async def get_driver_standings(year: Optional[int] = None):
+@limiter.limit("60/minute")
+async def get_driver_standings(request: Request, year: Optional[int] = None):
     """Get driver championship standings. Defaults to current active season."""
     if year is None:
         year = await get_current_season()
@@ -58,7 +60,8 @@ async def get_driver_standings(year: Optional[int] = None):
 
 @router.get("/standings/constructors")
 @router.get("/standings/constructors/{year}")
-async def get_constructor_standings(year: Optional[int] = None):
+@limiter.limit("60/minute")
+async def get_constructor_standings(request: Request, year: Optional[int] = None):
     """Get constructor championship standings. Defaults to current active season."""
     if year is None:
         year = await get_current_season()
@@ -101,7 +104,8 @@ async def get_constructor_standings(year: Optional[int] = None):
 
 @router.get("/season/races")
 @router.get("/season/races/{year}")
-async def get_season_races(year: Optional[int] = None):
+@limiter.limit("60/minute")
+async def get_season_races(request: Request, year: Optional[int] = None):
     """Get all races in the specified season. Defaults to current active season."""
     if year is None:
         year = await get_current_season()
@@ -151,7 +155,8 @@ async def get_season_races(year: Optional[int] = None):
     }
 
 @router.get("/season/race/{round_num}")
-async def get_race_by_round(round_num: int, year: Optional[int] = None):
+@limiter.limit("60/minute")
+async def get_race_by_round(request: Request, round_num: int, year: Optional[int] = None):
     """Get specific race details from DB by round number. Defaults to current season."""
     if year is None:
         year = await get_current_season()
@@ -172,7 +177,8 @@ async def get_race_by_round(round_num: int, year: Optional[int] = None):
 
 @router.get("/champions")
 @router.get("/champions/{year}")
-async def get_champions(year: Optional[int] = None):
+@limiter.limit("60/minute")
+async def get_champions(request: Request, year: Optional[int] = None):
     """
     Get the World Champions (Driver & Constructor) for a given season.
     FULLY AUTONOMOUS: Detects the most recent COMPLETED season from race data.

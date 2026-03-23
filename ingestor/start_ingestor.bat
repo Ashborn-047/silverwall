@@ -1,0 +1,6 @@
+@echo off
+echo Starting SilverWall Ingestor...
+echo Connecting to SpacetimeDB Cloud...
+cd /d %~dp0
+npm start
+pause
