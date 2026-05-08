@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Trophy, Flag, Users, ChevronDown, ChevronUp, Crown, Timer, Clock } from 'lucide-react';
 import { useSpacetime } from '../contexts/SpacetimeContext';
-import useSpacetimeStatus, { CIRCUIT_METADATA } from '../hooks/useSpacetimeStatus';
+import useSpacetimeStatus from '../hooks/useSpacetimeStatus';
 
 interface Driver {
     position: number;

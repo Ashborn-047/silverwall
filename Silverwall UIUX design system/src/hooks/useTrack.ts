@@ -80,7 +80,7 @@ export function useTrack(circuitKey: number): UseTrackResult {
                 .subscribe(["SELECT * FROM track_point"]);
 
             // Watch for new points arriving
-            const onInsert = (ctx: any, p: TrackPoint) => {
+            const onInsert = (_ctx: any, p: TrackPoint) => {
                 if (p.circuitKey === circuitKey) {
                     updatePoints();
                 }

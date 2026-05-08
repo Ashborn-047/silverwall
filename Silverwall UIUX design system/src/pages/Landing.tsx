@@ -60,7 +60,7 @@ export default function Landing() {
     return (
         <div className="min-h-screen bg-[#050608] text-[#E0E0E0] font-sans selection:bg-[#00D2BE] selection:text-[#050608] flex flex-col overflow-hidden relative">
 
-            {/* Background Grid Mesh (Subtle Engineering Texture) }
+            {/* Background Grid Mesh (Subtle Engineering Texture) */}
             <div
                 className="absolute inset-0 pointer-events-none opacity-10"
                 style={{
@@ -72,10 +72,10 @@ export default function Landing() {
 
             {/* ========================================================================
           HEADER
-      ======================================================================== }
+      ======================================================================== */}
             <header className="w-full max-w-[1400px] mx-auto px-6 py-6 flex items-center justify-between relative z-10 border-b border-[#00D2BE]/10">
                 <div className="flex items-center gap-3">
-                    <div className="w-1 h-6 bg-[#00D2BE]" /> {/* AMG Style Accent Bar }
+                    <div className="w-1 h-6 bg-[#00D2BE]" /> {/* AMG Style Accent Bar */}
                     <h1 className="text-xl font-bold tracking-widest uppercase">
                         SILVER<span className="text-[#00D2BE]">WALL</span>
                     </h1>
@@ -105,7 +105,7 @@ export default function Landing() {
 
             {/* ========================================================================
           MAINTENANCE BANNER
-      ======================================================================== }
+      ======================================================================== */}
             <div className="w-full bg-[#FFD700]/5 border-y border-[#FFD700]/10 py-2 relative z-20 overflow-hidden shrink-0">
                 <div className="animate-sw-marquee whitespace-nowrap flex items-center">
                     {[...Array(8)].map((_, i) => (
@@ -122,26 +122,26 @@ export default function Landing() {
 
             {/* ========================================================================
           MAIN CONTENT AREA
-      ======================================================================== }
+      ======================================================================== */}
             <main className="flex-grow flex items-center justify-center relative z-10 w-full max-w-[1400px] mx-auto px-6 py-12">
                 <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
 
-                    {/* LEFT COL: Value Prop & CTA }
+                    {/* LEFT COL: Value Prop & CTA */}
                     <div className="lg:col-span-7 flex flex-col gap-8">
 
-                        {/* Context Label }
+                        {/* Context Label */}
                         <div className="flex items-center gap-2 text-[#00D2BE] font-mono text-xs tracking-[0.2em] uppercase mb-[-1rem]">
                             <Terminal size={14} />
                             <span>Telemetry Extraction Unit</span>
                         </div>
 
-                        {/* Headline }
+                        {/* Headline */}
                         <h2 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1]">
                             ENGINEERING-GRADE<br />
                             <span className="text-white">RACE TELEMETRY.</span>
                         </h2>
 
-                        {/* Countdown Timer }
+                        {/* Countdown Timer */}
                         <div className="flex items-center gap-3 font-mono text-sm">
                             {isLive ? (
                                 <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-sm animate-pulse">
@@ -158,13 +158,13 @@ export default function Landing() {
                             )}
                         </div>
 
-                        {/* Value Statement }
+                        {/* Value Statement */}
                         <p className="text-[#9CA3AF] text-lg md:text-xl max-w-2xl font-light border-l-2 border-[#333] pl-6 py-1">
                             Speed, gear changes, throttle, braking, and DRS — visualized in real-time.
                             A precise tactical toolkit for analysts, mirroring the pit wall environment.
                         </p>
 
-                        {/* Metric Preview Pills }
+                        {/* Metric Preview Pills */}
                         <div className="flex flex-wrap gap-3 font-mono text-xs text-[#00D2BE]">
                             {['SPEED_KPH', 'RPM', 'DRS_STATUS', 'THROTTLE_%', 'BRAKE_PSI', 'GEAR'].map((metric) => (
                                 <span key={metric} className="px-2 py-1 bg-[#00D2BE]/10 border border-[#00D2BE]/20 rounded-sm">
@@ -173,7 +173,7 @@ export default function Landing() {
                             ))}
                         </div>
 
-                        {/* PRIMARY CTA }
+                        {/* PRIMARY CTA */}
                         <div className="mt-4">
                             <Link
                                 to="/telemetry/live"
@@ -203,11 +203,11 @@ export default function Landing() {
                         </div>
                     </div>
 
-                    {/* RIGHT COL: Next Race Card }
+                    {/* RIGHT COL: Next Race Card */}
                     <div className="lg:col-span-5 w-full flex flex-col gap-6">
                         <RaceCard currentTime={currentTime} raceStatus={raceStatus} />
 
-                        {/* Champions & Leaders Banner (100% Dynamic from Supabase) }
+                        {/* Champions & Leaders Banner (100% Dynamic from Supabase) */}
                         {!champions.isEarlySeason && (
                             <div className="p-4 rounded-sm border border-[#FFD700]/20 bg-[#FFD700]/5 flex items-center justify-between overflow-hidden relative group transition-all duration-500 hover:border-[#FFD700]/40">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-[#FFD700] opacity-50 shadow-[0_0_10px_rgba(255,215,0,0.3)]" />
@@ -221,7 +221,7 @@ export default function Landing() {
                                     </div>
 
                                     <div className="flex flex-col gap-1">
-                                        {/* Driver Champion }
+                                        {/* Driver Champion */}
                                         <div className="flex items-baseline gap-2">
                                             <span className="text-xl font-black text-white italic tracking-tight uppercase">
                                                 {champions.driver?.name || 'Loading...'}
@@ -230,7 +230,7 @@ export default function Landing() {
                                                 / {champions.driver?.team || 'TBD'} · DRIVER
                                             </span>
                                         </div>
-                                        {/* Constructor Champion }
+                                        {/* Constructor Champion */}
                                         <div className="flex items-baseline gap-2">
                                             <span className="text-sm font-bold text-[#E0E0E0] uppercase tracking-[0.1em]">
                                                 {champions.constructor?.name || 'Loading...'} F1 TEAM
@@ -246,7 +246,7 @@ export default function Landing() {
                             </div>
                         )}
 
-                        {/* View Season Results Button }
+                        {/* View Season Results Button */}
                         <button
                             onClick={() => setShowStandings(true)}
                             className="w-full p-3 flex items-center justify-between border border-[#00D2BE]/20 rounded-sm bg-[#00D2BE]/5 hover:bg-[#00D2BE]/10 hover:border-[#00D2BE]/40 transition-all group"
@@ -266,7 +266,7 @@ export default function Landing() {
 
             {/* ========================================================================
           FOOTER
-      ======================================================================== }
+      ======================================================================== */}
             <footer className="w-full max-w-[1400px] mx-auto px-6 py-8 border-t border-[#00D2BE]/10 relative z-10">
                 <div className="flex flex-col md:flex-row justify-between items-center text-[#555] text-xs gap-4">
                     <div className="flex items-center gap-4">
@@ -286,7 +286,7 @@ export default function Landing() {
                 </div>
             </footer>
 
-            {/* Results Modal }
+            {/* Results Modal */}
             <ResultsModal
                 isOpen={showStandings}
                 onClose={() => setShowStandings(false)}
@@ -336,13 +336,13 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
 
     return (
         <div className="relative w-full bg-[#0A0C10] border border-[#00D2BE]/20 rounded-sm overflow-hidden">
-            {/* Decorative Corner Markers }
+            {/* Decorative Corner Markers */}
             <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-[#00D2BE]" />
             <div className="absolute top-0 right-0 w-2 h-2 border-r border-t border-[#00D2BE]" />
             <div className="absolute bottom-0 left-0 w-2 h-2 border-l border-b border-[#00D2BE]" />
             <div className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-[#00D2BE]" />
 
-            {/* Card Header }
+            {/* Card Header */}
             <div className="bg-[#00D2BE]/5 border-b border-[#00D2BE]/10 p-4 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <Activity size={16} className="text-[#00D2BE]" />
@@ -355,14 +355,14 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                 </div>
             </div>
 
-            {/* Card Body }
+            {/* Card Body */}
             <div className="p-6 md:p-8">
                 <div className="flex flex-col gap-1 mb-6">
                     <h3 className="text-2xl font-bold text-white tracking-wide uppercase">{eventName}</h3>
                     <span className="text-[#9CA3AF] text-sm font-light">{circuitName}</span>
                 </div>
 
-                {/* Data Grid }
+                {/* Data Grid */}
                 <div className="grid grid-cols-2 gap-y-4 gap-x-8 mb-8 border-t border-b border-[#333] py-4">
                     <DataPoint icon={<Clock size={14} />} label="DATE" value={dateStr} sub={subDate} />
                     <DataPoint icon={<Flag size={14} />} label="LAPS" value={isOffSeason ? String(nextSeason?.laps || 'TBD') : 'TBD'} sub={isOffSeason ? `${nextSeason?.circuit_length_km || 'TBD'} KM` : 'TBD'} />
@@ -370,7 +370,7 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                     <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub={isOffSeason ? "PLANNING" : "LIVE STREAM"} />
                 </div>
 
-                {/* Dynamic Track Map Visualization } 
+                {/* Dynamic Track Map Visualization */} 
                 <div className="relative w-full bg-[#050608]/50 rounded border border-[#333]/50 overflow-hidden" style={{ aspectRatio: '16/9' }}>
                     <div className="absolute inset-0 flex items-center justify-center p-4">
                         {loading ? (
@@ -417,10 +417,9 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                         SECTOR 1 | SECTOR 2 | SECTOR 3
                     </div>
                 </div>
-                }
             </div>
 
-            {/* 2026 Regulation Highlight }
+            {/* 2026 Regulation Highlight */}
             {isOffSeason && (
                 <div className="px-6 md:px-8 pb-8">
                     <div className="p-3 bg-[#00D2BE]/5 border border-[#00D2BE]/10 rounded-sm">
