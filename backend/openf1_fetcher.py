@@ -6,7 +6,7 @@ Fetches real-time car positions and telemetry from OpenF1 API
 import httpx
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict
 from pybreaker import CircuitBreaker
 
@@ -31,6 +31,13 @@ _CACHE_MAX_SIZE = 50
 # Cache for session key with shorter TTL
 _session_key_cache: Optional[tuple] = None  # (session_key, timestamp)
 _SESSION_KEY_TTL = 30  # 30 seconds - reduce repeated API calls
+
+# Cache full telemetry snapshots so each WebSocket client does not create its
+# own burst of OpenF1 requests. OpenF1's free tier is intentionally modest.
+_telemetry_cache: Optional[tuple] = None  # (payload, timestamp)
+_LIVE_TELEMETRY_TTL = 4
+_IDLE_TELEMETRY_TTL = 30
+_LIVE_WINDOW_PADDING = timedelta(minutes=30)
 
 
 async def get_http_client() -> httpx.AsyncClient:
@@ -75,6 +82,57 @@ def _cache_set(key: str, data: Dict) -> None:
     _driver_cache[key] = (data, time.time())
 
 
+def _parse_openf1_datetime(value: Optional[str]) -> Optional[datetime]:
+    """Parse OpenF1 ISO timestamps into timezone-aware UTC datetimes."""
+    if not value:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def is_session_in_live_window(session: Dict) -> bool:
+    """
+    OpenF1 now classifies live data by time window, not only by null date_end.
+    Treat sessions as active from 30 minutes before start through 30 minutes
+    after end, matching OpenF1's own live/historical boundary.
+    """
+    if session.get("date_end") is None:
+        return True
+
+    now = datetime.now(timezone.utc)
+    start = _parse_openf1_datetime(session.get("date_start"))
+    end = _parse_openf1_datetime(session.get("date_end"))
+
+    if start and end:
+        return (start - _LIVE_WINDOW_PADDING) <= now <= (end + _LIVE_WINDOW_PADDING)
+    if start:
+        return now >= (start - _LIVE_WINDOW_PADDING)
+    return False
+
+
+def _get_telemetry_cache() -> Optional[Dict]:
+    if _telemetry_cache is None:
+        return None
+
+    payload, ts = _telemetry_cache
+    ttl = _LIVE_TELEMETRY_TTL if payload.get("status") == "live" else _IDLE_TELEMETRY_TTL
+    if time.time() - ts < ttl:
+        return payload
+    return None
+
+
+def _set_telemetry_cache(payload: Dict) -> Dict:
+    global _telemetry_cache
+    _telemetry_cache = (payload, time.time())
+    return payload
+
+
 async def get_latest_session_key() -> Optional[int]:
     """Get the current/latest session key from OpenF1. Results are cached for 30s."""
     global _session_key_cache
@@ -94,8 +152,8 @@ async def get_latest_session_key() -> Optional[int]:
             data = response.json()
             if data:
                 session = data[0]
-                # Only return if session is live (no end time)
-                if session.get("date_end") is None:
+                # Only return sessions that are currently in OpenF1's live window.
+                if is_session_in_live_window(session):
                     session_key = session.get("session_key")
                     # Cache the result
                     _session_key_cache = (session_key, time.time())
@@ -267,10 +325,25 @@ async def fetch_live_telemetry(session_key: int = None) -> Dict:
     Fetch live telemetry data combining positions, intervals, stints, and driver info.
     Returns data ready for WebSocket broadcast, SORTED by race position.
     """
+    should_cache_snapshot = session_key is None
+
+    if should_cache_snapshot:
+        cached_payload = _get_telemetry_cache()
+        if cached_payload is not None:
+            return cached_payload
+
     session_key = session_key or await get_latest_session_key()
+
+    def maybe_cache(payload: Dict) -> Dict:
+        return _set_telemetry_cache(payload) if should_cache_snapshot else payload
     
     if not session_key:
-        return {"status": "offline", "cars": [], "message": "No active session"}
+        return maybe_cache({
+            "status": "offline",
+            "cars": [],
+            "message": "No active session",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
 
     # Fetch all data in parallel using asyncio.gather
     try:
@@ -292,10 +365,15 @@ async def fetch_live_telemetry(session_key: int = None) -> Dict:
 
     except Exception as e:
         print(f"Critical error in parallel fetch: {e}")
-        return {"status": "error", "cars": [], "message": str(e)}
+        return maybe_cache({"status": "error", "cars": [], "message": str(e)})
     
     if not race_positions and not locations:
-        return {"status": "waiting", "cars": [], "session_key": session_key}
+        return maybe_cache({
+            "status": "waiting",
+            "cars": [],
+            "session_key": session_key,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
 
     # Build lookup maps with None filtering (single pass, more efficient)
     interval_map = {i["driver_number"]: i for i in intervals if i.get("driver_number")}
@@ -344,9 +422,10 @@ async def fetch_live_telemetry(session_key: int = None) -> Dict:
     # Sort by position (using optimized key function)
     cars.sort(key=lambda x: x["position"] or 999)
     
-    return {
+    payload = {
         "status": "live",
         "session_key": session_key,
         "cars": cars,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    return maybe_cache(payload)

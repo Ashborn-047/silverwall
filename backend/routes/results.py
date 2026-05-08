@@ -69,22 +69,27 @@ async def fetch_race_results_from_openf1(session_key: str = "latest"):
             
             # Get final positions for race
             response = await client.get(
-                f"{OPENF1_API}/position",
+                f"{OPENF1_API}/session_result",
                 params={"session_key": session_key}
             )
             if response.status_code == 200:
                 data = response.json()
                 if data:
-                    # Get latest position for each driver
-                    latest = {}
-                    for entry in data:
-                        driver_num = entry.get("driver_number")
-                        if driver_num and (driver_num not in latest or entry.get("date", "") > latest[driver_num].get("date", "")):
-                            latest[driver_num] = entry
-                    
-                    # Sort by position
-                    sorted_results = sorted(latest.values(), key=lambda x: x.get("position", 999))
-                    return sorted_results
+                    return sorted(data, key=lambda x: x.get("position", 999))
+
+            # Fallback for older sessions where session_result is not populated yet.
+            response = await client.get(
+                f"{OPENF1_API}/position",
+                params={"session_key": session_key}
+            )
+            if response.status_code == 200:
+                data = response.json()
+                latest = {}
+                for entry in data:
+                    driver_num = entry.get("driver_number")
+                    if driver_num and (driver_num not in latest or entry.get("date", "") > latest[driver_num].get("date", "")):
+                        latest[driver_num] = entry
+                return sorted(latest.values(), key=lambda x: x.get("position", 999))
     except Exception as e:
         print(f"Error fetching results: {e}")
     return []

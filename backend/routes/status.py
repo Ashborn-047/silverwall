@@ -10,6 +10,7 @@ from database import get_next_race, supabase, get_current_season
 from logger import logger
 from limiter import limiter
 from fastapi import Request
+from openf1_fetcher import is_session_in_live_window
 
 router = APIRouter()
 
@@ -24,18 +25,8 @@ async def fetch_live_session():
                 data = response.json()
                 if data:
                     session = data[0]
-                    date_end = session.get("date_end")
-                    if date_end is None:
+                    if is_session_in_live_window(session):
                         return session
-                    
-                    # Check if session ended recently (within last 30 minutes)
-                    try:
-                        end_time = datetime.fromisoformat(date_end.replace('Z', '+00:00'))
-                        now = datetime.now(timezone.utc)
-                        if (now - end_time).total_seconds() < 1800:
-                            return session
-                    except Exception as parse_error:
-                        logger.warning(f"Failed to parse session end time: {parse_error}")
     except Exception as e:
         logger.error(f"Live session fetch failed: {e}")
     return None

@@ -14,18 +14,23 @@ async def fetch_session_order(session_key: int):
     """Fetch final position order from OpenF1"""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{OPENF1_API}/position", params={"session_key": session_key})
+            response = await client.get(f"{OPENF1_API}/session_result", params={"session_key": session_key})
             if response.status_code == 200:
                 data = response.json()
                 if data:
-                    # Get latest position per driver
-                    latest = {}
-                    for entry in data:
-                        d_num = entry.get("driver_number")
-                        if d_num:
-                            if d_num not in latest or entry.get("date", "") > latest[d_num].get("date", ""):
-                                latest[d_num] = entry
-                    return sorted(latest.values(), key=lambda x: x.get("position", 999))
+                    return sorted(data, key=lambda x: x.get("position", 999))
+
+            # Older sessions can lag behind official publication, so keep the
+            # previous position-derived path as a compatibility fallback.
+            response = await client.get(f"{OPENF1_API}/position", params={"session_key": session_key})
+            if response.status_code == 200:
+                data = response.json()
+                latest = {}
+                for entry in data:
+                    d_num = entry.get("driver_number")
+                    if d_num and (d_num not in latest or entry.get("date", "") > latest[d_num].get("date", "")):
+                        latest[d_num] = entry
+                return sorted(latest.values(), key=lambda x: x.get("position", 999))
     except Exception as e:
         print(f"Error fetching session order: {e}")
     return []
