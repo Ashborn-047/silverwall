@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag, Trophy } from 'lucide-react';
 import useSpacetimeStatus from '../hooks/useSpacetimeStatus';
-import useTrack from '../hooks/useTrack';
+import TrackMap from '../components/TrackMap';
 import useChampions from '../hooks/useChampions';
 import ResultsModal from '../components/ResultsModal';
 
@@ -301,10 +301,8 @@ export default function Landing() {
 const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: any }) => {
     const isOffSeason = raceStatus.status === 'off_season';
 
-    // SpacetimeDB uses integer circuit keys, use 49 (Bahrain) as default fallback
-    const parsedCircuitId = raceStatus.circuit ? parseInt(raceStatus.circuit, 10) : 49;
-    const nextSeason = raceStatus.nextSeason;
-    const { points, loading } = useTrack(parsedCircuitId);
+    // SpacetimeDB uses integer circuit keys, use 63 (Bahrain) as default fallback
+    const parsedCircuitId = raceStatus.circuit ? parseInt(raceStatus.circuit, 10) : 63;
 
     const eventName = raceStatus.meeting || raceStatus.meetingName || (isOffSeason ? "Season Opener" : "TBD Event");
     const circuitName = raceStatus.circuitName || (raceStatus.circuit ? `Circuit ${raceStatus.circuit}` : "TBD Circuit");
@@ -323,16 +321,6 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
         dateStr = d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
         subDate = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) + " UTC";
     }
-
-    const getTrackTransform = (circuitId: number) => {
-        // SVG's Y-axis is inverted vs geographic north. We mirror Y first with scale(1, -1).
-        // Then we rotate to match the standard canonical mapping of the track.
-        switch (circuitId) {
-            case 49: return 'scale(1, -1) rotate(-140deg)'; // Shanghai
-            case 63: return 'scale(1, -1) rotate(-90deg)';  // Bahrain
-            default: return 'scale(1, -1) rotate(-90deg)';
-        }
-    };
 
     return (
         <div className="relative w-full bg-[#0A0C10] border border-[#00D2BE]/20 rounded-sm overflow-hidden">
@@ -365,58 +353,17 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                 {/* Data Grid */}
                 <div className="grid grid-cols-2 gap-y-4 gap-x-8 mb-8 border-t border-b border-[#333] py-4">
                     <DataPoint icon={<Clock size={14} />} label="DATE" value={dateStr} sub={subDate} />
-                    <DataPoint icon={<Flag size={14} />} label="LAPS" value={isOffSeason ? String(nextSeason?.laps || 'TBD') : 'TBD'} sub={isOffSeason ? `${nextSeason?.circuit_length_km || 'TBD'} KM` : 'TBD'} />
+                    <DataPoint icon={<Flag size={14} />} label="LAPS" value={isOffSeason ? String(raceStatus.nextSeason?.laps || 'TBD') : 'TBD'} sub={isOffSeason ? `${raceStatus.nextSeason?.circuit_length_km || 'TBD'} KM` : 'TBD'} />
                     <DataPoint icon={<MapPin size={14} />} label="LOCATION" value={location} sub={country} />
                     <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub={isOffSeason ? "PLANNING" : "LIVE STREAM"} />
                 </div>
 
-                {/* Dynamic Track Map Visualization */} 
-                <div className="relative w-full bg-[#050608]/50 rounded border border-[#333]/50 overflow-hidden" style={{ aspectRatio: '16/9' }}>
-                    <div className="absolute inset-0 flex items-center justify-center p-4">
-                        {loading ? (
-                            <div className="animate-pulse text-[#00D2BE] font-mono text-[10px]">LOADING_GEOMETRY...</div>
-                        ) : points.length > 0 ? (
-                            <svg
-                                viewBox="0 0 1.1 1.1"
-                                className="max-w-full max-h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)] z-10"
-                                style={{ transform: getTrackTransform(parsedCircuitId), width: 'auto', height: '90%' }}
-                                preserveAspectRatio="xMidYMid meet"
-                            >
-                                <path
-                                    d={`M ${points[0].x} ${points[0].y} ${points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')} Z`}
-                                    fill="none"
-                                    stroke="#00D2BE"
-                                    strokeWidth="0.015"
-                                    strokeLinejoin="round"
-                                    strokeLinecap="round"
-                                    className="transition-all duration-1000"
-                                />
-
-                                <path
-                                    d={`M ${points[0].x} ${points[0].y} ${points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')} Z`}
-                                    fill="none"
-                                    stroke="white"
-                                    strokeWidth="0.002"
-                                    opacity="0.3"
-                                />
-
-                                <circle cx={points[0].x} cy={points[0].y} r="0.01" fill="white" />
-                                <text x={points[0].x + 0.02} y={points[0].y} fill="white" fontSize="0.03" className="font-mono">S/F</text>
-                            </svg>
-                        ) : (
-                            <div className="text-red-500/50 font-mono text-[10px]">GEOMETRY_ERROR</div>
-                        )}
-                    </div>
-
-                    <div className="absolute top-1 left-1 w-3 h-3 border-l border-t border-[#00D2BE]/30" />
-                    <div className="absolute top-1 right-1 w-3 h-3 border-r border-t border-[#00D2BE]/30" />
-                    <div className="absolute bottom-1 left-1 w-3 h-3 border-l border-b border-[#00D2BE]/30" />
-                    <div className="absolute bottom-1 right-1 w-3 h-3 border-r border-b border-[#00D2BE]/30" />
-
-                    <div className="absolute bottom-2 right-3 text-[10px] font-mono text-[#00D2BE]/50">
-                        SECTOR 1 | SECTOR 2 | SECTOR 3
-                    </div>
-                </div>
+                {/* Static Track Map Visualization */}
+                <TrackMap 
+                    circuitId={parsedCircuitId}
+                    showInfo={true}
+                    className="mt-4"
+                />
             </div>
 
             {/* 2026 Regulation Highlight */}
