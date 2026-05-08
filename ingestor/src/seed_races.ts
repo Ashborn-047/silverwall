@@ -39,6 +39,8 @@ async function syncYearRaces(year: number) {
             conn.reducers.seedRace({
                 raceKey: s.session_key,
                 name: s.session_name || s.meeting_name || 'Race',
+                meetingName: s.meeting_name || `${s.country_name || 'Unknown'} Grand Prix`,
+                location: s.circuit_short_name || s.location || 'Unknown',
                 date: s.date_start,
                 circuitKey: s.circuit_key,
                 status: status,

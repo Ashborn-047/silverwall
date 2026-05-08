@@ -31,6 +31,8 @@ const conn = DbConnection.builder()
                         conn.reducers.seedRace({
                             raceKey: r.raceKey,
                             name: r.name,
+                            meetingName: r.meetingName || r.name,
+                            location: r.location || `Circuit ${r.circuitKey}`,
                             date: r.date,
                             circuitKey: r.circuitKey,
                             status: status,

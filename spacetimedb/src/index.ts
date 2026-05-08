@@ -203,6 +203,15 @@ export const seed_constructor_standings = spacetimedb.reducer(
   }
 );
 
+export const clear_race_results = spacetimedb.reducer(
+  {},
+  (ctx) => {
+    for (const result of ctx.db.race_result.iter()) {
+      ctx.db.race_result.delete(result);
+    }
+  }
+);
+
 export const seed_race_result = spacetimedb.reducer(
   { race_key: t.i32(), position: t.i32(), driver_number: t.i32(), driver_name: t.string(), team: t.string(), time_status: t.string() },
   (ctx, args) => {
