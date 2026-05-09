@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag, Trophy } from 'lucide-react';
 import useSpacetimeStatus from '../hooks/useSpacetimeStatus';
-import TrackMap from '../components/TrackMap';
 import useChampions from '../hooks/useChampions';
 import ResultsModal from '../components/ResultsModal';
 
@@ -301,8 +300,6 @@ export default function Landing() {
 const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: any }) => {
     const isOffSeason = raceStatus.status === 'off_season';
 
-    // SpacetimeDB uses integer circuit keys, use 63 (Bahrain) as default fallback
-    const parsedCircuitId = raceStatus.circuit ? parseInt(raceStatus.circuit, 10) : 63;
 
     const eventName = raceStatus.meeting || raceStatus.meetingName || (isOffSeason ? "Season Opener" : "TBD Event");
     const circuitName = raceStatus.circuitName || (raceStatus.circuit ? `Circuit ${raceStatus.circuit}` : "TBD Circuit");
@@ -358,12 +355,6 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                     <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub={isOffSeason ? "PLANNING" : "LIVE STREAM"} />
                 </div>
 
-                {/* Static Track Map Visualization */}
-                <TrackMap 
-                    circuitId={parsedCircuitId}
-                    showInfo={true}
-                    className="mt-4"
-                />
             </div>
 
             {/* 2026 Regulation Highlight */}
