@@ -14,6 +14,7 @@ export { austin } from './austin';
 export { interlagos } from './interlagos';
 export { marina_bay } from './marina_bay';
 export { yas_marina } from './yas_marina';
+export { montreal } from './montreal';
 
 import { CircuitMetadata } from './types';
 import { bahrain } from './bahrain';
@@ -30,6 +31,7 @@ import { austin } from './austin';
 import { interlagos } from './interlagos';
 import { marina_bay } from './marina_bay';
 import { yas_marina } from './yas_marina';
+import { montreal } from './montreal';
 
 export const allCircuits: CircuitMetadata[] = [
   bahrain,
@@ -45,7 +47,8 @@ export const allCircuits: CircuitMetadata[] = [
   austin,
   interlagos,
   marina_bay,
-  yas_marina
+  yas_marina,
+  montreal
 ];
 
 export function getCircuitById(id: number): CircuitMetadata | undefined {
