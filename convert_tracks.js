@@ -20,8 +20,8 @@ const circuitInfo = {
   montreal: { id: 23, name: "Circuit Gilles Villeneuve", location: "Montreal, Canada", country: "Canada", length_km: 4.361, corners: 14, first_gp: 1978, lap_record: { time: "1:13.078", driver: "Valtteri Bottas", year: 2019 } },
 };
 
-// Downsample points to ~150 for cleaner SVG
-function downsample(points, target = 150) {
+// Downsample points to ~60 for cleaner SVG
+function downsample(points, target = 60) {
   if (points.length <= target) return points;
   const step = Math.ceil(points.length / target);
   return points.filter((_, i) => i % step === 0);
