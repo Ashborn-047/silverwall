@@ -56,5 +56,5 @@ export const suzuka: CircuitMetadata = {
     { x: 0.43, y: 0.15 },
     { x: 0.45, y: 0.12 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

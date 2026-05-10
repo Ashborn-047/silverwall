@@ -50,5 +50,5 @@ export const bahrain: CircuitMetadata = {
     { x: 0.0296, y: 0.719 },
     { x: 0.179, y: 0.3844 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

@@ -74,5 +74,5 @@ export const zandvoort: CircuitMetadata = {
     { x: 0.2552, y: 0.4057 },
     { x: 0.2012, y: 0.8371 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

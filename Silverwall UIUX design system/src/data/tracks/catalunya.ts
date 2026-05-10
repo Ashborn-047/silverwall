@@ -50,5 +50,5 @@ export const catalunya: CircuitMetadata = {
     { x: 0.3026, y: 0.1966 },
     { x: 0.3027, y: 0.196 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

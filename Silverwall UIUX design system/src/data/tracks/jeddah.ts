@@ -59,5 +59,5 @@ export const jeddah: CircuitMetadata = {
     { x: 0.46, y: 0.84 },
     { x: 0.50, y: 0.85 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

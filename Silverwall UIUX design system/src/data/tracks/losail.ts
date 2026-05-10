@@ -73,5 +73,5 @@ export const losail: CircuitMetadata = {
     { x: 0.774, y: 0.256 },
     { x: 0.3654, y: 0.2351 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

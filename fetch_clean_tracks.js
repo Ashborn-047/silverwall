@@ -33,18 +33,21 @@ function fetchJSON(url) {
   });
 }
 
-// Apply backend filtering logic
+// Apply backend filtering logic with date sorting
 function cleanTrackData(rawPoints) {
   if (!rawPoints || rawPoints.length === 0) return [];
   
-  // Step 1: Remove invalid GPS locks (0,0 points)
-  let points = rawPoints.filter(p => {
+  // Step 1: SORT BY DATE FIRST (critical for lap order)
+  const sorted = rawPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
+  
+  // Step 2: Remove invalid GPS locks (0,0 points)
+  let points = sorted.filter(p => {
     return p.x !== null && p.y !== null && (Math.abs(p.x) > 0.1 || Math.abs(p.y) > 0.1);
   });
   
   if (points.length < 100) return [];
   
-  // Step 2: Remove outliers (points too far from center)
+  // Step 3: Remove outliers (points too far from center)
   const xs = points.map(p => p.x);
   const ys = points.map(p => p.y);
   const avgX = xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -56,14 +59,12 @@ function cleanTrackData(rawPoints) {
   
   if (points.length < 100) return [];
   
-  // Step 3: Find a clean lap by detecting loop closure
-  // Start point
+  // Step 4: Find a clean lap by detecting loop closure
   const startX = points[0].x;
   const startY = points[0].y;
   const threshold = 300; // Distance to consider "back at start"
   
-  // Find where driver comes back near start (after minimum lap distance)
-  const minLapPoints = Math.floor(points.length * 0.2); // At least 20% of data
+  const minLapPoints = Math.floor(points.length * 0.2);
   let lapEnd = points.length - 1;
   
   for (let i = minLapPoints; i < points.length; i++) {
@@ -79,7 +80,7 @@ function cleanTrackData(rawPoints) {
   // Extract just one lap
   const lapPoints = points.slice(0, lapEnd + 1);
   
-  // Step 4: Normalize to 0-1 coordinates
+  // Step 5: Normalize to 0-1 coordinates
   const finalXs = lapPoints.map(p => p.x);
   const finalYs = lapPoints.map(p => p.y);
   const minX = Math.min(...finalXs), maxX = Math.max(...finalXs);
@@ -87,14 +88,21 @@ function cleanTrackData(rawPoints) {
   const maxRange = Math.max(maxX - minX, maxY - minY) || 1;
   
   const normalized = lapPoints.map(p => ({
-    x: Number(((p.x - minX) / maxRange).toFixed(4)),
-    y: Number(((p.y - minY) / maxRange).toFixed(4))
+    x: +((p.x - minX) / maxRange).toFixed(4),
+    y: +((p.y - minY) / maxRange).toFixed(4)
   }));
   
-  // Step 5: Downsample to ~70 points for clean SVG
+  // Step 6: Dedupe points that are too close together
+  const deduped = normalized.filter((p, i) => {
+    if (i === 0) return true;
+    const prev = normalized[i - 1];
+    return Math.abs(p.x - prev.x) + Math.abs(p.y - prev.y) > 0.004;
+  });
+  
+  // Step 7: Downsample to ~70 points for clean SVG
   const target = 70;
-  const step = Math.ceil(normalized.length / target);
-  return normalized.filter((_, i) => i % step === 0);
+  const step = Math.ceil(deduped.length / target);
+  return deduped.filter((_, i) => i % step === 0);
 }
 
 async function fetchTrack(name, circuit) {

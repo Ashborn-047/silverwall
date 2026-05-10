@@ -44,5 +44,5 @@ export const montreal: CircuitMetadata = {
     { x: 0.42, y: 0.22 },
     { x: 0.35, y: 0.15 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

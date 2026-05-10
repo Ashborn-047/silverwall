@@ -50,5 +50,5 @@ export const melbourne: CircuitMetadata = {
     { x: 0.0657, y: 0.2304 },
     { x: 0.1863, y: 0.137 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

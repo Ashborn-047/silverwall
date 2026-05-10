@@ -50,5 +50,5 @@ export const monza: CircuitMetadata = {
     { x: 0.3654, y: 0.1442 },
     { x: 0.3654, y: 0.1442 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

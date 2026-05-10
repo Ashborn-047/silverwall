@@ -50,5 +50,5 @@ export const shanghai: CircuitMetadata = {
     { x: 0.402, y: 0.3377 },
     { x: 0.402, y: 0.3377 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

@@ -52,5 +52,5 @@ export const yas_marina: CircuitMetadata = {
     { x: 0.45, y: 0.94 },
     { x: 0.50, y: 0.88 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

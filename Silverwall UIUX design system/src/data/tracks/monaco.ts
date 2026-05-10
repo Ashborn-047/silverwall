@@ -50,5 +50,5 @@ export const monaco: CircuitMetadata = {
     { x: 0.1491, y: 0.8506 },
     { x: 0.5826, y: 0.4695 }
   ],
-  svg_transform: "scale(1, -1) rotate(-90deg)"
+  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
 };

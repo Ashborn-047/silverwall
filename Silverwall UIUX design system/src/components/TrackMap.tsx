@@ -52,52 +52,51 @@ export function TrackMap({
             <svg
               viewBox="0 0 1.1 1.1"
               className="max-w-full max-h-full drop-shadow-[0_0_8px_rgba(0,210,190,0.3)]"
-              style={{ 
-                transform: svg_transform,
-                width: 'auto',
-                height: '85%'
-              }}
+              style={{ width: 'auto', height: '85%' }}
               preserveAspectRatio="xMidYMid meet"
             >
-              {/* Main Track Path */}
-              <path
-                d={pathD}
-                fill="none"
-                stroke="#00D2BE"
-                strokeWidth="0.015"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              {/* Apply SVG transform via <g> element with proper SVG syntax */}
+              <g transform={svg_transform}>
+                {/* Main Track Path */}
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke="#00D2BE"
+                  strokeWidth="0.015"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
 
-              {/* Secondary Track Line */}
-              <path
-                d={pathD}
-                fill="none"
-                stroke="white"
-                strokeWidth="0.002"
-                opacity="0.3"
-              />
+                {/* Secondary Track Line */}
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="0.002"
+                  opacity="0.3"
+                />
 
-              {/* Start/Finish Point */}
-              <circle 
-                cx={points[0].x} 
-                cy={points[0].y} 
-                r="0.012" 
-                fill="white"
-                className="drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]"
-              />
+                {/* Start/Finish Point */}
+                <circle 
+                  cx={points[0].x} 
+                  cy={points[0].y} 
+                  r="0.012" 
+                  fill="white"
+                  className="drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]"
+                />
 
-              {/* S/F Label */}
-              <text 
-                x={points[0].x + 0.025} 
-                y={points[0].y} 
-                fill="white" 
-                fontSize="0.035"
-                className="font-mono"
-                style={{ fontFamily: 'monospace' }}
-              >
-                S/F
-              </text>
+                {/* S/F Label */}
+                <text 
+                  x={points[0].x + 0.025} 
+                  y={points[0].y} 
+                  fill="white" 
+                  fontSize="0.035"
+                  className="font-mono"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  S/F
+                </text>
+              </g>
             </svg>
           ) : (
             <div className="text-red-500/50 font-mono text-xs">GEOMETRY_ERROR</div>
