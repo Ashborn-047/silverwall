@@ -49,5 +49,5 @@ export const marina_bay: CircuitMetadata = {
     { x: 0.7302, y: 0.0917 },
     { x: 0.7269, y: 0.0908 }
   ],
-  svg_transform: "scale(1,-1) rotate(-90, 0.55, 0.55)"
+  svg_transform: "scale(1,-1) translate(0,-1.1) rotate(-90, 0.55, 0.55)"
 };

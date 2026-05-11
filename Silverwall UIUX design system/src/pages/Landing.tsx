@@ -4,6 +4,7 @@ import { ChevronRight, Activity, Cpu, ShieldAlert, Terminal, Clock, MapPin, Flag
 import useSpacetimeStatus from '../hooks/useSpacetimeStatus';
 import useChampions from '../hooks/useChampions';
 import ResultsModal from '../components/ResultsModal';
+import TrackMap from '../components/TrackMap';
 
 // ============================================================================
 // 🏎️ TELEMETRY LIVE VIEWER
@@ -300,6 +301,8 @@ export default function Landing() {
 const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: any }) => {
     const isOffSeason = raceStatus.status === 'off_season';
 
+    // Parse circuit ID for track map - use Montreal (23) as default
+    const parsedCircuitId = raceStatus.circuit ? parseInt(raceStatus.circuit, 10) : 23;
 
     const eventName = raceStatus.meeting || raceStatus.meetingName || (isOffSeason ? "Season Opener" : "TBD Event");
     const circuitName = raceStatus.circuitName || (raceStatus.circuit ? `Circuit ${raceStatus.circuit}` : "TBD Circuit");
@@ -355,6 +358,12 @@ const RaceCard = ({ currentTime, raceStatus }: { currentTime: Date, raceStatus: 
                     <DataPoint icon={<Cpu size={14} />} label="DATA SOURCE" value="OPENF1" sub={isOffSeason ? "PLANNING" : "LIVE STREAM"} />
                 </div>
 
+                {/* Track Map Visualization */}
+                <TrackMap
+                    circuitId={parsedCircuitId}
+                    showInfo={true}
+                    className="mt-4"
+                />
             </div>
 
             {/* 2026 Regulation Highlight */}
