@@ -77,7 +77,19 @@ def run_security_audit():
             if high == 0 and critical == 0:
                 return f"✅ **Dependencies:** 0 Critical, 0 High vulnerabilities."
             else:
-                return f"⚠️ **WARNING:** {critical} Critical, {high} High vulnerabilities found. Run `npm audit`."
+                vuln_dict = audit_data.get('vulnerabilities', {})
+                bad_packages = []
+                for pkg, details in vuln_dict.items():
+                    if isinstance(details, dict) and details.get('severity') in ['high', 'critical']:
+                        bad_packages.append(f"`{pkg}` ({details.get('severity')})")
+                
+                # Truncate if there are too many to avoid Discord embed limits
+                if len(bad_packages) > 10:
+                    pkg_str = ", ".join(bad_packages[:10]) + f", and {len(bad_packages)-10} more..."
+                else:
+                    pkg_str = ", ".join(bad_packages) if bad_packages else "See action logs."
+                    
+                return f"⚠️ **WARNING:** {critical} Critical, {high} High vulnerabilities.\n**Affected:** {pkg_str}"
         except json.JSONDecodeError:
             return "⚠️ Security Scan Failed: Could not parse npm audit output."
             
