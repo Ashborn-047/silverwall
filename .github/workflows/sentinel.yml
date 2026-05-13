@@ -1,32 +1,36 @@
-name: SilverWall Autonomous Health Check
+name: SilverWall Sentinel (Health & Security)
 
 on:
   schedule:
-    - cron: '0 0 */3 * *' # Every 3 days at midnight
+    - cron: '0 0 */1 * *' # Every day at midnight
   workflow_dispatch: # Allow manual trigger
 
 jobs:
-  health-check:
+  sentinel-scan:
+    name: 🛡️ Run Sentinel Diagnostics
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Setup Node (For Security Audit)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install Dependencies
+      - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install httpx supabase python-dotenv
+          pip install httpx
 
-      - name: Run Health Keep-Alive
+      - name: Run Sentinel Script
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           cd backend
-          python -m pipeline.health_keepalive
+          python -m pipeline.sentinel
