@@ -42,8 +42,9 @@ async def check_spacetimedb():
             response = await client.post(SPACETIME_URL, json=payload, timeout=10.0)
             latency = (datetime.now() - start).total_seconds() * 1000
             
-            if response.status_code == 200:
-                return True, f"🟢 RESPONSIVE ({int(latency)}ms)"
+            # Maincloud returns 403 without valid auth, but this confirms the server is up and responsive.
+            if response.status_code in [200, 403]:
+                return True, f"🟢 RESPONSIVE ({int(latency)}ms) - HTTP {response.status_code}"
             else:
                 return False, f"🔴 API ERROR HTTP {response.status_code}"
     except Exception as e:
@@ -53,8 +54,9 @@ def run_security_audit():
     """Run npm audit on the frontend to detect vulnerabilities."""
     try:
         print("Running npm audit...")
-        # Path relative to the github action root
-        project_dir = os.path.join(os.getcwd(), 'Silverwall UIUX design system')
+        # We run from the 'backend' directory in GitHub Actions, so we must go up one level
+        repo_root = os.path.dirname(os.getcwd())
+        project_dir = os.path.join(repo_root, 'Silverwall UIUX design system')
         if not os.path.exists(project_dir):
             return "⚠️ Security Scan Skipped: Frontend directory not found."
             
