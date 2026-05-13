@@ -24,3 +24,8 @@ venv/
 
 # Secrets
 backend/env/
+
+# Playwright
+**/playwright-report/
+**/test-results/
+**/blob-report/
