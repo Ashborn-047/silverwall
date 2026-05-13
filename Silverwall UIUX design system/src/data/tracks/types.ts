@@ -6,11 +6,11 @@ export interface CircuitMetadata {
   length_km: number;
   corners: number;
   first_gp: number;
-  lap_record: {
+  lap_record?: {
     time: string;
     driver: string;
     year: number;
   };
   points: { x: number; y: number }[];
-  svg_transform: string;
+  svg_transform?: string;
 }
