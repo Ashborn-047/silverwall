@@ -28,7 +28,7 @@ test.describe('Landing Page', () => {
 
   test('should render the primary CTA link to live telemetry', async ({ page }) => {
     await page.goto('/');
-    const cta = page.locator('a[href="/telemetry/live"]');
+    const cta = page.locator('a[href$="/telemetry/live"]');
     await expect(cta).toBeVisible();
     await expect(cta).toContainText('Open Live Pit-Wall');
   });
@@ -98,7 +98,7 @@ test.describe('Navigation', () => {
 
   test('should have a design system link in the footer', async ({ page }) => {
     await page.goto('/');
-    const dsLink = page.locator('a[href="/design-system"]');
+    const dsLink = page.locator('a[href$="/design-system"]');
     await expect(dsLink).toBeVisible();
   });
 
