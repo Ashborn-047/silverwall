@@ -27,9 +27,12 @@
             "@/*": [
                 "./src/*"
             ]
-        }
+        },
+        "types": ["node"]
     },
     "include": [
-        "src"
+        "src",
+        "playwright.config.ts",
+        "vite.config.ts"
     ]
 }
