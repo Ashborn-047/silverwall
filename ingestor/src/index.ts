@@ -348,10 +348,10 @@ async function syncSessionBriefly(sessionKey: number) {
 
         const [carData, locationData] = await Promise.all([
             axios.get(`${OPENF1_BASE_URL}/car_data`, {
-                params: { session_key: sessionKey, date: `>${start.toISOString()}`, date_to: `<${end.toISOString()}` }
+                params: { session_key: sessionKey, 'date>': start.toISOString(), 'date<': end.toISOString() }
             }).catch(() => ({ data: [] })),
             axios.get(`${OPENF1_BASE_URL}/location`, {
-                params: { session_key: sessionKey, date: `>${start.toISOString()}`, date_to: `<${end.toISOString()}` }
+                params: { session_key: sessionKey, 'date>': start.toISOString(), 'date<': end.toISOString() }
             }).catch(() => ({ data: [] }))
         ]);
 
@@ -408,10 +408,10 @@ async function syncTelemetry() {
     try {
         const [carData, locationData] = await Promise.all([
             axios.get(`${OPENF1_BASE_URL}/car_data`, {
-                params: { session_key: currentSessionKey, date: `>${start}`, date_to: `<${end}` }
+                params: { session_key: currentSessionKey, 'date>': start, 'date<': end }
             }).catch(() => ({ data: [] })),
             axios.get(`${OPENF1_BASE_URL}/location`, {
-                params: { session_key: currentSessionKey, date: `>${start}`, date_to: `<${end}` }
+                params: { session_key: currentSessionKey, 'date>': start, 'date<': end }
             }).catch(() => ({ data: [] }))
         ]);
 
