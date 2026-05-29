@@ -279,10 +279,73 @@ async function syncYearDrivers(year: number) {
     }
 }
 
+const CIRCUIT_KEY_TO_APEX_ID: Record<number, string> = {
+    63: 'bahrain',
+    49: 'shanghai',
+    23: 'villeneuve', // Montreal / Canada
+    2: 'albert_park', // Melbourne
+    22: 'baku', // Baku
+    7: 'catalunya', // Barcelona
+    39: 'silverstone', // Silverstone
+    4: 'hungaroring', // Budapest
+    65: 'spa', // Spa-Francorchamps
+    14: 'monza', // Monza
+    27: 'marina_bay', // Singapore
+    29: 'americas', // Austin / COTA
+    21: 'interlagos', // Interlagos / Sao Paulo
+    9: 'yas_marina', // Abu Dhabi
+    24: 'losail', // Qatar
+    10: 'vegas', // Las Vegas Strip
+    12: 'jeddah', // Jeddah Corniche
+    11: 'miami', // Miami International Autodrome
+    13: 'imola', // Imola
+    18: 'monaco', // Monaco
+    15: 'red_bull_ring', // Spielberg
+    17: 'zandvoort', // Zandvoort
+    26: 'rodriguez', // Mexico / Autodromo Hermanos Rodriguez
+    8: 'suzuka', // Suzuka
+};
+
+function getApexCircuitId(circuitKey: number, circuitShortName?: string, location?: string): string | null {
+    if (CIRCUIT_KEY_TO_APEX_ID[circuitKey]) {
+        return CIRCUIT_KEY_TO_APEX_ID[circuitKey];
+    }
+    
+    // Fuzzy matching based on short name or location
+    const searchStr = `${circuitShortName || ''} ${location || ''}`.toLowerCase();
+    
+    if (searchStr.includes('bahrain') || searchStr.includes('sakhir')) return 'bahrain';
+    if (searchStr.includes('shanghai')) return 'shanghai';
+    if (searchStr.includes('montreal') || searchStr.includes('villeneuve')) return 'villeneuve';
+    if (searchStr.includes('melbourne') || searchStr.includes('albert park')) return 'albert_park';
+    if (searchStr.includes('baku')) return 'baku';
+    if (searchStr.includes('catalunya') || searchStr.includes('barcelona')) return 'catalunya';
+    if (searchStr.includes('silverstone')) return 'silverstone';
+    if (searchStr.includes('hungaroring') || searchStr.includes('budapest')) return 'hungaroring';
+    if (searchStr.includes('spa')) return 'spa';
+    if (searchStr.includes('monza')) return 'monza';
+    if (searchStr.includes('singapore') || searchStr.includes('marina bay')) return 'marina_bay';
+    if (searchStr.includes('americas') || searchStr.includes('austin')) return 'americas';
+    if (searchStr.includes('interlagos') || searchStr.includes('jose carlos pace') || searchStr.includes('sao paulo')) return 'interlagos';
+    if (searchStr.includes('yas marina') || searchStr.includes('abu dhabi')) return 'yas_marina';
+    if (searchStr.includes('losail') || searchStr.includes('qatar')) return 'losail';
+    if (searchStr.includes('vegas')) return 'vegas';
+    if (searchStr.includes('jeddah')) return 'jeddah';
+    if (searchStr.includes('miami')) return 'miami';
+    if (searchStr.includes('imola')) return 'imola';
+    if (searchStr.includes('monaco') || searchStr.includes('monte carlo')) return 'monaco';
+    if (searchStr.includes('red bull') || searchStr.includes('spielberg')) return 'red_bull_ring';
+    if (searchStr.includes('zandvoort')) return 'zandvoort';
+    if (searchStr.includes('rodriguez') || searchStr.includes('mexico')) return 'rodriguez';
+    if (searchStr.includes('suzuka')) return 'suzuka';
+    
+    return null;
+}
+
 async function syncTrack(sessionKey: number) {
     console.log(`Syncing track geometry for session ${sessionKey}...`);
     try {
-        // 1. Fetch session details to get circuit_key and start time
+        // 1. Fetch session details to get circuit_key and details
         const sessionResp = await axios.get(`${OPENF1_BASE_URL}/sessions`, {
             params: { session_key: sessionKey }
         });
@@ -292,10 +355,68 @@ async function syncTrack(sessionKey: number) {
             return;
         }
         const circuitKey = session.circuit_key;
+        const circuitShortName = session.circuit_short_name;
+        const location = session.location;
 
-        // 2. Fetch location data for a single driver
-        // We use a 45-minute offset to ensure cars are running laps.
-        const start = new Date(session.date_start);
+        // 2. Map to Apex Circuit ID
+        const apexCircuitId = getApexCircuitId(circuitKey, circuitShortName, location);
+        if (!apexCircuitId) {
+            console.warn(`Could not map circuitKey ${circuitKey} (${circuitShortName}) to an Apex circuit ID. Falling back to OpenF1 location API...`);
+            await syncTrackLegacy(sessionKey, session);
+            return;
+        }
+
+        // 3. Query Apex API for geometry
+        const APEX_API_URL = process.env.APEX_API_URL || 'https://apex-api.fly.dev';
+        const apiKey = process.env.APEX_API_KEY || 'f1_apex_super_secret_dev_key';
+
+        console.log(`Fetching high-fidelity geometry for '${apexCircuitId}' from Apex API (${APEX_API_URL})...`);
+        const apexResp = await axios.get(`${APEX_API_URL}/api/circuits/${apexCircuitId}/geometry`, {
+            headers: { 'x-api-key': apiKey },
+            timeout: 8000
+        });
+
+        const geometry = apexResp.data?.geometry || [];
+        if (geometry.length === 0) {
+            console.warn(`No geometry returned from Apex API for ${apexCircuitId}. Falling back to OpenF1 location API...`);
+            await syncTrackLegacy(sessionKey, session);
+            return;
+        }
+
+        console.log(`Successfully fetched ${geometry.length} points for ${apexCircuitId}. Seeding into SpacetimeDB...`);
+
+        // 4. Seed into SpacetimeDB
+        let order = 0;
+        for (const pt of geometry) {
+            conn.reducers.seedTrack({
+                circuitKey: circuitKey,
+                x: pt.x,
+                y: pt.y,
+                order: order++
+            });
+        }
+        console.log(`Seeded ${order} track points for circuit ${circuitKey} to SpacetimeDB.`);
+
+    } catch (err: any) {
+        console.error(`Failed to sync track from Apex API for session ${sessionKey}: ${err.message}. Trying legacy fallback...`);
+        try {
+            const sessionResp = await axios.get(`${OPENF1_BASE_URL}/sessions`, {
+                params: { session_key: sessionKey }
+            });
+            const session = sessionResp.data[0];
+            if (session) {
+                await syncTrackLegacy(sessionKey, session);
+            }
+        } catch (fallbackErr: any) {
+            console.error(`Legacy fallback failed for session ${sessionKey}:`, fallbackErr.message);
+        }
+    }
+}
+
+async function syncTrackLegacy(sessionKey: number, session: any) {
+    const circuitKey = session.circuit_key;
+    console.log(`Running legacy OpenF1 location fetch for circuit ${circuitKey}...`);
+    try {
         const driversToTry = [1, 44, 16, 4, 63];
         let locations = [];
         let successDriver = -1;
@@ -303,7 +424,6 @@ async function syncTrack(sessionKey: number) {
         for (const drv of driversToTry) {
             console.log(`Attempting to fetch track points for circuit ${circuitKey} using driver ${drv}...`);
             try {
-                // Fetch first ~10k location points without date constraints to guarantee data
                 const locationResp = await axios.get(`${OPENF1_BASE_URL}/location`, {
                     params: {
                         session_key: sessionKey,
@@ -328,7 +448,6 @@ async function syncTrack(sessionKey: number) {
             return;
         }
 
-        // 3. Simple downsampling (take every Nth point) to keep DB size reasonable
         const DOWNSAMPLE_FACTOR = 10;
         let order = 0;
         console.log(`Processing ${locations.length} raw location points for circuit ${circuitKey}...`);
@@ -345,9 +464,8 @@ async function syncTrack(sessionKey: number) {
             }
         }
         console.log(`Seeded ${order} track points for circuit ${circuitKey} to SpacetimeDB.`);
-
-    } catch (err) {
-        console.error(`Failed to sync track for session ${sessionKey}:`, err);
+    } catch (err: any) {
+        console.error(`Legacy syncTrack failed for session ${sessionKey}:`, err.message);
     }
 }
 
