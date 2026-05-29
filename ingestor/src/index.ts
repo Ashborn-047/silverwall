@@ -89,6 +89,11 @@ async function startIngestion() {
     await syncTrack(9472);
     await sleep(2000);
 
+    // PRIORITY 4: Seed Canada Track Geometry (Circuit 23)
+    console.log("Seeding Circuit 23 (Canada) track geometry...");
+    await syncTrack(9524);
+    await sleep(2000);
+
     console.log("Background: Syncing historical metadata (throttled)...");
     // Move heavy metadata syncs to follow-up to avoid blocking priorities
     const otherYears = [2024, 2025];
