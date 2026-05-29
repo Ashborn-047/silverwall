@@ -166,6 +166,20 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
         };
 
         fetchData();
+
+        // Listen for table updates to reactively update the UI when new data is streamed
+        const updateListener = () => {
+            fetchData();
+        };
+
+        conn.db.driver_standings.onInsert(updateListener);
+        conn.db.driver_standings.onDelete(updateListener);
+        conn.db.constructor_standings.onInsert(updateListener);
+        conn.db.constructor_standings.onDelete(updateListener);
+        conn.db.race.onInsert(updateListener);
+        conn.db.race.onDelete(updateListener);
+        conn.db.race_result.onInsert(updateListener);
+        conn.db.race_result.onDelete(updateListener);
     }, [isOpen, selectedYear, conn, isReady]);
 
     if (!isOpen) return null;

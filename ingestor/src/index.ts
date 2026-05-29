@@ -18,8 +18,13 @@ const conn = DbConnection.builder()
     .withUri(SPACETIME_URI)
     .withDatabaseName(DBNAME)
     .onConnect(() => {
-        console.log('Ingestor connected to SpacetimeDB');
-        startIngestion();
+        console.log('Ingestor connected to SpacetimeDB. Subscribing to tables...');
+        conn.subscriptionBuilder()
+            .onApplied(() => {
+                console.log('Ingestor subscription applied. Starting ingestion...');
+                startIngestion();
+            })
+            .subscribe(["SELECT * FROM race", "SELECT * FROM race_result"]);
     })
     .onConnectError((ctx, err) => {
         console.error('SpacetimeDB Connection Error:', err);
@@ -56,12 +61,16 @@ async function startIngestion() {
     await sleep(10000);
 
     // PRIORITY 1: Seed 2026 data & Standings immediately for UI responsiveness
-    console.log(">>> PRIORITY: Syncing 2026 Races and 2025 Standings baseline...");
+    console.log(">>> PRIORITY: Syncing 2026 Races, Standings, and Podiums...");
     await syncYearRaces(2026);
     await sleep(2000);
     await syncYearDrivers(2026);
     await sleep(2000);
     await syncStandings(2025);
+    await sleep(2000);
+    await syncStandings(2026);
+    await sleep(2000);
+    await syncPodiums(2026);
     await sleep(2000);
 
     // PRIORITY 2: Seed Shanghai Track Geometry (Circuit 49) 
@@ -100,13 +109,16 @@ async function syncPodiums(year: number) {
     console.log(`Syncing race results (podiums) for ${year}...`);
     try {
         // 1. Get all races for this year from SpacetimeDB to create a lookup
-        const dbRaces = Array.from(conn.db.race.iter()).filter(r => r.seasonYear === year);
+        const dbRaces = Array.from(conn.db.race.iter()).filter(r => r.seasonYear === year && r.name === 'Race');
+        
         const lookup = new Map<string, number>();
         for (const r of dbRaces) {
-            // Match by meeting name (ignoring case/extra spaces)
-            const cleanName = r.meetingName.toLowerCase().trim();
-            if (r.name === 'Race') {
-                lookup.set(cleanName, r.raceKey);
+            const country = r.meetingName.replace(/Grand Prix/gi, '').trim().toLowerCase();
+            const locParts = r.location.split(',').map((p: string) => p.trim().toLowerCase());
+            
+            if (country) lookup.set(country, r.raceKey);
+            for (const p of locParts) {
+                if (p) lookup.set(p, r.raceKey);
             }
         }
 
@@ -115,8 +127,25 @@ async function syncPodiums(year: number) {
         const races = resp.data.MRData.RaceTable.Races;
 
         for (const race of races) {
-            const cleanJolpiName = race.raceName.toLowerCase().trim();
-            const raceKey = lookup.get(cleanJolpiName);
+            const jolpiCountry = race.raceName.replace(/Grand Prix/gi, '').trim().toLowerCase();
+            let raceKey = lookup.get(jolpiCountry);
+
+            // Fuzzy match by Circuit.Location
+            if (!raceKey && race.Circuit?.Location) {
+                const locality = (race.Circuit.Location.locality || '').toLowerCase();
+                const country = (race.Circuit.Location.country || '').toLowerCase();
+                raceKey = lookup.get(locality) || lookup.get(country);
+            }
+
+            // Substring match
+            if (!raceKey) {
+                for (const [key, val] of lookup.entries()) {
+                    if (key.includes(jolpiCountry) || jolpiCountry.includes(key)) {
+                        raceKey = val;
+                        break;
+                    }
+                }
+            }
 
             if (raceKey) {
                 const results = race.Results.slice(0, 3); // Get Top 3
@@ -130,6 +159,7 @@ async function syncPodiums(year: number) {
                         timeStatus: res.Time?.time || res.status
                     });
                 }
+                console.log(`Successfully synced podium results for Jolpi race: ${race.raceName} (raceKey: ${raceKey})`);
             } else {
                 console.warn(`Could not find raceKey for Jolpi race: ${race.raceName} (${year})`);
             }
@@ -197,11 +227,14 @@ async function syncYearRaces(year: number) {
                 status = 'live';
             }
 
+            const meetingName = s.meeting_name || `${s.country_name || 'Unknown'} Grand Prix`;
+            const location = `${s.circuit_short_name || s.location || 'Unknown'}, ${s.country_name || ''}`.trim();
+
             conn.reducers.seedRace({
                 raceKey: s.session_key,
                 name: s.session_name || 'Race',
-                meetingName: s.meeting_name || 'Grand Prix',
-                location: s.location || 'Unknown',
+                meetingName: meetingName,
+                location: location,
                 date: s.date_start,
                 circuitKey: s.circuit_key,
                 status: status,

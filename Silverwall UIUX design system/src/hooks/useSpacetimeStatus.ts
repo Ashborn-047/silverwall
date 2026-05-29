@@ -54,12 +54,18 @@ export function useSpacetimeStatus(): RaceStatus {
     useEffect(() => {
         if (!isReady || !conn) return;
 
-        // Subscribe to races and config
         conn.subscriptionBuilder()
             .onApplied(() => {
                 updateStatus();
             })
-            .subscribe(["SELECT * FROM race", "SELECT * FROM config", "SELECT * FROM race_result", "SELECT * FROM constructor_standings"]);
+            .subscribe([
+                "SELECT * FROM race",
+                "SELECT * FROM config",
+                "SELECT * FROM race_result",
+                "SELECT * FROM constructor_standings",
+                "SELECT * FROM driver_standings",
+                "SELECT * FROM driver"
+            ]);
 
         // Listen for table updates
         conn.db.race.onInsert((_) => updateStatus());
