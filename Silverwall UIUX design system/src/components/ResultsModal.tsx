@@ -106,14 +106,27 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                 });
                 setConstructorStandings(sortedConstructors);
 
-                // Read Races directly from SpacetimeDB Table (Filters for Races and Sprints)
-                const dbRaces = Array.from(conn.db.race.iter()).filter(r => 
-                    r.seasonYear === selectedYear && (r.name === 'Race' || r.name === 'Sprint')
-                );
-                const sortedRaces = dbRaces.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                
                 // Fetch podium results from race_result table
                 const allResults = Array.from(conn.db.race_result.iter());
+                const now = new Date().getTime();
+
+                // Read Races directly from SpacetimeDB Table (Filters for Main Sunday Races and filters out cancelled/empty ones)
+                const dbRaces = Array.from(conn.db.race.iter()).filter(r => {
+                    if (r.seasonYear !== selectedYear || r.name !== 'Race') {
+                        return false;
+                    }
+                    
+                    // Filter out cancelled races (ended/past date with no results after 2 days)
+                    const hasResults = allResults.some(res => res.raceKey === r.raceKey);
+                    if (r.status === 'ended' && !hasResults) {
+                        const raceTime = new Date(r.date).getTime();
+                        if (now - raceTime > 2 * 24 * 60 * 60 * 1000) {
+                            return false; // Skip cancelled race
+                        }
+                    }
+                    return true;
+                });
+                const sortedRaces = dbRaces.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
                 const mappedRaces = sortedRaces.map((r, idx) => {
 

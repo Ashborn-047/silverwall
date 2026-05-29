@@ -1,8 +1,5 @@
-"""
-SilverWall REST API - Track Geometry
-Dynamic circuit detection and geometry fetching from Supabase
-"""
-
+import json
+import os
 import httpx
 from fastapi import APIRouter, Request
 from database import get_track_geometry, get_next_race, save_track_geometry
@@ -12,6 +9,76 @@ router = APIRouter()
 
 # OpenF1 API base URL
 OPENF1_API = "https://api.openf1.org/v1"
+
+# Load static track geometry compiled from frontend files
+TRACKS_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tracks.json")
+try:
+    with open(TRACKS_FILE, "r", encoding="utf-8") as f:
+        STATIC_TRACKS = json.load(f)
+    print(f"[INFO] Successfully loaded {len(STATIC_TRACKS)} static tracks in backend.")
+except Exception as e:
+    print(f"[ERR] Failed to load static tracks: {e}")
+    STATIC_TRACKS = {}
+
+
+def normalize_key(name: str) -> str:
+    if not name:
+        return ""
+    name = name.lower().strip()
+    name = name.replace(" ", "_").replace("-", "_")
+    
+    # Fuzzy mappings to match filenames in tracks.json
+    if "albert_park" in name or "melbourne" in name or "australia" in name:
+        return "melbourne"
+    if "shanghai" in name or "china" in name:
+        return "shanghai"
+    if "suzuka" in name or "japan" in name:
+        return "suzuka"
+    if "sakhir" in name or "bahrain" in name:
+        return "bahrain"
+    if "jeddah" in name or "saudi" in name:
+        return "jeddah"
+    if "miami" in name:
+        return "miami"
+    if "gilles_villeneuve" in name or "montreal" in name or "canada" in name:
+        return "montreal"
+    if "monaco" in name or "monte_carlo" in name:
+        return "monaco"
+    if "catalunya" in name or "barcelona" in name or "spain" in name:
+        return "catalunya"
+    if "silverstone" in name or "united_kingdom" in name or "british" in name:
+        return "silverstone"
+    if "red_bull" in name or "spielberg" in name or "austria" in name:
+        return "red_bull_ring"
+    if "hungaroring" in name or "budapest" in name or "hungary" in name:
+        return "hungaroring"
+    if "spa" in name or "francorchamps" in name or "belgium" in name:
+        return "belgium"
+    if "monza" in name or "italy" in name:
+        return "monza"
+    if "baku" in name or "azerbaijan" in name:
+        return "baku"
+    if "singapore" in name:
+        return "singapore"
+    if "austin" in name or "united_states" in name or "cota" in name:
+        return "austin"
+    if "mexico" in name or "hermanos" in name:
+        return "mexico_city"
+    if "interlagos" in name or "brazil" in name or "sao_paulo" in name:
+        return "interlagos"
+    if "las_vegas" in name or "vegas" in name:
+        return "vegas"
+    if "lusail" in name or "qatar" in name:
+        return "qatar"
+    if "yas_marina" in name or "abu_dhabi" in name or "uae" in name:
+        return "yas_marina"
+    if "imola" in name or "emilia" in name:
+        return "imola"
+    if "zandvoort" in name or "netherlands" in name or "dutch" in name:
+        return "zandvoort"
+        
+    return name
+
 
 # Cache for track data
 _track_cache = {}
@@ -125,7 +192,25 @@ async def fetch_track_from_openf1(session_key: str = "latest") -> list:
 @limiter.limit("60/minute")
 async def get_current_track(request: Request):
     """Get track for current F1 session (LIVE mode)"""
-    # 1. Try Live OpenF1 Data
+    # 1. Try static JSON mapping based on current session
+    try:
+        session_info = await fetch_current_session()
+        if session_info:
+            circuit_short = session_info.get("circuit_short_name") or ""
+            meeting = session_info.get("meeting_name") or ""
+            country = session_info.get("country_name") or ""
+            
+            for search_str in [circuit_short, meeting, country]:
+                key = normalize_key(search_str)
+                if key and key in STATIC_TRACKS:
+                    return {
+                        **STATIC_TRACKS[key],
+                        "source": "static_apex_json_current"
+                    }
+    except Exception as e:
+        print(f"[WARN] Failed static match for current session: {e}")
+
+    # 2. Try Live OpenF1 Data
     try:
         session_info = await fetch_current_session()
         if session_info:
@@ -157,11 +242,21 @@ async def get_current_track(request: Request):
     except Exception:
         pass
     
-    # 2. Database-driven Fallback (Next Race)
+    # 3. Database-driven or static Fallback (Next Race)
     try:
         next_race = await get_next_race()
         if next_race:
-            circuit_name = next_race.get("circuit")
+            circuit_name = next_race.get("circuit") or ""
+            meeting_name = next_race.get("name") or ""
+            
+            for search_str in [circuit_name, meeting_name]:
+                key = normalize_key(search_str)
+                if key and key in STATIC_TRACKS:
+                    return {
+                        **STATIC_TRACKS[key],
+                        "source": "static_apex_json_next_race"
+                    }
+            
             circuit_key = circuit_name.lower().replace(" ", "_")
             track_data = await get_track_geometry(circuit_key)
             if track_data:
@@ -170,7 +265,7 @@ async def get_current_track(request: Request):
                     "source": "database_fallback"
                 }
     except Exception as e:
-        print(f"[ERR] Database fallback failed: {e}")
+        print(f"[ERR] Next race static/db fallback failed: {e}")
 
     return {"error": "No track geometry available. Please seed the database."}
 
@@ -179,10 +274,17 @@ async def get_current_track(request: Request):
 @limiter.limit("60/minute")
 async def get_track(request: Request, circuit: str, use_openf1: bool = False, session_key: str = "latest"):
     """Return track geometry for a specific circuit"""
-    # 1. Prefer database
+    circuit_key = normalize_key(circuit)
+    
+    # 1. Prefer static JSON map if available (unless use_openf1 override is requested)
+    if not use_openf1 and circuit_key in STATIC_TRACKS:
+        return {
+            **STATIC_TRACKS[circuit_key],
+            "source": "static_apex_json"
+        }
+        
+    # 2. Prefer database
     try:
-        # Normalize the circuit key
-        circuit_key = circuit.lower().replace(" ", "_").replace("-", "_")
         track_data = await get_track_geometry(circuit_key)
         if track_data:
             if use_openf1:
@@ -194,7 +296,7 @@ async def get_track(request: Request, circuit: str, use_openf1: bool = False, se
     except Exception:
         pass
 
-    # 2. OpenF1 Autogen
+    # 3. OpenF1 Autogen
     points = await fetch_track_from_openf1(session_key)
     if points:
         return {
