@@ -24,7 +24,7 @@ const conn = DbConnection.builder()
                 console.log('Ingestor subscription applied. Starting ingestion...');
                 startIngestion();
             })
-            .subscribe(["SELECT * FROM race", "SELECT * FROM race_result"]);
+            .subscribe(["SELECT * FROM race", "SELECT * FROM race_result", "SELECT * FROM track_point"]);
     })
     .onConnectError((ctx, err) => {
         console.error('SpacetimeDB Connection Error:', err);
@@ -245,6 +245,16 @@ async function syncYearRaces(year: number) {
                 status: status,
                 year: year
             });
+
+            // Check if track geometry for this circuit is already seeded in SpacetimeDB
+            if (s.circuit_key) {
+                const hasGeometry = Array.from(conn.db.track_point.iter()).some(p => p.circuitKey === s.circuit_key);
+                if (!hasGeometry) {
+                    console.log(`Track geometry for circuit ${s.circuit_key} not found in SpacetimeDB. Syncing from Apex...`);
+                    await syncTrack(s.session_key);
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Throttle requests
+                }
+            }
         }
     } catch (err) {
         console.error(`Failed to sync races for ${year}:`, err);
