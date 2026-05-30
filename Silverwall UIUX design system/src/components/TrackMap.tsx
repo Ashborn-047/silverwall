@@ -13,26 +13,26 @@ const OPENF1_TO_STATIC_ID: Record<number, number> = {
   63: 63, // bahrain
   49: 49, // shanghai
   23: 23, // montreal
-  2: 10,  // melbourne
-  22: 73, // baku
-  7: 15,  // catalunya
-  39: 9,  // silverstone
+  10: 10, // melbourne
+  144: 73, // baku
+  15: 15, // catalunya
+  2: 9,   // silverstone
   4: 4,   // hungaroring
-  14: 14, // monza
-  27: 61, // singapore
-  29: 69, // austin
-  21: 18, // interlagos
-  9: 24,  // yas_marina
-  24: 78, // qatar
-  10: 80, // vegas
-  12: 76, // jeddah
-  11: 79, // miami
-  13: 21, // imola
-  18: 6,  // monaco
-  15: 70, // red_bull_ring
-  17: 55, // zandvoort
-  26: 32, // mexico_city
-  8: 77,  // suzuka
+  39: 14, // monza
+  61: 61, // singapore
+  9: 69,  // austin
+  14: 18, // interlagos
+  70: 24, // yas_marina
+  150: 78, // qatar
+  152: 80, // vegas
+  149: 76, // jeddah
+  151: 79, // miami
+  6: 21,  // imola
+  22: 6,  // monaco
+  19: 70, // red_bull_ring
+  55: 55, // zandvoort
+  65: 32, // mexico_city
+  46: 77, // suzuka
 };
 
 export function TrackMap({

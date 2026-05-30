@@ -293,27 +293,27 @@ const CIRCUIT_KEY_TO_APEX_ID: Record<number, string> = {
     63: 'bahrain',
     49: 'shanghai',
     23: 'villeneuve', // Montreal / Canada
-    2: 'albert_park', // Melbourne
-    22: 'baku', // Baku
-    7: 'catalunya', // Barcelona
-    39: 'silverstone', // Silverstone
-    4: 'hungaroring', // Budapest
-    65: 'spa', // Spa-Francorchamps
-    14: 'monza', // Monza
-    27: 'marina_bay', // Singapore
-    29: 'americas', // Austin / COTA
-    21: 'interlagos', // Interlagos / Sao Paulo
-    9: 'yas_marina', // Abu Dhabi
-    24: 'losail', // Qatar
-    10: 'vegas', // Las Vegas Strip
-    12: 'jeddah', // Jeddah Corniche
-    11: 'miami', // Miami International Autodrome
-    13: 'imola', // Imola
-    18: 'monaco', // Monaco
-    15: 'red_bull_ring', // Spielberg
-    17: 'zandvoort', // Zandvoort
-    26: 'rodriguez', // Mexico / Autodromo Hermanos Rodriguez
-    8: 'suzuka', // Suzuka
+    10: 'albert_park', // Melbourne (Albert Park)
+    144: 'baku', // Baku
+    15: 'catalunya', // Catalunya / Barcelona
+    2: 'silverstone', // Silverstone
+    4: 'hungaroring', // Hungaroring
+    7: 'spa', // Spa-Francorchamps
+    39: 'monza', // Monza
+    61: 'marina_bay', // Marina Bay / Singapore
+    9: 'americas', // Austin / COTA
+    14: 'interlagos', // Interlagos / Sao Paulo
+    70: 'yas_marina', // Yas Marina / Abu Dhabi
+    150: 'losail', // Lusail / Qatar
+    152: 'vegas', // Las Vegas Strip
+    149: 'jeddah', // Jeddah Corniche
+    151: 'miami', // Miami International Autodrome
+    6: 'imola', // Imola
+    22: 'monaco', // Monaco
+    19: 'red_bull_ring', // Spielberg
+    55: 'zandvoort', // Zandvoort
+    65: 'rodriguez', // Mexico City
+    46: 'suzuka', // Suzuka
 };
 
 function getApexCircuitId(circuitKey: number, circuitShortName?: string, location?: string): string | null {
