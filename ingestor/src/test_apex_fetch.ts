@@ -34,7 +34,7 @@ async function testFetch(baseUrl: string, label: string) {
 
 async function run() {
     // 1. Test Cloud Deployment (Fly.io)
-    await testFetch('https://apex-api.fly.dev', 'Fly.io Cloud');
+    await testFetch('https://apex-f1-api.fly.dev', 'Fly.io Cloud');
 
     // 2. Test Local Deployment (Localhost)
     // Note: Make sure the local dev server is running on port 3000!
