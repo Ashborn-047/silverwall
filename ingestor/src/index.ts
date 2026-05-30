@@ -367,7 +367,7 @@ async function syncTrack(sessionKey: number) {
         }
 
         // 3. Query Apex API for geometry
-        const APEX_API_URL = process.env.APEX_API_URL || 'https://apex-api.fly.dev';
+        const APEX_API_URL = process.env.APEX_API_URL || 'https://apex-f1-api.fly.dev';
         const apiKey = process.env.APEX_API_KEY || 'f1_apex_super_secret_dev_key';
 
         console.log(`Fetching high-fidelity geometry for '${apexCircuitId}' from Apex API (${APEX_API_URL})...`);
