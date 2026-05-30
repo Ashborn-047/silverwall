@@ -1,3 +1,4 @@
+import { useTrack } from '../hooks/useTrack';
 import { getCircuitById } from '../data/tracks';
 
 interface TrackMapProps {
@@ -8,6 +9,32 @@ interface TrackMapProps {
   className?: string;
 }
 
+const OPENF1_TO_STATIC_ID: Record<number, number> = {
+  63: 63, // bahrain
+  49: 49, // shanghai
+  23: 23, // montreal
+  2: 10,  // melbourne
+  22: 73, // baku
+  7: 15,  // catalunya
+  39: 9,  // silverstone
+  4: 4,   // hungaroring
+  14: 14, // monza
+  27: 61, // singapore
+  29: 69, // austin
+  21: 18, // interlagos
+  9: 24,  // yas_marina
+  24: 78, // qatar
+  10: 80, // vegas
+  12: 76, // jeddah
+  11: 79, // miami
+  13: 21, // imola
+  18: 6,  // monaco
+  15: 70, // red_bull_ring
+  17: 55, // zandvoort
+  26: 32, // mexico_city
+  8: 77,  // suzuka
+};
+
 export function TrackMap({
   circuitId,
   width = "100%",
@@ -15,9 +42,27 @@ export function TrackMap({
   showInfo = false,
   className = ""
 }: TrackMapProps) {
-  const circuit = getCircuitById(circuitId);
+  const { track, points: dbPoints, loading } = useTrack(circuitId);
 
-  if (!circuit) {
+  // Resolve static metadata if available
+  const staticId = OPENF1_TO_STATIC_ID[circuitId] || circuitId;
+  const staticCircuit = getCircuitById(staticId);
+
+  // Use SpacetimeDB points if available, otherwise fall back to static local files
+  const points = dbPoints.length > 0 ? dbPoints : (staticCircuit?.points || []);
+
+  if (loading && points.length === 0) {
+    return (
+      <div
+        className={`flex items-center justify-center bg-[#0A0C10] border border-[#00D2BE]/20 rounded ${className}`}
+        style={{ width, height: height === "auto" ? "200px" : height }}
+      >
+        <span className="text-[#00D2BE] font-mono text-xs animate-pulse">LOADING GEOMETRY...</span>
+      </div>
+    );
+  }
+
+  if (points.length === 0) {
     return (
       <div
         className={`flex items-center justify-center bg-[#0A0C10] border border-[#333] rounded ${className}`}
@@ -28,7 +73,10 @@ export function TrackMap({
     );
   }
 
-  const { points, name, location } = circuit;
+  const name = staticCircuit?.name || track?.name || `Circuit ${circuitId}`;
+  const location = staticCircuit?.location || track?.location || '';
+  const length_km = staticCircuit?.length_km || '';
+  const corners = staticCircuit?.corners || '';
 
   // Generate SVG path from points
   const pathD = points.length > 0
@@ -130,7 +178,7 @@ export function TrackMap({
                 {name}
               </div>
               <div className="text-[#9CA3AF] font-mono text-[10px]">
-                {location} • {circuit.length_km} km • {circuit.corners} corners
+                {location} {length_km ? `• ${length_km} km` : ''} {corners ? `• ${corners} corners` : ''}
               </div>
             </div>
           </div>
