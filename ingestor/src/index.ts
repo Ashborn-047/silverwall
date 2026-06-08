@@ -11,7 +11,7 @@ const POLL_INTERVAL_MS = 3000;
 const TIME_WINDOW_STEP_MS = 5000; // Small chunks for 422 fix
 
 let lastSyncedTimestamp: Date | null = null;
-let currentSessionKey = 9673; // Default or fetched
+let currentSessionKey = -1; // Dynamic live session key
 let isIngesting = false;
 
 const conn = DbConnection.builder()
@@ -68,6 +68,17 @@ async function startIngestion() {
     await sleep(2000);
     await syncStandings(2025);
     await sleep(2000);
+
+    // Clear 2026 standings before seeding to prevent duplicates
+    try {
+        const { execSync } = require('child_process');
+        execSync(`spacetime sql spacetimedb-uorks "DELETE FROM driver_standings WHERE season_year = 2026"`, { stdio: 'ignore' });
+        execSync(`spacetime sql spacetimedb-uorks "DELETE FROM constructor_standings WHERE season_year = 2026"`, { stdio: 'ignore' });
+    } catch (e) {
+        console.error("Failed to clear 2026 standings on startup:", e);
+    }
+    await sleep(2000);
+
     await syncStandings(2026);
     await sleep(2000);
     await syncPodiums(2026);
@@ -106,8 +117,31 @@ async function startIngestion() {
         await sleep(5000);
     }
 
-    // Start live ingestion for 2026
-    setupLiveIngestion(9673);
+    // Start live ingestion loop (dynamically checks for live session in SpacetimeDB)
+    setupLiveIngestion();
+
+    // Run periodic sync of races, standings, and podiums every 10 minutes to auto-update statuses and fetch new data
+    setInterval(async () => {
+        console.log(">>> Running periodic sync task...");
+        try {
+            await syncYearRaces(2026);
+            await syncYearDrivers(2026);
+
+            // Clear and update standings to avoid duplication and get latest updates
+            try {
+                const { execSync } = require('child_process');
+                execSync(`spacetime sql spacetimedb-uorks "DELETE FROM driver_standings WHERE season_year = 2026"`, { stdio: 'ignore' });
+                execSync(`spacetime sql spacetimedb-uorks "DELETE FROM constructor_standings WHERE season_year = 2026"`, { stdio: 'ignore' });
+            } catch (e) {
+                console.error("Failed to clear standings via CLI, continuing...", e);
+            }
+
+            await syncStandings(2026);
+            await syncPodiums(2026);
+        } catch (e) {
+            console.error("Periodic sync task failed:", e);
+        }
+    }, 10 * 60 * 1000); // 10 minutes
 }
 
 async function syncPodiums(year: number) {
@@ -115,7 +149,11 @@ async function syncPodiums(year: number) {
     try {
         // 1. Get all races for this year from SpacetimeDB to create a lookup
         const dbRaces = Array.from(conn.db.race.iter()).filter(r => r.seasonYear === year && r.name === 'Race');
-        
+        if (dbRaces.length === 0) {
+            console.log(`No races found in DB for year ${year}, skipping podium sync.`);
+            return;
+        }
+
         const lookup = new Map<string, number>();
         for (const r of dbRaces) {
             const country = r.meetingName.replace(/Grand Prix/gi, '').trim().toLowerCase();
@@ -127,22 +165,24 @@ async function syncPodiums(year: number) {
             }
         }
 
-        // 2. Fetch podiums from Jolpi
-        const resp = await axios.get(`https://api.jolpi.ca/ergast/f1/${year}/results.json?limit=1000`);
-        const races = resp.data.MRData.RaceTable.Races;
+        // 2. Fetch the season calendar from Jolpi
+        console.log(`Fetching F1 calendar for ${year} from Jolpi...`);
+        const calResp = await axios.get(`https://api.jolpi.ca/ergast/f1/${year}.json`);
+        const jolpiRaces = calResp.data?.MRData?.RaceTable?.Races || [];
 
-        for (const race of races) {
+        const dbResults = Array.from(conn.db.race_result.iter());
+
+        for (const race of jolpiRaces) {
+            const round = race.round;
             const jolpiCountry = race.raceName.replace(/Grand Prix/gi, '').trim().toLowerCase();
             let raceKey = lookup.get(jolpiCountry);
 
-            // Fuzzy match by Circuit.Location
             if (!raceKey && race.Circuit?.Location) {
                 const locality = (race.Circuit.Location.locality || '').toLowerCase();
                 const country = (race.Circuit.Location.country || '').toLowerCase();
                 raceKey = lookup.get(locality) || lookup.get(country);
             }
 
-            // Substring match
             if (!raceKey) {
                 for (const [key, val] of lookup.entries()) {
                     if (key.includes(jolpiCountry) || jolpiCountry.includes(key)) {
@@ -153,18 +193,45 @@ async function syncPodiums(year: number) {
             }
 
             if (raceKey) {
-                const results = race.Results.slice(0, 3); // Get Top 3
-                for (const res of results) {
-                    conn.reducers.seedRaceResult({
-                        raceKey: raceKey,
-                        position: parseInt(res.position, 10),
-                        driverNumber: parseInt(res.Driver.permanentNumber || '0', 10),
-                        driverName: `${res.Driver.givenName} ${res.Driver.familyName}`,
-                        team: res.Constructor.name,
-                        timeStatus: res.Time?.time || res.status
-                    });
+                // Check if we already have results for this raceKey
+                const hasResults = dbResults.some(res => res.raceKey === raceKey);
+                if (hasResults) {
+                    console.log(`Podium results for raceKey ${raceKey} (${race.raceName}) already exist in SpacetimeDB. Skipping.`);
+                    continue;
                 }
-                console.log(`Successfully synced podium results for Jolpi race: ${race.raceName} (raceKey: ${raceKey})`);
+
+                // Check if the race date is in the past
+                const raceDate = new Date(race.date + 'T' + (race.time || '00:00:00Z'));
+                if (raceDate.getTime() > new Date().getTime()) {
+                    // Race is in the future
+                    continue;
+                }
+
+                console.log(`Fetching results for ${race.raceName} (Round ${round}, raceKey: ${raceKey})...`);
+                try {
+                    const resResp = await axios.get(`https://api.jolpi.ca/ergast/f1/${year}/${round}/results.json`);
+                    const resultsData = resResp.data?.MRData?.RaceTable?.Races?.[0]?.Results || [];
+                    
+                    if (resultsData.length > 0) {
+                        const podium = resultsData.slice(0, 3);
+                        for (const res of podium) {
+                            conn.reducers.seedRaceResult({
+                                raceKey: raceKey,
+                                position: parseInt(res.position, 10),
+                                driverNumber: parseInt(res.Driver.permanentNumber || '0', 10),
+                                driverName: `${res.Driver.givenName} ${res.Driver.familyName}`,
+                                team: res.Constructor.name,
+                                timeStatus: res.Time?.time || res.status
+                            });
+                        }
+                        console.log(`Successfully seeded podium results for ${race.raceName} (raceKey: ${raceKey})`);
+                    } else {
+                        console.log(`No results returned for ${race.raceName} yet.`);
+                    }
+                } catch (err: any) {
+                    console.error(`Failed to fetch results for ${race.raceName}:`, err.message);
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Rate limit buffer
             } else {
                 console.warn(`Could not find raceKey for Jolpi race: ${race.raceName} (${year})`);
             }
@@ -549,14 +616,30 @@ async function syncSessionBriefly(sessionKey: number) {
     }
 }
 
-function setupLiveIngestion(sessionKey: number) {
-    currentSessionKey = sessionKey;
+function setupLiveIngestion() {
     lastSyncedTimestamp = new Date();
     lastSyncedTimestamp.setSeconds(lastSyncedTimestamp.getSeconds() - 60);
 
     setInterval(async () => {
         try {
-            await syncTelemetry();
+            // Find active live session key from SpacetimeDB
+            const liveRace = Array.from(conn.db.race.iter()).find(r => r.status === 'live');
+            if (liveRace) {
+                if (currentSessionKey !== liveRace.raceKey) {
+                    console.log(`🏎️ Detected live race: ${liveRace.meetingName} - ${liveRace.name} (raceKey: ${liveRace.raceKey}). Switching live telemetry ingestion.`);
+                    currentSessionKey = liveRace.raceKey;
+                    // Reset sync timestamp
+                    lastSyncedTimestamp = new Date();
+                    lastSyncedTimestamp.setSeconds(lastSyncedTimestamp.getSeconds() - 30);
+                }
+                await syncTelemetry();
+            } else {
+                // No live race, do nothing (or reset currentSessionKey)
+                if (currentSessionKey !== -1) {
+                    console.log(`ℹ️ No live race active. Telemetry ingestion sleeping...`);
+                    currentSessionKey = -1;
+                }
+            }
         } catch (err) {
             console.error('Ingestion Loop Error:', err);
         }
