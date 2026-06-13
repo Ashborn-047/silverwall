@@ -54,8 +54,17 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=[
+        "Accept",
+        "Accept-Language",
+        "Content-Language",
+        "Content-Type",
+        "Authorization",
+        "Origin",
+        "X-Signature-Ed25519",
+        "X-Signature-Timestamp",
+    ],
 )
 
 # Add response compression for responses > 1KB
