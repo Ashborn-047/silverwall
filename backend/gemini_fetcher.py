@@ -68,23 +68,42 @@ async def fetch_race_results_from_gemini(race_name: str, year: int = 2025) -> Op
         return None
 
 
-async def save_results_to_db(race_id: str, results: List[Dict], supabase_client) -> bool:
-    """Save fetched results to Supabase"""
+async def save_results_to_db(race_id: str, results: List[Dict]) -> bool:
+    """Save fetched results to SpacetimeDB"""
     try:
-        # Clear existing results for this race
-        supabase_client.table("race_results").delete().eq("race_id", race_id).execute()
+        from spacetimedb import call_reducer, execute_sql
+
+        # race_id here is probably race_key. Let's make sure it's int
+        try:
+            r_key = int(race_id)
+        except ValueError:
+            print("❌ Invalid race_key format")
+            return False
+
+        # In SpacetimeDB, we typically use reducers to insert data.
+        # But we don't have a clear way to bulk insert here or clear. Let's use execute_sql for DELETE
+        # Then call seedRaceResult reducer.
+
+        await execute_sql(f"DELETE FROM race_result WHERE race_key = {r_key}")
         
         # Insert new results
         for result in results:
-            supabase_client.table("race_results").insert({
-                "race_id": race_id,
-                "position": result["position"],
-                "driver_code": result["driver_code"],
-                "driver_name": result["driver_name"],
-                "team": result["team"],
-                "team_color": get_team_color(result["team"]),
-                "points": result["points"],
-            }).execute()
+            driver_number = 0 # Default if we don't know it from Gemini
+            time_status = "Finished" if result["position"] <= 10 else "N/A"
+
+            # seedRaceResult args: raceKey, position, driverNumber, driverName, team, timeStatus
+            args = [
+                r_key,
+                result["position"],
+                driver_number,
+                result["driver_name"],
+                result["team"],
+                time_status
+            ]
+            await call_reducer("seedRaceResult", args)
+
+            # Since Gemini gives points, we might also want to seed driver standings.
+            # However, standings are recalculated elsewhere or seeded via another reducer.
         
         return True
     except Exception as e:

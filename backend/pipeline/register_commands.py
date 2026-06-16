@@ -3,13 +3,13 @@ import httpx
 from dotenv import load_dotenv
 
 # Load credentials
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../env', '.env.supabase'))
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../env', '.env'))
 
 APP_ID = os.getenv("DISCORD_APP_ID")
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Need to add this to .env
 
 if not APP_ID or not BOT_TOKEN:
-    print("❌ Error: DISCORD_APP_ID or DISCORD_BOT_TOKEN not found in .env.supabase")
+    print("❌ Error: DISCORD_APP_ID or DISCORD_BOT_TOKEN not found in .env")
     exit(1)
 
 URL = f"https://discord.com/api/v10/applications/{APP_ID}/commands"
