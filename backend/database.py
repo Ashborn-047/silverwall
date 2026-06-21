@@ -67,7 +67,7 @@ async def get_current_season_year():
     Cached for 5 minutes to reduce database load.
     """
     cache_key = "current_season_year"
-    cached = _get_cache(cache_key)
+    cached = _get_cache(cache_key, ttl=300)
     if cached is not None:
         return cached
 
