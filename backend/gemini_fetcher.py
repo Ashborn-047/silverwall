@@ -100,7 +100,9 @@ async def save_results_to_db(race_id: str, results: List[Dict]) -> bool:
                 result["team"],
                 time_status
             ]
-            await call_reducer("seedRaceResult", args)
+            success = await call_reducer("seedRaceResult", args)
+            if not success:
+                print(f"❌ Failed to execute seedRaceResult reducer for {result['driver_name']}")
 
             # Since Gemini gives points, we might also want to seed driver standings.
             # However, standings are recalculated elsewhere or seeded via another reducer.

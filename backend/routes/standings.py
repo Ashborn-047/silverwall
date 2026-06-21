@@ -139,7 +139,7 @@ async def get_race_by_round(request: Request, round_num: int, year: Optional[int
 @router.get("/champions")
 @router.get("/champions/{year}")
 @limiter.limit("60/minute")
-async def get_champions(request: Request, year: Optional[int] = None):
+async def get_champions(request: Optional[Request] = None, year: Optional[int] = None):
     """
     Get the World Champions (Driver & Constructor) for a given season.
     FULLY AUTONOMOUS: Detects the most recent COMPLETED season from race data.
@@ -151,10 +151,18 @@ async def get_champions(request: Request, year: Optional[int] = None):
         if standings_res:
             year = standings_res[0].get("season_year")
         else:
-            # Fallback: use recent season from races table
-            races_res = await execute_sql("SELECT season_year FROM race WHERE status = 'ended' ORDER BY date DESC LIMIT 1")
-            if races_res:
-                year = races_res[0].get("season_year")
+            # Fallback: find the most recent season where all races have ended
+            seasons_res = await execute_sql("SELECT DISTINCT season_year FROM race WHERE status = 'ended' ORDER BY season_year DESC")
+            if seasons_res:
+                for row in seasons_res:
+                    yr = row.get("season_year")
+                    check_res = await execute_sql(f"SELECT * FROM race WHERE season_year = {yr} AND status IN ('upcoming', 'live') LIMIT 1")
+                    if not check_res:
+                        year = yr
+                        break
+                
+                if year is None:
+                    year = seasons_res[0].get("season_year")
             else:
                 return {"error": "No completed seasons found", "year": None, "source": "spacetimedb"}
     

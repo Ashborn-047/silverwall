@@ -5,4 +5,5 @@ async def test():
     res = await execute_sql("SELECT * FROM race LIMIT 1")
     print("Race table:", res)
 
-asyncio.run(test())
+if __name__ == "__main__":
+    asyncio.run(test())

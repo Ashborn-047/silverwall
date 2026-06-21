@@ -1,32 +1,43 @@
 import sys
 import unittest
 from unittest.mock import MagicMock, patch
+import os
 
-# Mock all the necessary dependencies before importing the module
-sys.modules["fastapi"] = MagicMock()
-sys.modules["fastapi.middleware.cors"] = MagicMock()
-sys.modules["fastapi.middleware.gzip"] = MagicMock()
-sys.modules["slowapi"] = MagicMock()
-sys.modules["slowapi.errors"] = MagicMock()
-sys.modules["limiter"] = MagicMock()
-sys.modules["logger"] = MagicMock()
-sys.modules["middleware.request_tracking"] = MagicMock()
-sys.modules["websocket.live"] = MagicMock()
-sys.modules["routes.track"] = MagicMock()
-sys.modules["routes.status"] = MagicMock()
-sys.modules["routes.commentary"] = MagicMock()
-sys.modules["routes.radio"] = MagicMock()
-sys.modules["routes.results"] = MagicMock()
-sys.modules["routes.standings"] = MagicMock()
-sys.modules["routes.discord"] = MagicMock()
-sys.modules["openf1_fetcher"] = MagicMock()
-
-from fastapi.middleware.cors import CORSMiddleware
+# Ensure backend directory is in sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 class TestCORSSecurity(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Start a scoped patch for sys.modules during this test class execution
+        cls.modules_patcher = patch.dict('sys.modules', {
+            "fastapi": MagicMock(),
+            "fastapi.middleware.cors": MagicMock(),
+            "fastapi.middleware.gzip": MagicMock(),
+            "slowapi": MagicMock(),
+            "slowapi.errors": MagicMock(),
+            "limiter": MagicMock(),
+            "logger": MagicMock(),
+            "middleware.request_tracking": MagicMock(),
+            "websocket.live": MagicMock(),
+            "routes.track": MagicMock(),
+            "routes.status": MagicMock(),
+            "routes.commentary": MagicMock(),
+            "routes.radio": MagicMock(),
+            "routes.results": MagicMock(),
+            "routes.standings": MagicMock(),
+            "routes.discord": MagicMock(),
+            "openf1_fetcher": MagicMock(),
+        })
+        cls.modules_patcher.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.modules_patcher.stop()
+
     def test_cors_configuration(self):
-        # We need to import main to run its top-level code,
-        # which configures CORS via app.add_middleware
+        # Import inside the test method when mocks are active
+        from fastapi.middleware.cors import CORSMiddleware
         import main
 
         # Verify app.add_middleware was called with CORSMiddleware

@@ -41,7 +41,7 @@ async def get_current_season_year() -> int:
     # We query the `race` table since there might not be a `seasons` table anymore (or `driver_standings` has season_year)
     # Let's get max seasonYear from driver_standings
     res = await execute_sql("SELECT MAX(season_year) as year FROM driver_standings")
-    year = 2025
+    year = datetime.now().year
     if res and len(res) > 0 and 'year' in res[0] and res[0]['year'] is not None:
         year = int(res[0]['year'])
     else:
@@ -141,8 +141,13 @@ async def get_season_races(season_year: int = None):
     if not res:
         return []
 
-    # Get race results to emulate race_results(*)
-    results_res = await execute_sql(f"SELECT * FROM race_result")
+    # Get race results only for the current season races to avoid unbounded full table scan
+    race_keys = [r.get("race_key") for r in res if r.get("race_key") is not None]
+    if race_keys:
+        keys_str = ",".join(str(k) for k in race_keys)
+        results_res = await execute_sql(f"SELECT * FROM race_result WHERE race_key IN ({keys_str})")
+    else:
+        results_res = []
 
     races = []
     for r in res:
@@ -176,12 +181,16 @@ async def get_season_races(season_year: int = None):
 
 
 async def get_track_geometry(circuit_key: str):
+    # Sanitize circuit_key to prevent SQL injection
+    if not circuit_key or not str(circuit_key).replace("-", "_").replace("_", "").isalnum():
+        return None
+
     cache_key = f"track_geometry_{circuit_key}"
     cached = _get_cache(cache_key, ttl=3600)
     if cached is not None:
         return cached
 
-    res = await execute_sql(f"SELECT * FROM track_point WHERE circuit_key = {circuit_key}")
+    res = await execute_sql(f"SELECT * FROM track_point WHERE circuit_key = '{circuit_key}'")
     if res:
         _set_cache(cache_key, {"points": res})
         return {"points": res}

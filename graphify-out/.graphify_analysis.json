@@ -1,0 +1,1090 @@
+{
+  "communities": {
+    "0": [
+      "backend_logger",
+      "backend_logger_rationale_1",
+      "backend_logger_rationale_14",
+      "backend_logger_rationale_20",
+      "backend_logger_rationale_50",
+      "backend_logger_setup_logging",
+      "backend_logger_structuredformatter",
+      "backend_logger_structuredformatter_format",
+      "backend_main",
+      "backend_main_health",
+      "backend_main_py_request",
+      "backend_main_rationale_1",
+      "backend_main_rationale_120",
+      "backend_main_rationale_82",
+      "backend_main_root",
+      "backend_main_startup_event",
+      "backend_middleware_request_tracking_py_request",
+      "backend_routes_track_py_request",
+      "backend_websocket_live_py_websocket",
+      "basehttpmiddleware",
+      "logger",
+      "logrecord",
+      "middleware_request_tracking",
+      "middleware_request_tracking_rationale_1",
+      "middleware_request_tracking_rationale_15",
+      "middleware_request_tracking_rationale_26",
+      "middleware_request_tracking_requesttrackingmiddleware",
+      "middleware_request_tracking_requesttrackingmiddleware_dispatch",
+      "response",
+      "routes_track",
+      "routes_track_fetch_current_session",
+      "routes_track_fetch_track_from_openf1",
+      "routes_track_get_current_track",
+      "routes_track_get_track",
+      "routes_track_normalize_key",
+      "routes_track_rationale_112",
+      "routes_track_rationale_194",
+      "routes_track_rationale_276",
+      "routes_track_rationale_88",
+      "websocket_live",
+      "websocket_live_rationale_1",
+      "websocket_live_rationale_14",
+      "websocket_live_websocket_live"
+    ],
+    "1": [
+      "asyncclient",
+      "backend_openf1_fetcher",
+      "backend_openf1_fetcher_fetch_car_positions",
+      "backend_openf1_fetcher_fetch_intervals",
+      "backend_openf1_fetcher_fetch_live_telemetry",
+      "backend_openf1_fetcher_fetch_position",
+      "backend_openf1_fetcher_fetch_stints",
+      "backend_openf1_fetcher_get_http_client",
+      "backend_openf1_fetcher_get_latest_session_key",
+      "backend_openf1_fetcher_get_telemetry_cache",
+      "backend_openf1_fetcher_is_session_in_live_window",
+      "backend_openf1_fetcher_parse_openf1_datetime",
+      "backend_openf1_fetcher_rationale_1",
+      "backend_openf1_fetcher_rationale_100",
+      "backend_openf1_fetcher_rationale_137",
+      "backend_openf1_fetcher_rationale_167",
+      "backend_openf1_fetcher_rationale_240",
+      "backend_openf1_fetcher_rationale_268",
+      "backend_openf1_fetcher_rationale_296",
+      "backend_openf1_fetcher_rationale_324",
+      "backend_openf1_fetcher_rationale_44",
+      "backend_openf1_fetcher_rationale_86",
+      "backend_openf1_fetcher_set_telemetry_cache",
+      "tests_test_live_fetch_rationale_287",
+      "tests_test_live_fetch_testcircuitbreakerintegration_test_api_failure_returns_empty"
+    ],
+    "2": [
+      "backend_extract_lap",
+      "backend_extract_lap_extract_clean_lap",
+      "backend_get_albert_park",
+      "backend_get_albert_park_get_albert_park",
+      "backend_routes_radio_py_request",
+      "datetime",
+      "pipeline_sentinel",
+      "pipeline_sentinel_check_frontend",
+      "pipeline_sentinel_check_spacetimedb",
+      "pipeline_sentinel_rationale_1",
+      "pipeline_sentinel_rationale_100",
+      "pipeline_sentinel_rationale_20",
+      "pipeline_sentinel_rationale_36",
+      "pipeline_sentinel_rationale_54",
+      "pipeline_sentinel_run_security_audit",
+      "pipeline_sentinel_run_sentinel",
+      "pipeline_sentinel_send_discord_alert",
+      "routes_radio",
+      "routes_radio_fetch_radio_from_openf1",
+      "routes_radio_get_demo_radio",
+      "routes_radio_get_radio_messages",
+      "routes_radio_rationale_1",
+      "routes_radio_rationale_42",
+      "routes_radio_rationale_60",
+      "routes_radio_rationale_94"
+    ],
+    "3": [
+      "backend_models",
+      "backend_models_cardata",
+      "backend_models_framepacket",
+      "backend_models_rationale_1",
+      "backend_models_rationale_11",
+      "backend_models_rationale_25",
+      "backend_ws",
+      "backend_ws_py_websocket",
+      "backend_ws_rationale_1",
+      "backend_ws_ws_monza",
+      "framepacket",
+      "pipeline_fake_monza_timeline",
+      "pipeline_fake_monza_timeline_generate_fake_timeline",
+      "pipeline_fake_monza_timeline_rationale_1",
+      "pipeline_fake_monza_timeline_trackpath",
+      "pipeline_fake_monza_timeline_trackpath_build_path",
+      "pipeline_fake_monza_timeline_trackpath_get_position",
+      "pipeline_fake_monza_timeline_trackpath_init",
+      "pipeline_fake_monza_timeline_tracksegment",
+      "pipeline_fake_monza_timeline_tracksegment_calculate_length",
+      "pipeline_fake_monza_timeline_tracksegment_get_point",
+      "pipeline_fake_monza_timeline_tracksegment_init"
+    ],
+    "4": [
+      "any",
+      "backend_database",
+      "backend_database_get_cache",
+      "backend_database_get_constructor_standings",
+      "backend_database_get_current_season_id",
+      "backend_database_get_current_season_year",
+      "backend_database_get_driver_standings",
+      "backend_database_get_next_race",
+      "backend_database_get_season_races",
+      "backend_database_get_track_geometry",
+      "backend_database_rationale_1",
+      "backend_database_rationale_115",
+      "backend_database_rationale_140",
+      "backend_database_rationale_153",
+      "backend_database_rationale_178",
+      "backend_database_rationale_48",
+      "backend_database_rationale_59",
+      "backend_database_rationale_65",
+      "backend_database_rationale_82",
+      "backend_database_rationale_90",
+      "backend_database_set_cache"
+    ],
+    "5": [
+      "ingestor_src_index_ts_src_index",
+      "src_index_app",
+      "src_index_backfillyear",
+      "src_index_circuit_key_to_apex_id",
+      "src_index_conn",
+      "src_index_getapexcircuitid",
+      "src_index_setupliveingestion",
+      "src_index_startingestion",
+      "src_index_syncpodiums",
+      "src_index_syncsessionbriefly",
+      "src_index_syncstandings",
+      "src_index_synctelemetry",
+      "src_index_synctrack",
+      "src_index_synctracklegacy",
+      "src_index_syncyeardrivers",
+      "src_index_syncyearraces"
+    ],
+    "6": [
+      "ingestor_src_sdk_index_ts_sdk_index",
+      "ingestor_src_sdk_index_ts_sdk_index_dbconnection",
+      "ingestor_src_sdk_index_ts_sdk_index_dbconnection_builder",
+      "ingestor_src_sdk_index_ts_sdk_index_dbconnection_subscriptionbuilder",
+      "ingestor_src_sdk_index_ts_sdk_index_dbconnectionbuilder",
+      "ingestor_src_sdk_index_ts_sdk_index_errorcontext",
+      "ingestor_src_sdk_index_ts_sdk_index_eventcontext",
+      "ingestor_src_sdk_index_ts_sdk_index_proceduresschema",
+      "ingestor_src_sdk_index_ts_sdk_index_reducereventcontext",
+      "ingestor_src_sdk_index_ts_sdk_index_reducers",
+      "ingestor_src_sdk_index_ts_sdk_index_reducersschema",
+      "ingestor_src_sdk_index_ts_sdk_index_subscriptionbuilder",
+      "ingestor_src_sdk_index_ts_sdk_index_subscriptioneventcontext",
+      "ingestor_src_sdk_index_ts_sdk_index_subscriptionhandle",
+      "ingestor_src_sdk_index_ts_sdk_index_tables",
+      "ingestor_src_sdk_index_ts_sdk_index_tablesschema"
+    ],
+    "7": [
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_dbconnection",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_dbconnection_builder",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_dbconnection_subscriptionbuilder",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_dbconnectionbuilder",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_errorcontext",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_eventcontext",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_proceduresschema",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_reducereventcontext",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_reducers",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_reducersschema",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_subscriptionbuilder",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_subscriptioneventcontext",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_subscriptionhandle",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_tables",
+      "spacetimedb_ingestor_src_sdk_index_ts_sdk_index_tablesschema"
+    ],
+    "8": [
+      "spacetimedb_src_sdk_index_ts_sdk_index",
+      "spacetimedb_src_sdk_index_ts_sdk_index_dbconnection",
+      "spacetimedb_src_sdk_index_ts_sdk_index_dbconnection_builder",
+      "spacetimedb_src_sdk_index_ts_sdk_index_dbconnection_subscriptionbuilder",
+      "spacetimedb_src_sdk_index_ts_sdk_index_dbconnectionbuilder",
+      "spacetimedb_src_sdk_index_ts_sdk_index_errorcontext",
+      "spacetimedb_src_sdk_index_ts_sdk_index_eventcontext",
+      "spacetimedb_src_sdk_index_ts_sdk_index_proceduresschema",
+      "spacetimedb_src_sdk_index_ts_sdk_index_reducereventcontext",
+      "spacetimedb_src_sdk_index_ts_sdk_index_reducers",
+      "spacetimedb_src_sdk_index_ts_sdk_index_reducersschema",
+      "spacetimedb_src_sdk_index_ts_sdk_index_subscriptionbuilder",
+      "spacetimedb_src_sdk_index_ts_sdk_index_subscriptioneventcontext",
+      "spacetimedb_src_sdk_index_ts_sdk_index_subscriptionhandle",
+      "spacetimedb_src_sdk_index_ts_sdk_index_tables",
+      "spacetimedb_src_sdk_index_ts_sdk_index_tablesschema"
+    ],
+    "9": [
+      "backend_database_get_current_season",
+      "backend_database_rationale_234",
+      "backend_routes_standings_py_request",
+      "routes_standings",
+      "routes_standings_get_champions",
+      "routes_standings_get_constructor_standings",
+      "routes_standings_get_driver_standings",
+      "routes_standings_get_race_by_round",
+      "routes_standings_get_season_races",
+      "routes_standings_rationale_1",
+      "routes_standings_rationale_109",
+      "routes_standings_rationale_160",
+      "routes_standings_rationale_17",
+      "routes_standings_rationale_182",
+      "routes_standings_rationale_65"
+    ],
+    "10": [
+      "backend_openf1_fetcher_cache_get",
+      "backend_openf1_fetcher_cache_set",
+      "backend_openf1_fetcher_rationale_66",
+      "backend_openf1_fetcher_rationale_77",
+      "tests_test_live_fetch_rationale_36",
+      "tests_test_live_fetch_rationale_42",
+      "tests_test_live_fetch_rationale_48",
+      "tests_test_live_fetch_rationale_53",
+      "tests_test_live_fetch_rationale_62",
+      "tests_test_live_fetch_testcacheutilities",
+      "tests_test_live_fetch_testcacheutilities_setup",
+      "tests_test_live_fetch_testcacheutilities_test_cache_eviction",
+      "tests_test_live_fetch_testcacheutilities_test_cache_expiry",
+      "tests_test_live_fetch_testcacheutilities_test_cache_miss",
+      "tests_test_live_fetch_testcacheutilities_test_cache_set_and_get"
+    ],
+    "11": [
+      "backend_routes_discord_py_request",
+      "routes_discord",
+      "routes_discord_discord_interactions",
+      "routes_discord_handle_champions_command",
+      "routes_discord_handle_next_gp_command",
+      "routes_discord_handle_results_command",
+      "routes_discord_handle_standings_command",
+      "routes_discord_handle_status_command",
+      "routes_discord_rationale_102",
+      "routes_discord_rationale_142",
+      "routes_discord_rationale_176",
+      "routes_discord_rationale_202",
+      "routes_discord_rationale_24",
+      "routes_discord_rationale_76",
+      "routes_discord_verify_signature"
+    ],
+    "12": [
+      "basemodel",
+      "routes_commentary",
+      "routes_commentary_commentaryevent",
+      "routes_commentary_detect_events_from_frame",
+      "routes_commentary_generate_demo_events",
+      "routes_commentary_generate_event_id",
+      "routes_commentary_get_commentary",
+      "routes_commentary_get_commentary_history",
+      "routes_commentary_rationale_1",
+      "routes_commentary_rationale_100",
+      "routes_commentary_rationale_17",
+      "routes_commentary_rationale_178",
+      "routes_commentary_rationale_230",
+      "routes_commentary_rationale_248",
+      "routes_commentary_rationale_95"
+    ],
+    "13": [
+      "spacetimedb_src_index_ts_src_index",
+      "src_index_add_commentary",
+      "src_index_authenticate",
+      "src_index_clear_race_results",
+      "src_index_clear_track_geometry",
+      "src_index_init",
+      "src_index_insert_telemetry",
+      "src_index_seed_constructor_standings",
+      "src_index_seed_driver_standings",
+      "src_index_seed_race",
+      "src_index_seed_race_result",
+      "src_index_seed_track",
+      "src_index_spacetimedb",
+      "src_index_upsert_driver"
+    ],
+    "14": [
+      "tests_test_live_fetch",
+      "tests_test_live_fetch_create_response",
+      "tests_test_live_fetch_rationale_1",
+      "tests_test_live_fetch_rationale_247",
+      "tests_test_live_fetch_rationale_256",
+      "tests_test_live_fetch_rationale_279",
+      "tests_test_live_fetch_rationale_28",
+      "tests_test_live_fetch_rationale_305",
+      "tests_test_live_fetch_testcircuitbreakerintegration",
+      "tests_test_live_fetch_testcircuitbreakerintegration_asyncsetup",
+      "tests_test_live_fetch_testcircuitbreakerintegration_test_http_error_returns_empty",
+      "tests_test_live_fetch_testsessionkeycache",
+      "tests_test_live_fetch_testsessionkeycache_asyncsetup",
+      "tests_test_live_fetch_testsessionkeycache_test_session_key_cached"
+    ],
+    "15": [
+      "backend_gemini_fetcher",
+      "backend_gemini_fetcher_configure_gemini",
+      "backend_gemini_fetcher_fetch_all_season_results",
+      "backend_gemini_fetcher_fetch_race_results_from_gemini",
+      "backend_gemini_fetcher_get_team_color",
+      "backend_gemini_fetcher_rationale_1",
+      "backend_gemini_fetcher_rationale_116",
+      "backend_gemini_fetcher_rationale_19",
+      "backend_gemini_fetcher_rationale_33",
+      "backend_gemini_fetcher_rationale_72",
+      "backend_gemini_fetcher_rationale_96",
+      "backend_gemini_fetcher_save_results_to_db"
+    ],
+    "16": [
+      "ingestor_src_sdk_types_ts_sdk_types",
+      "ingestor_src_sdk_types_ts_sdk_types_authmapping",
+      "ingestor_src_sdk_types_ts_sdk_types_commentary",
+      "ingestor_src_sdk_types_ts_sdk_types_config",
+      "ingestor_src_sdk_types_ts_sdk_types_constructorstandings",
+      "ingestor_src_sdk_types_ts_sdk_types_driver",
+      "ingestor_src_sdk_types_ts_sdk_types_driverstandings",
+      "ingestor_src_sdk_types_ts_sdk_types_race",
+      "ingestor_src_sdk_types_ts_sdk_types_raceresult",
+      "ingestor_src_sdk_types_ts_sdk_types_telemetry",
+      "ingestor_src_sdk_types_ts_sdk_types_trackpoint"
+    ],
+    "17": [
+      "spacetimedb_ingestor_src_sdk_types_ts_sdk_types",
+      "spacetimedb_ingestor_src_sdk_types_ts_sdk_types_authmapping",
+      "spacetimedb_ingestor_src_sdk_types_ts_sdk_types_commentary",
+      "spacetimedb_ingestor_src_sdk_types_ts_sdk_types_config",
+      "spacetimedb_ingestor_src_sdk_types_ts_sdk_types_constructorstandings",
+      "spacetimedb_ingestor_src_sdk_types_ts_sdk_types_driver",
+      "spacetimedb_ingestor_src_sdk_types_ts_sdk_types_driverstandings",
+      "spacetimedb_ingestor_src_sdk_types_ts_sdk_types_race",
+      "spacetimedb_ingestor_src_sdk_types_ts_sdk_types_raceresult",
+      "spacetimedb_ingestor_src_sdk_types_ts_sdk_types_telemetry",
+      "spacetimedb_ingestor_src_sdk_types_ts_sdk_types_trackpoint"
+    ],
+    "18": [
+      "tests_test_live_fetch_rationale_101",
+      "tests_test_live_fetch_rationale_148",
+      "tests_test_live_fetch_rationale_157",
+      "tests_test_live_fetch_rationale_222",
+      "tests_test_live_fetch_rationale_234",
+      "tests_test_live_fetch_testdriverinfocaching_asyncsetup",
+      "tests_test_live_fetch_testlivetelemetry",
+      "tests_test_live_fetch_testlivetelemetry_asyncsetup",
+      "tests_test_live_fetch_testlivetelemetry_test_fetch_live_telemetry_aggregation",
+      "tests_test_live_fetch_testlivetelemetry_test_fetch_live_telemetry_no_data",
+      "tests_test_live_fetch_testlivetelemetry_test_fetch_live_telemetry_no_session"
+    ],
+    "19": [
+      "backend_database_finalize_race_status",
+      "backend_database_rationale_252",
+      "pipeline_ingest_results",
+      "pipeline_ingest_results_fetch_driver_metadata",
+      "pipeline_ingest_results_fetch_session_order",
+      "pipeline_ingest_results_ingest_race_results",
+      "pipeline_ingest_results_rationale_1",
+      "pipeline_ingest_results_rationale_14",
+      "pipeline_ingest_results_rationale_39",
+      "pipeline_ingest_results_rationale_52"
+    ],
+    "20": [
+      "backend_main_rationale_96",
+      "backend_main_shutdown_event",
+      "backend_openf1_fetcher_close_http_client",
+      "backend_openf1_fetcher_rationale_58",
+      "tests_test_live_fetch_rationale_76",
+      "tests_test_live_fetch_rationale_79",
+      "tests_test_live_fetch_rationale_88",
+      "tests_test_live_fetch_testconnectionpooling",
+      "tests_test_live_fetch_testconnectionpooling_test_close_http_client",
+      "tests_test_live_fetch_testconnectionpooling_test_get_http_client_returns_client"
+    ],
+    "21": [
+      "ingestor_src_sdk_types_reducers_ts_types_reducers",
+      "ingestor_src_sdk_types_reducers_ts_types_reducers_addcommentaryparams",
+      "ingestor_src_sdk_types_reducers_ts_types_reducers_authenticateparams",
+      "ingestor_src_sdk_types_reducers_ts_types_reducers_inserttelemetryparams",
+      "ingestor_src_sdk_types_reducers_ts_types_reducers_seedconstructorstandingsparams",
+      "ingestor_src_sdk_types_reducers_ts_types_reducers_seeddriverstandingsparams",
+      "ingestor_src_sdk_types_reducers_ts_types_reducers_seedraceparams",
+      "ingestor_src_sdk_types_reducers_ts_types_reducers_seedraceresultparams",
+      "ingestor_src_sdk_types_reducers_ts_types_reducers_seedtrackparams",
+      "ingestor_src_sdk_types_reducers_ts_types_reducers_upsertdriverparams"
+    ],
+    "22": [
+      "spacetimedb_ingestor_src_sdk_types_reducers_ts_types_reducers",
+      "spacetimedb_ingestor_src_sdk_types_reducers_ts_types_reducers_addcommentaryparams",
+      "spacetimedb_ingestor_src_sdk_types_reducers_ts_types_reducers_authenticateparams",
+      "spacetimedb_ingestor_src_sdk_types_reducers_ts_types_reducers_inserttelemetryparams",
+      "spacetimedb_ingestor_src_sdk_types_reducers_ts_types_reducers_seedconstructorstandingsparams",
+      "spacetimedb_ingestor_src_sdk_types_reducers_ts_types_reducers_seeddriverstandingsparams",
+      "spacetimedb_ingestor_src_sdk_types_reducers_ts_types_reducers_seedraceparams",
+      "spacetimedb_ingestor_src_sdk_types_reducers_ts_types_reducers_seedraceresultparams",
+      "spacetimedb_ingestor_src_sdk_types_reducers_ts_types_reducers_seedtrackparams",
+      "spacetimedb_ingestor_src_sdk_types_reducers_ts_types_reducers_upsertdriverparams"
+    ],
+    "23": [
+      "backend_database_get_last_race",
+      "backend_database_get_supabase_client",
+      "backend_database_rationale_20",
+      "backend_database_rationale_206",
+      "backend_database_rationale_219",
+      "backend_database_rationale_38",
+      "backend_database_supabase",
+      "backend_database_update_standings_from_results",
+      "client"
+    ],
+    "24": [
+      "backend_routes_results_py_request",
+      "routes_results",
+      "routes_results_fetch_race_results_from_openf1",
+      "routes_results_get_podium",
+      "routes_results_get_race_results",
+      "routes_results_rationale_1",
+      "routes_results_rationale_101",
+      "routes_results_rationale_156",
+      "routes_results_rationale_45"
+    ],
+    "25": [
+      "backend_routes_status_py_request",
+      "routes_status",
+      "routes_status_fetch_live_session",
+      "routes_status_get_leaderboard",
+      "routes_status_get_race_status",
+      "routes_status_rationale_1",
+      "routes_status_rationale_125",
+      "routes_status_rationale_20",
+      "routes_status_rationale_37"
+    ],
+    "26": [
+      "tests_test_middleware",
+      "tests_test_middleware_rationale_16",
+      "tests_test_middleware_rationale_24",
+      "tests_test_middleware_rationale_36",
+      "tests_test_middleware_testmiddleware",
+      "tests_test_middleware_testmiddleware_setup",
+      "tests_test_middleware_testmiddleware_test_cors_headers",
+      "tests_test_middleware_testmiddleware_test_gzip_compression",
+      "tests_test_middleware_testmiddleware_test_rate_limiting"
+    ],
+    "27": [
+      "backend_openf1_fetcher_fetch_driver_info",
+      "backend_openf1_fetcher_rationale_199",
+      "tests_test_live_fetch_rationale_107",
+      "tests_test_live_fetch_rationale_137",
+      "tests_test_live_fetch_rationale_98",
+      "tests_test_live_fetch_testdriverinfocaching",
+      "tests_test_live_fetch_testdriverinfocaching_test_driver_cache_hit",
+      "tests_test_live_fetch_testdriverinfocaching_test_driver_info_error_handling"
+    ],
+    "28": [
+      "src_fix_all",
+      "src_fix_all_fetchjolpipaginated",
+      "src_fix_all_fixyear",
+      "src_fix_all_main",
+      "src_fix_all_seedpodium",
+      "src_fix_all_sessiontoround",
+      "src_fix_all_sleep",
+      "src_fix_all_synctrack"
+    ],
+    "29": [
+      "src_seed_definitive",
+      "src_seed_definitive_fetchjolpipaginated",
+      "src_seed_definitive_main",
+      "src_seed_definitive_seedpodium",
+      "src_seed_definitive_seedstandings",
+      "src_seed_definitive_seedyear",
+      "src_seed_definitive_sleep",
+      "src_seed_definitive_synctrack"
+    ],
+    "30": [
+      "src_seed_final_fast",
+      "src_seed_final_fast_cachedir",
+      "src_seed_final_fast_fetchjolpi",
+      "src_seed_final_fast_main",
+      "src_seed_final_fast_seedmockgeometry",
+      "src_seed_final_fast_seedstandings",
+      "src_seed_final_fast_seedyearfromcache",
+      "src_seed_final_fast_sleep"
+    ],
+    "31": [
+      "src_seed_history",
+      "src_seed_history_fetchandseedraces",
+      "src_seed_history_main",
+      "src_seed_history_seedall",
+      "src_seed_history_seeddrivers",
+      "src_seed_history_seedpodiums",
+      "src_seed_history_seedstandings",
+      "src_seed_history_sleep"
+    ],
+    "32": [
+      "spacetimedb_src_sdk_types_ts_sdk_types",
+      "spacetimedb_src_sdk_types_ts_sdk_types_authmapping",
+      "spacetimedb_src_sdk_types_ts_sdk_types_config",
+      "spacetimedb_src_sdk_types_ts_sdk_types_driver",
+      "spacetimedb_src_sdk_types_ts_sdk_types_race",
+      "spacetimedb_src_sdk_types_ts_sdk_types_telemetry",
+      "spacetimedb_src_sdk_types_ts_sdk_types_trackpoint"
+    ],
+    "33": [
+      "src_seed_final",
+      "src_seed_final_fetchjolpipaginated",
+      "src_seed_final_main",
+      "src_seed_final_matchrace",
+      "src_seed_final_seedall",
+      "src_seed_final_seedpodium",
+      "src_seed_final_sleep"
+    ],
+    "34": [
+      "spacetimedb_src_sdk_types_reducers_ts_types_reducers",
+      "spacetimedb_src_sdk_types_reducers_ts_types_reducers_authenticateparams",
+      "spacetimedb_src_sdk_types_reducers_ts_types_reducers_inserttelemetryparams",
+      "spacetimedb_src_sdk_types_reducers_ts_types_reducers_seedraceparams",
+      "spacetimedb_src_sdk_types_reducers_ts_types_reducers_seedtrackparams",
+      "spacetimedb_src_sdk_types_reducers_ts_types_reducers_upsertdriverparams"
+    ],
+    "35": [
+      "src_seed_final_v2",
+      "src_seed_final_v2_fetchjolpi",
+      "src_seed_final_v2_main",
+      "src_seed_final_v2_seedmockgeometry",
+      "src_seed_final_v2_seedyearsurgically",
+      "src_seed_final_v2_sleep"
+    ],
+    "36": [
+      "backend_database_rationale_238",
+      "backend_database_save_track_geometry",
+      "pipeline_seed_tracks",
+      "pipeline_seed_tracks_rationale_1",
+      "pipeline_seed_tracks_seed_tracks"
+    ],
+    "37": [
+      "src_fix_surgical",
+      "src_fix_surgical_fixlocations",
+      "src_fix_surgical_main",
+      "src_fix_surgical_sleep",
+      "src_fix_surgical_synctrack"
+    ],
+    "38": [
+      "src_seed_2024",
+      "src_seed_2024_fetchalljolpiresults",
+      "src_seed_2024_main",
+      "src_seed_2024_seed2024",
+      "src_seed_2024_sleep"
+    ],
+    "39": [
+      "src_seed_complete",
+      "src_seed_complete_fetchalljolpiresults",
+      "src_seed_complete_main",
+      "src_seed_complete_seedall",
+      "src_seed_complete_sleep"
+    ],
+    "40": [
+      "src_seed_podiums",
+      "src_seed_podiums_fetchalljolpiresults",
+      "src_seed_podiums_main",
+      "src_seed_podiums_seedpodiums",
+      "src_seed_podiums_sleep"
+    ],
+    "41": [
+      "src_cache_data",
+      "src_cache_data_fetchwithretry",
+      "src_cache_data_main",
+      "src_cache_data_sleep"
+    ],
+    "42": [
+      "src_fetch_geometry",
+      "src_fetch_geometry_cachedir",
+      "src_fetch_geometry_fetchgeometry",
+      "src_fetch_geometry_run"
+    ],
+    "43": [
+      "src_seed_races",
+      "src_seed_races_conn",
+      "src_seed_races_runseeding",
+      "src_seed_races_syncyearraces"
+    ],
+    "44": [
+      "src_test_apex_fetch",
+      "src_test_apex_fetch_circuit_key_to_apex_id",
+      "src_test_apex_fetch_run",
+      "src_test_apex_fetch_testfetch"
+    ],
+    "45": [
+      "backend_fetch_hq_track",
+      "backend_fetch_hq_track_fetch_single_lap",
+      "backend_fetch_hq_track_main"
+    ],
+    "46": [
+      "backend_test_full_standings",
+      "backend_test_full_standings_calculate_constructor_standings",
+      "backend_test_full_standings_calculate_driver_standings"
+    ],
+    "47": [
+      "src_seed_fixup",
+      "src_seed_fixup_main",
+      "src_seed_fixup_sleep"
+    ],
+    "48": [
+      "src_test_telemetry",
+      "src_test_telemetry_conn",
+      "src_test_telemetry_runtestingestion"
+    ],
+    "49": [
+      "backend_api_diagnostic",
+      "backend_api_diagnostic_diagnose_api"
+    ],
+    "50": [
+      "backend_check_2026",
+      "backend_check_2026_check_data"
+    ],
+    "51": [
+      "backend_update_geometry",
+      "backend_update_geometry_update_track"
+    ],
+    "52": [
+      "pipeline_init",
+      "pipeline_init_rationale_1"
+    ],
+    "53": [
+      "pipeline_register_commands",
+      "pipeline_register_commands_register_commands"
+    ],
+    "54": [
+      "spacetimedb_publish",
+      "spacetimedb_publish_projectdir"
+    ],
+    "55": [
+      "src_check_races",
+      "src_check_races_conn"
+    ],
+    "56": [
+      "src_check_standings",
+      "src_check_standings_conn"
+    ],
+    "57": [
+      "src_clean_db",
+      "src_clean_db_conn"
+    ],
+    "58": [
+      "src_debug_races",
+      "src_debug_races_conn"
+    ],
+    "59": [
+      "src_fix_race_status",
+      "src_fix_race_status_conn"
+    ],
+    "60": [
+      "src_seed_shanghai",
+      "src_seed_shanghai_seed"
+    ],
+    "61": [
+      "backend_limiter"
+    ],
+    "62": [
+      "backend_test_calc"
+    ],
+    "63": [
+      "backend_test_standings"
+    ],
+    "64": [
+      "backend_yas_marina_new"
+    ],
+    "65": [
+      "ingestor_src_sdk_add_commentary_reducer_ts_sdk_add_commentary_reducer"
+    ],
+    "66": [
+      "ingestor_src_sdk_auth_mapping_table_ts_sdk_auth_mapping_table"
+    ],
+    "67": [
+      "ingestor_src_sdk_authenticate_reducer_ts_sdk_authenticate_reducer"
+    ],
+    "68": [
+      "ingestor_src_sdk_commentary_table_ts_sdk_commentary_table"
+    ],
+    "69": [
+      "ingestor_src_sdk_config_table_ts_sdk_config_table"
+    ],
+    "70": [
+      "ingestor_src_sdk_constructor_standings_table_ts_sdk_constructor_standings_table"
+    ],
+    "71": [
+      "ingestor_src_sdk_driver_standings_table_ts_sdk_driver_standings_table"
+    ],
+    "72": [
+      "ingestor_src_sdk_driver_table_ts_sdk_driver_table"
+    ],
+    "73": [
+      "ingestor_src_sdk_insert_telemetry_reducer_ts_sdk_insert_telemetry_reducer"
+    ],
+    "74": [
+      "ingestor_src_sdk_race_result_table_ts_sdk_race_result_table"
+    ],
+    "75": [
+      "ingestor_src_sdk_race_table_ts_sdk_race_table"
+    ],
+    "76": [
+      "ingestor_src_sdk_seed_constructor_standings_reducer_ts_sdk_seed_constructor_standings_reducer"
+    ],
+    "77": [
+      "ingestor_src_sdk_seed_driver_standings_reducer_ts_sdk_seed_driver_standings_reducer"
+    ],
+    "78": [
+      "ingestor_src_sdk_seed_race_reducer_ts_sdk_seed_race_reducer"
+    ],
+    "79": [
+      "ingestor_src_sdk_seed_race_result_reducer_ts_sdk_seed_race_result_reducer"
+    ],
+    "80": [
+      "ingestor_src_sdk_seed_track_reducer_ts_sdk_seed_track_reducer"
+    ],
+    "81": [
+      "ingestor_src_sdk_telemetry_table_ts_sdk_telemetry_table"
+    ],
+    "82": [
+      "ingestor_src_sdk_track_point_table_ts_sdk_track_point_table"
+    ],
+    "83": [
+      "ingestor_src_sdk_types_procedures_ts_types_procedures"
+    ],
+    "84": [
+      "ingestor_src_sdk_upsert_driver_reducer_ts_sdk_upsert_driver_reducer"
+    ],
+    "85": [
+      "middleware_init"
+    ],
+    "86": [
+      "routes_init"
+    ],
+    "87": [
+      "spacetimedb_ingestor_src_sdk_add_commentary_reducer_ts_sdk_add_commentary_reducer"
+    ],
+    "88": [
+      "spacetimedb_ingestor_src_sdk_auth_mapping_table_ts_sdk_auth_mapping_table"
+    ],
+    "89": [
+      "spacetimedb_ingestor_src_sdk_authenticate_reducer_ts_sdk_authenticate_reducer"
+    ],
+    "90": [
+      "spacetimedb_ingestor_src_sdk_commentary_table_ts_sdk_commentary_table"
+    ],
+    "91": [
+      "spacetimedb_ingestor_src_sdk_config_table_ts_sdk_config_table"
+    ],
+    "92": [
+      "spacetimedb_ingestor_src_sdk_constructor_standings_table_ts_sdk_constructor_standings_table"
+    ],
+    "93": [
+      "spacetimedb_ingestor_src_sdk_driver_standings_table_ts_sdk_driver_standings_table"
+    ],
+    "94": [
+      "spacetimedb_ingestor_src_sdk_driver_table_ts_sdk_driver_table"
+    ],
+    "95": [
+      "spacetimedb_ingestor_src_sdk_insert_telemetry_reducer_ts_sdk_insert_telemetry_reducer"
+    ],
+    "96": [
+      "spacetimedb_ingestor_src_sdk_race_result_table_ts_sdk_race_result_table"
+    ],
+    "97": [
+      "spacetimedb_ingestor_src_sdk_race_table_ts_sdk_race_table"
+    ],
+    "98": [
+      "spacetimedb_ingestor_src_sdk_seed_constructor_standings_reducer_ts_sdk_seed_constructor_standings_reducer"
+    ],
+    "99": [
+      "spacetimedb_ingestor_src_sdk_seed_driver_standings_reducer_ts_sdk_seed_driver_standings_reducer"
+    ],
+    "100": [
+      "spacetimedb_ingestor_src_sdk_seed_race_reducer_ts_sdk_seed_race_reducer"
+    ],
+    "101": [
+      "spacetimedb_ingestor_src_sdk_seed_race_result_reducer_ts_sdk_seed_race_result_reducer"
+    ],
+    "102": [
+      "spacetimedb_ingestor_src_sdk_seed_track_reducer_ts_sdk_seed_track_reducer"
+    ],
+    "103": [
+      "spacetimedb_ingestor_src_sdk_telemetry_table_ts_sdk_telemetry_table"
+    ],
+    "104": [
+      "spacetimedb_ingestor_src_sdk_track_point_table_ts_sdk_track_point_table"
+    ],
+    "105": [
+      "spacetimedb_ingestor_src_sdk_types_procedures_ts_types_procedures"
+    ],
+    "106": [
+      "spacetimedb_ingestor_src_sdk_upsert_driver_reducer_ts_sdk_upsert_driver_reducer"
+    ],
+    "107": [
+      "spacetimedb_src_sdk_auth_mapping_table_ts_sdk_auth_mapping_table"
+    ],
+    "108": [
+      "spacetimedb_src_sdk_authenticate_reducer_ts_sdk_authenticate_reducer"
+    ],
+    "109": [
+      "spacetimedb_src_sdk_config_table_ts_sdk_config_table"
+    ],
+    "110": [
+      "spacetimedb_src_sdk_driver_table_ts_sdk_driver_table"
+    ],
+    "111": [
+      "spacetimedb_src_sdk_insert_telemetry_reducer_ts_sdk_insert_telemetry_reducer"
+    ],
+    "112": [
+      "spacetimedb_src_sdk_race_table_ts_sdk_race_table"
+    ],
+    "113": [
+      "spacetimedb_src_sdk_seed_race_reducer_ts_sdk_seed_race_reducer"
+    ],
+    "114": [
+      "spacetimedb_src_sdk_seed_track_reducer_ts_sdk_seed_track_reducer"
+    ],
+    "115": [
+      "spacetimedb_src_sdk_telemetry_table_ts_sdk_telemetry_table"
+    ],
+    "116": [
+      "spacetimedb_src_sdk_track_point_table_ts_sdk_track_point_table"
+    ],
+    "117": [
+      "spacetimedb_src_sdk_types_procedures_ts_types_procedures"
+    ],
+    "118": [
+      "spacetimedb_src_sdk_upsert_driver_reducer_ts_sdk_upsert_driver_reducer"
+    ],
+    "119": [
+      "websocket_init"
+    ]
+  },
+  "cohesion": {
+    "0": 0.05758582502768549,
+    "1": 0.13,
+    "2": 0.1,
+    "3": 0.14285714285714285,
+    "4": 0.16666666666666666,
+    "5": 0.20833333333333334,
+    "6": 0.125,
+    "7": 0.125,
+    "8": 0.125,
+    "9": 0.2,
+    "10": 0.17142857142857143,
+    "11": 0.2,
+    "12": 0.19047619047619047,
+    "13": 0.14285714285714285,
+    "14": 0.16483516483516483,
+    "15": 0.19696969696969696,
+    "16": 0.18181818181818182,
+    "17": 0.18181818181818182,
+    "18": 0.18181818181818182,
+    "19": 0.24444444444444444,
+    "20": 0.2,
+    "21": 0.2,
+    "22": 0.2,
+    "23": 0.25,
+    "24": 0.2777777777777778,
+    "25": 0.2777777777777778,
+    "26": 0.2222222222222222,
+    "27": 0.2857142857142857,
+    "28": 0.4642857142857143,
+    "29": 0.42857142857142855,
+    "30": 0.35714285714285715,
+    "31": 0.4642857142857143,
+    "32": 0.2857142857142857,
+    "33": 0.5238095238095238,
+    "34": 0.3333333333333333,
+    "35": 0.5333333333333333,
+    "36": 0.4,
+    "37": 0.5,
+    "38": 0.8,
+    "39": 0.7,
+    "40": 0.7,
+    "41": 1.0,
+    "42": 0.6666666666666666,
+    "43": 0.6666666666666666,
+    "44": 0.6666666666666666,
+    "45": 1.0,
+    "46": 0.6666666666666666,
+    "47": 0.6666666666666666,
+    "48": 0.6666666666666666,
+    "49": 1.0,
+    "50": 1.0,
+    "51": 1.0,
+    "52": 1.0,
+    "53": 1.0,
+    "54": 1.0,
+    "55": 1.0,
+    "56": 1.0,
+    "57": 1.0,
+    "58": 1.0,
+    "59": 1.0,
+    "60": 1.0,
+    "61": 1.0,
+    "62": 1.0,
+    "63": 1.0,
+    "64": 1.0,
+    "65": 1.0,
+    "66": 1.0,
+    "67": 1.0,
+    "68": 1.0,
+    "69": 1.0,
+    "70": 1.0,
+    "71": 1.0,
+    "72": 1.0,
+    "73": 1.0,
+    "74": 1.0,
+    "75": 1.0,
+    "76": 1.0,
+    "77": 1.0,
+    "78": 1.0,
+    "79": 1.0,
+    "80": 1.0,
+    "81": 1.0,
+    "82": 1.0,
+    "83": 1.0,
+    "84": 1.0,
+    "85": 1.0,
+    "86": 1.0,
+    "87": 1.0,
+    "88": 1.0,
+    "89": 1.0,
+    "90": 1.0,
+    "91": 1.0,
+    "92": 1.0,
+    "93": 1.0,
+    "94": 1.0,
+    "95": 1.0,
+    "96": 1.0,
+    "97": 1.0,
+    "98": 1.0,
+    "99": 1.0,
+    "100": 1.0,
+    "101": 1.0,
+    "102": 1.0,
+    "103": 1.0,
+    "104": 1.0,
+    "105": 1.0,
+    "106": 1.0,
+    "107": 1.0,
+    "108": 1.0,
+    "109": 1.0,
+    "110": 1.0,
+    "111": 1.0,
+    "112": 1.0,
+    "113": 1.0,
+    "114": 1.0,
+    "115": 1.0,
+    "116": 1.0,
+    "117": 1.0,
+    "118": 1.0,
+    "119": 1.0
+  },
+  "gods": [
+    {
+      "id": "backend_database_supabase",
+      "label": "supabase()",
+      "degree": 25
+    },
+    {
+      "id": "backend_openf1_fetcher_fetch_live_telemetry",
+      "label": "fetch_live_telemetry()",
+      "degree": 13
+    },
+    {
+      "id": "backend_database_get_current_season_year",
+      "label": "get_current_season_year()",
+      "degree": 11
+    },
+    {
+      "id": "backend_openf1_fetcher_get_http_client",
+      "label": "get_http_client()",
+      "degree": 10
+    },
+    {
+      "id": "backend_database_get_next_race",
+      "label": "get_next_race()",
+      "degree": 9
+    },
+    {
+      "id": "routes_track_get_current_track",
+      "label": "get_current_track()",
+      "degree": 9
+    },
+    {
+      "id": "backend_database_get_cache",
+      "label": "_get_cache()",
+      "degree": 8
+    },
+    {
+      "id": "backend_database_set_cache",
+      "label": "_set_cache()",
+      "degree": 8
+    },
+    {
+      "id": "backend_database_get_current_season",
+      "label": "get_current_season()",
+      "degree": 8
+    },
+    {
+      "id": "backend_openf1_fetcher_fetch_driver_info",
+      "label": "fetch_driver_info()",
+      "degree": 8
+    }
+  ],
+  "surprises": [
+    {
+      "source": "ingest_race_results()",
+      "target": "supabase()",
+      "source_files": [
+        "backend/pipeline/ingest_results.py",
+        "backend/database.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities"
+    },
+    {
+      "source": "handle_standings_command()",
+      "target": "supabase()",
+      "source_files": [
+        "backend/routes/discord.py",
+        "backend/database.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities"
+    },
+    {
+      "source": "handle_status_command()",
+      "target": "supabase()",
+      "source_files": [
+        "backend/routes/discord.py",
+        "backend/database.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities"
+    },
+    {
+      "source": "get_champions()",
+      "target": "supabase()",
+      "source_files": [
+        "backend/routes/standings.py",
+        "backend/database.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities"
+    },
+    {
+      "source": "get_constructor_standings()",
+      "target": "supabase()",
+      "source_files": [
+        "backend/routes/standings.py",
+        "backend/database.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}

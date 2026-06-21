@@ -1,73 +1,67 @@
 import sys
-from unittest.mock import MagicMock
+import os
+from unittest.mock import MagicMock, patch, AsyncMock
+import asyncio
 
 class BaseModelMock:
     pass
 
-sys.modules['pybreaker'] = MagicMock()
-sys.modules['fastapi'] = MagicMock()
-sys.modules['fastapi.testclient'] = MagicMock()
-sys.modules['fastapi.middleware'] = MagicMock()
-sys.modules['fastapi.middleware.cors'] = MagicMock()
-sys.modules['fastapi.middleware.gzip'] = MagicMock()
-sys.modules['fastapi.responses'] = MagicMock()
-sys.modules['slowapi'] = MagicMock()
-sys.modules['slowapi.errors'] = MagicMock()
-sys.modules['slowapi.util'] = MagicMock()
-sys.modules['slowapi.middleware'] = MagicMock()
-sys.modules['starlette'] = MagicMock()
-sys.modules['starlette.middleware'] = MagicMock()
-sys.modules['starlette.middleware.base'] = MagicMock()
-sys.modules['nacl'] = MagicMock()
-sys.modules['nacl.signing'] = MagicMock()
-sys.modules['nacl.exceptions'] = MagicMock()
+def run_tests():
+    pydantic_mock = MagicMock()
+    pydantic_mock.BaseModel = BaseModelMock
 
-pydantic_mock = MagicMock()
-pydantic_mock.BaseModel = BaseModelMock
-sys.modules['pydantic'] = pydantic_mock
-sys.modules['dotenv'] = MagicMock()
-sys.modules['supabase'] = MagicMock()
-sys.modules['httpx'] = MagicMock()
-sys.modules['google'] = MagicMock()
-sys.modules['google.generativeai'] = MagicMock()
+    mock_modules = {
+        'pybreaker': MagicMock(),
+        'fastapi': MagicMock(),
+        'fastapi.testclient': MagicMock(),
+        'fastapi.middleware': MagicMock(),
+        'fastapi.middleware.cors': MagicMock(),
+        'fastapi.middleware.gzip': MagicMock(),
+        'fastapi.responses': MagicMock(),
+        'slowapi': MagicMock(),
+        'slowapi.errors': MagicMock(),
+        'slowapi.util': MagicMock(),
+        'slowapi.middleware': MagicMock(),
+        'starlette': MagicMock(),
+        'starlette.middleware': MagicMock(),
+        'starlette.middleware.base': MagicMock(),
+        'nacl': MagicMock(),
+        'nacl.signing': MagicMock(),
+        'nacl.exceptions': MagicMock(),
+        'pydantic': pydantic_mock,
+        'dotenv': MagicMock(),
+        'supabase': MagicMock(),
+        'httpx': MagicMock(),
+        'google': MagicMock(),
+        'google.generativeai': MagicMock(),
+    }
 
-import unittest
-import os
-sys.path.insert(0, os.path.abspath('backend'))
+    with patch.dict('sys.modules', mock_modules):
+        sys.path.insert(0, os.path.abspath('backend'))
+        
+        from database import get_current_season_year
+        import database
 
-# We want to run test_live_fetch.py
-# Note: we are ignoring test_middleware.py since it seems to be failing
-# due to the complex mock setup required for TestClient. We only changed
-# database.py, so testing that nothing functionally broke is key.
-# But there is no test_database.py. Let's write a small ad-hoc test for
-# get_current_season_year.
+        async def test_get_current_season_year():
+            mock_execute_sql = AsyncMock(return_value=[{'year': 2024}])
+            database.execute_sql = mock_execute_sql
 
-import asyncio
-from database import get_current_season_year
+            # First call - should execute SQL query
+            database._query_cache.clear()
+            year = await get_current_season_year()
+            assert year == 2024, f"Expected 2024, got {year}"
+            assert "current_season_year" in database._query_cache
+            self_call_count = mock_execute_sql.call_count
+            assert self_call_count == 1, f"Expected 1 call to execute_sql, got {self_call_count}"
 
-async def test_get_current_season_year():
-    # Setup mock for supabase
-    client_mock = MagicMock()
-    result_mock = MagicMock()
-    result_mock.data = {'year': 2024}
+            # Second call - should hit cache
+            mock_execute_sql.reset_mock()
+            year = await get_current_season_year()
+            assert year == 2024
+            mock_execute_sql.assert_not_called()
+            print("Test passed: get_current_season_year works as expected with SpacetimeDB cache.")
 
-    # Chain mocks for: client.table("seasons").select("year").order("year", desc=True).limit(1).single().execute()
-    client_mock.table.return_value.select.return_value.order.return_value.limit.return_value.single.return_value.execute.return_value = result_mock
+        asyncio.run(test_get_current_season_year())
 
-    import database
-    database.supabase = MagicMock(return_value=client_mock)
-
-    # First call - should hit DB
-    database._query_cache.clear()
-    year = await get_current_season_year()
-    assert year == 2024, f"Expected 2024, got {year}"
-    assert "current_season_year" in database._query_cache
-
-    # Second call - should hit cache
-    database.supabase.reset_mock()
-    year = await get_current_season_year()
-    assert year == 2024
-    database.supabase.assert_not_called()
-    print("Test passed: get_current_season_year works as expected.")
-
-asyncio.run(test_get_current_season_year())
+if __name__ == "__main__":
+    run_tests()

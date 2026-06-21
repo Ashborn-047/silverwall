@@ -1,0 +1,25 @@
+# Graphify Ignored Folders
+.git/
+.github/
+.vscode/
+node_modules/
+venv/
+.venv/
+dist/
+build/
+*.log
+logs/
+archive/
+graphify-out/
+.agents/
+docs/
+Silverwall UIUX design system/
+*.md
+*.txt
+*.json
+*.pdf
+*.html
+*.png
+*.jpg
+*.jpeg
+*.gif

@@ -36,7 +36,10 @@ async def execute_sql(sql: str) -> List[Dict[str, Any]]:
                     return data
                 # Sometimes it might be {"results": [...] } or similar.
                 if isinstance(data, dict):
-                    # We can log if it's not straightforward
+                    if "rows" in data and isinstance(data["rows"], list):
+                        return data["rows"]
+                    elif "results" in data and isinstance(data["results"], list):
+                        return data["results"]
                     return []
             else:
                 logger.error(f"SpacetimeDB SQL error HTTP {response.status_code}: {response.text}")
