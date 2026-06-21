@@ -29,3 +29,11 @@ backend/env/
 **/playwright-report/
 **/test-results/
 **/blob-report/
+
+# Graphify
+graphify-out/
+.graphifyignore
+
+# Agents
+.agents/
+AGENTS.md
