@@ -5,7 +5,7 @@ import json
 from nacl.signing import VerifyKey
 from nacl.exceptions import BadSignatureError
 from datetime import datetime, timezone
-from database import supabase, get_next_race, get_driver_standings, get_constructor_standings, get_current_season_year
+from database import get_next_race, get_driver_standings, get_constructor_standings, get_current_season_year, execute_sql
 from limiter import limiter
 
 router = APIRouter(tags=["discord"])
@@ -75,18 +75,19 @@ async def discord_interactions(request: Request):
 async def handle_status_command():
     """Handle /status command."""
     try:
-        client = supabase()
         # Ping DB
-        client.table("seasons").select("count", count="exact").execute()
+        res = await execute_sql("SELECT COUNT(*) FROM race")
+        count = res[0].get("count", 0) if res else 0
+
         next_race = await get_next_race()
         
         content = (
             "### 🟢 SilverWall System Status\n"
             f"> **Status:** `OPERATIONAL`\n"
-            f"> **Backend:** `v3.0 Autonomous (Discord Active)`\n"
-            f"> **Database:** `Supabase Connected`\n"
+            f"> **Backend:** `v4.0 Autonomous (Discord Active)`\n"
+            f"> **Database:** `SpacetimeDB Connected ({count} races)`\n"
             "\n"
-            f"🏁 **Next Race:** **{next_race['name']}** on {next_race['race_date'] if next_race else 'TBD'}"
+            f"🏁 **Next Race:** **{next_race['name'] if next_race else 'TBD'}** on {next_race['race_date'] if next_race else 'TBD'}"
         )
         return JSONResponse(content={
             "type": CHANNEL_MESSAGE_WITH_SOURCE,
@@ -101,7 +102,6 @@ async def handle_status_command():
 async def handle_standings_command(year: int = None):
     """Handle /standings command with optional year."""
     try:
-        client = supabase()
         if not year:
             # Fallback to current year
             year = await get_current_season_year()
@@ -176,15 +176,16 @@ async def handle_champions_command():
     """Handle /champions command."""
     try:
         from routes.standings import get_champions
-        champs = await get_champions()
+        # Note: Need to mock request as we call a router method
+        champs = await get_champions(None, None)
         
-        if not champs:
+        if not champs or "error" in champs:
             return JSONResponse(content={"type": CHANNEL_MESSAGE_WITH_SOURCE, "data": {"content": "🏆 No champion data available."}})
             
         content = (
             f"## 👑 F1 World Champions ({champs['year']})\n"
-            f"> 🏎️ **Driver:** **{champs['driver']['name']}** ({champs['driver']['team']})\n"
-            f"> 🛠️ **Constructor:** **{champs['constructor']['name']}**\n"
+            f"> 🏎️ **Driver:** **{champs.get('driver', {}).get('name', 'N/A')}** ({champs.get('driver', {}).get('team', 'N/A')})\n"
+            f"> 🛠️ **Constructor:** **{champs.get('constructor', {}).get('name', 'N/A')}**\n"
             "\n"
             f"*Data sourced from official {champs['year']} standings.*"
         )

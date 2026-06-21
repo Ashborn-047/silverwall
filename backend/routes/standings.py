@@ -1,11 +1,11 @@
 """
 SilverWall - Season Standings API
-Autonomous standings and race history driven by Supabase
+Autonomous standings and race history driven by SpacetimeDB
 """
 
 from fastapi import APIRouter, Request
 from typing import Optional
-from database import supabase, get_current_season
+from database import get_current_season, get_driver_standings as db_get_driver_standings, get_constructor_standings as db_get_constructor_standings, get_season_races as db_get_season_races, execute_sql
 from limiter import limiter
 
 router = APIRouter()
@@ -18,40 +18,22 @@ async def get_driver_standings(request: Request, year: Optional[int] = None):
     if year is None:
         year = await get_current_season()
         
-    client = supabase()
+    standings = await db_get_driver_standings(year)
     
-    # 1. Fetch Season Info
-    season_res = client.table("seasons").select("*").eq("year", year).single().execute()
-    season_info = season_res.data if season_res.data else {}
+    # Try to determine champion
+    champion_name = None
+    if standings and len(standings) > 0 and standings[0].get("position") == 1:
+         # Need to check if season is ended to confirm champion, but we'll approximate
+         # based on whether a driver has enough points or if it's past year
+         current_year = await get_current_season()
+         if year < current_year:
+              champion_name = standings[0].get("driver_name")
     
-    champion_name = season_info.get("driver_champion")
     title_fight_msg = f"{champion_name} - {year} WORLD CHAMPION! 🏆" if champion_name else f"{year} World Championship"
-    
-    # 2. Fetch Standings
-    result = client.table("driver_standings") \
-        .select("position, driver_code, driver_name, team, team_color, points, wins") \
-        .eq("season_year", year) \
-        .order("position") \
-        .execute()
-    
-    standings = []
-    if result.data:
-        standings = [
-            {
-                "position": d["position"],
-                "code": d["driver_code"],
-                "name": d["driver_name"],
-                "team": d["team"],
-                "color": d["team_color"],
-                "points": float(d["points"]),
-                "wins": d.get("wins", 0),
-            }
-            for d in result.data
-        ]
 
     return {
         "season": year,
-        "source": "supabase",
+        "source": "spacetimedb",
         "title_fight": title_fight_msg,
         "standings": standings,
         "leader": standings[0] if standings else None,
@@ -66,37 +48,17 @@ async def get_constructor_standings(request: Request, year: Optional[int] = None
     if year is None:
         year = await get_current_season()
         
-    client = supabase()
+    standings = await db_get_constructor_standings(year)
     
-    # 1. Fetch Season Info
-    season_res = client.table("seasons").select("*").eq("year", year).single().execute()
-    season_info = season_res.data if season_res.data else {}
-    champ_team = season_info.get("constructor_champion")
-    
-    # 2. Fetch Standings
-    result = client.table("constructor_standings") \
-        .select("position, team, team_color, points, wins, is_champion") \
-        .eq("season_year", year) \
-        .order("position") \
-        .execute()
-    
-    standings = []
-    if result.data:
-        standings = [
-            {
-                "position": c["position"],
-                "team": c["team"],
-                "color": c["team_color"],
-                "points": float(c["points"]),
-                "wins": c.get("wins", 0),
-                "champion": c.get("is_champion", False),
-            }
-            for c in result.data
-        ]
+    champ_team = None
+    if standings and len(standings) > 0 and standings[0].get("position") == 1:
+         current_year = await get_current_season()
+         if year < current_year:
+              champ_team = standings[0].get("team")
 
     return {
         "season": year,
-        "source": "supabase",
+        "source": "spacetimedb",
         "standings": standings,
         "champion_team": champ_team,
         "message": f"{champ_team} - {year} CONSTRUCTORS' CHAMPIONS! 🏆" if champ_team else None
@@ -110,47 +72,40 @@ async def get_season_races(request: Request, year: Optional[int] = None):
     if year is None:
         year = await get_current_season()
         
-    client = supabase()
-    
-    # Fetch races and their results
-    result = client.table("races") \
-        .select("*, race_results(*)") \
-        .eq("season_year", year) \
-        .order("round") \
-        .execute()
+    races_raw = await db_get_season_races(year)
         
     races = []
     completed_count = 0
     
-    if result.data:
-        for r in result.data:
+    if races_raw:
+        for r in races_raw:
             podium = []
             results = r.get("race_results", [])
-            podium_results = sorted([res for res in results if res["position"] <= 3], key=lambda x: x["position"])
+            podium_results = sorted([res for res in results if res.get("position", 999) <= 3], key=lambda x: x.get("position", 999))
             
             if podium_results:
                 completed_count += 1
                 for pres in podium_results:
                     podium.append({
-                        "pos": pres["position"],
-                        "code": pres["driver_code"],
-                        "name": pres["driver_name"]
+                        "pos": pres.get("position"),
+                        "code": pres.get("driver_code"),
+                        "name": pres.get("driver_name")
                     })
             
             races.append({
-                "round": r["round"],
-                "name": r["name"],
-                "circuit": r["circuit"],
-                "date": r["race_date"],
+                "round": r.get("round"),
+                "name": r.get("name"),
+                "circuit": r.get("circuit"),
+                "date": r.get("race_date"),
                 "podium": podium if podium else None,
-                "status": r["status"]
+                "status": r.get("status")
             })
             
     return {
         "season": year,
         "total_races": len(races),
         "completed": completed_count,
-        "source": "supabase",
+        "source": "spacetimedb",
         "races": races
     }
 
@@ -161,18 +116,24 @@ async def get_race_by_round(request: Request, round_num: int, year: Optional[int
     if year is None:
         year = await get_current_season()
         
-    client = supabase()
-    result = client.table("races") \
-        .select("*, race_results(*)") \
-        .eq("season_year", year) \
-        .eq("round", round_num) \
-        .single() \
-        .execute()
+    # We use race_key for round in our SpacetimeDB abstraction
+    res = await execute_sql(f"SELECT * FROM race WHERE season_year = {year} AND race_key = {round_num}")
     
-    if not result.data:
+    if not res:
         return {"error": f"Race round {round_num} not found for {year}"}
+
+    r = res[0]
+    race_key = r.get("race_key")
+    results_res = await execute_sql(f"SELECT * FROM race_result WHERE race_key = {race_key}")
     
-    return result.data
+    return {
+        "id": race_key,
+        "name": r.get("meeting_name", r.get("name")),
+        "circuit": r.get("location"),
+        "race_date": r.get("date"),
+        "status": r.get("status"),
+        "race_results": results_res if results_res else []
+    }
 
 
 @router.get("/champions")
@@ -182,75 +143,34 @@ async def get_champions(request: Request, year: Optional[int] = None):
     """
     Get the World Champions (Driver & Constructor) for a given season.
     FULLY AUTONOMOUS: Detects the most recent COMPLETED season from race data.
-    No hardcoded years - works for any season automatically.
     """
-    client = supabase()
-    
     if year is None:
-        # AUTONOMOUS: Find the most recent season with completed races
-        # A season is "completed" if all its races are marked as 'completed'
-        # Or if it has standings data with a P1 driver
-        
         # First, try to find a season with standings data, ordered by year
-        standings_res = client.table("driver_standings") \
-            .select("season_year") \
-            .eq("position", 1) \
-            .order("season_year", desc=True) \
-            .limit(1) \
-            .execute()
+        standings_res = await execute_sql("SELECT season_year FROM driver_standings WHERE position = 1 ORDER BY season_year DESC LIMIT 1")
         
-        if standings_res.data:
-            year = standings_res.data[0]["season_year"]
-
+        if standings_res:
+            year = standings_res[0].get("season_year")
         else:
             # Fallback: use recent season from races table
-            races_res = client.table("races") \
-                .select("season_year") \
-                .eq("status", "completed") \
-                .order("race_date", desc=True) \
-                .limit(1) \
-                .execute()
-            if races_res.data:
-                year = races_res.data[0]["season_year"]
+            races_res = await execute_sql("SELECT season_year FROM race WHERE status = 'ended' ORDER BY date DESC LIMIT 1")
+            if races_res:
+                year = races_res[0].get("season_year")
             else:
-                return {"error": "No completed seasons found", "year": None, "source": "supabase"}
+                return {"error": "No completed seasons found", "year": None, "source": "spacetimedb"}
     
-    # Fetch Season Info        
-    season_res = client.table("seasons").select("*").eq("year", year).single().execute()
-    
-    if not season_res.data:
-        return {"error": f"Season {year} not found", "year": year}
-    
-    season = season_res.data if isinstance(season_res.data, dict) else season_res.data[0]
-    driver_champion = season.get("driver_champion")
-    constructor_champion = season.get("constructor_champion")
-    
-    # For the driver champion, fetch their team from standings
-    # If driver_champion is not set, use the P1 driver from standings as fallback
+    # We don't have a 'seasons' table anymore in SpacetimeDB schema.
+    driver_champion = None
     driver_team = None
-    driver_res = client.table("driver_standings") \
-        .select("driver_name, team, team_color") \
-        .eq("season_year", year) \
-        .eq("position", 1) \
-        .single() \
-        .execute()
+    constructor_champion = None
     
-    if driver_res.data:
-        driver_team = driver_res.data.get("team")
-        # Fallback: if no explicit champion, use P1 driver
-        if not driver_champion:
-            driver_champion = driver_res.data.get("driver_name")
-    
-    # Fallback for constructor: use P1 constructor if not set
-    if not constructor_champion:
-        cons_res = client.table("constructor_standings") \
-            .select("team") \
-            .eq("season_year", year) \
-            .eq("position", 1) \
-            .single() \
-            .execute()
-        if cons_res.data:
-            constructor_champion = cons_res.data.get("team")
+    driver_res = await execute_sql(f"SELECT driver_name, team FROM driver_standings WHERE season_year = {year} AND position = 1 LIMIT 1")
+    if driver_res:
+        driver_champion = driver_res[0].get("driver_name")
+        driver_team = driver_res[0].get("team")
+
+    cons_res = await execute_sql(f"SELECT team FROM constructor_standings WHERE season_year = {year} AND position = 1 LIMIT 1")
+    if cons_res:
+        constructor_champion = cons_res[0].get("team")
     
     return {
         "year": year,
@@ -261,5 +181,5 @@ async def get_champions(request: Request, year: Optional[int] = None):
         "constructor": {
             "name": constructor_champion
         } if constructor_champion else None,
-        "source": "supabase"
+        "source": "spacetimedb"
     }

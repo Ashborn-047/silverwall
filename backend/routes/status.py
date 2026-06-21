@@ -1,12 +1,12 @@
 """
 SilverWall REST API - Race Status & Leaderboard
-Provides race countdown, status, and leaderboard endpoints driven by Supabase & OpenF1
+Provides race countdown, status, and leaderboard endpoints driven by SpacetimeDB & OpenF1
 """
 
 from fastapi import APIRouter
 from datetime import datetime, timezone, timedelta
 import httpx
-from database import get_next_race, supabase, get_current_season
+from database import get_next_race, get_current_season, execute_sql, get_last_race
 from logger import logger
 from limiter import limiter
 from fastapi import Request
@@ -65,7 +65,7 @@ async def get_race_status(request: Request):
             "status": "waiting",
             "meeting": next_race["name"],
             "circuit": next_race["circuit"],
-            "circuit_name": next_race.get("circuit_name") or next_race["circuit"].replace("_", " ").title(),
+            "circuit_name": next_race.get("circuit_name") or next_race["circuit"].replace("_", " ").title() if isinstance(next_race["circuit"], str) else next_race.get("circuit_name"),
             "country": next_race.get("country"),
             "race_date": next_race["race_date"],
             "countdown_seconds": max(0, countdown),
@@ -78,22 +78,16 @@ async def get_race_status(request: Request):
     next_year = season_year + 1
     
     # Try to find the first race of the next season in the DB
-    client = supabase()
-    first_race_res = client.table("races") \
-        .select("*") \
-        .eq("season_year", next_year) \
-        .order("round") \
-        .limit(1) \
-        .execute()
+    first_race_res = await execute_sql(f"SELECT * FROM race WHERE season_year = {next_year} ORDER BY race_key ASC LIMIT 1")
     
     next_season_data = {
         "year": next_year,
         "message": "Stay tuned for the next season opener!"
     }
     
-    if first_race_res.data:
-        fr = first_race_res.data[0]
-        race_date_str = fr.get("race_date")
+    if first_race_res:
+        fr = first_race_res[0]
+        race_date_str = fr.get("date")
         countdown = 0
         if race_date_str:
             try:
@@ -102,15 +96,16 @@ async def get_race_status(request: Request):
             except Exception:
                 pass
         
+        circuit_val = fr.get("location", "tbd")
         next_season_data.update({
-            "first_race": fr.get("name", "TBD"),
-            "circuit": fr.get("circuit", "tbd"),
-            "circuit_name": fr.get("circuit_name") or fr.get("circuit", "").replace("_", " ").title(),
-            "location": fr.get("country", "TBD"),
-            "country": fr.get("country", "TBD"),
+            "first_race": fr.get("meeting_name", fr.get("name", "TBD")),
+            "circuit": circuit_val,
+            "circuit_name": circuit_val.replace("_", " ").title() if isinstance(circuit_val, str) else circuit_val,
+            "location": fr.get("location", "TBD"),
+            "country": fr.get("location", "TBD"),
             "race_date": race_date_str,
             "countdown_seconds": countdown,
-            "round": fr.get("round", 1),
+            "round": fr.get("race_key", 1),
         })
     
     return {
@@ -147,16 +142,13 @@ async def get_leaderboard(request: Request):
         pass
     
     # 2. Fallback to Last Race Results from DB
-    client = supabase()
-    last_race = client.table("races").select("id, name").eq("status", "completed").order("race_date", desc=True).limit(1).execute()
+    last_race = await get_last_race()
     
-    if last_race.data:
-        race_id = last_race.data[0]["id"]
-        results = client.table("race_results").select("*").eq("race_id", race_id).order("position").execute()
+    if last_race:
         return {
             "source": "database_final",
-            "meeting": last_race.data[0]["name"],
-            "drivers": results.data if results.data else []
+            "meeting": last_race.get("name"),
+            "drivers": last_race.get("race_results", [])
         }
 
     return {"source": "empty", "drivers": []}

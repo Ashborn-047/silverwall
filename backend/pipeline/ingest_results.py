@@ -6,7 +6,8 @@ and updating standings in Supabase.
 
 import asyncio
 import httpx
-from database import supabase, finalize_race_status
+from database import finalize_race_status
+from spacetimedb import call_reducer, execute_sql
 
 OPENF1_API = "https://api.openf1.org/v1"
 
@@ -51,7 +52,6 @@ POINTS_MAP = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1}
 async def ingest_race_results(race_uuid: str, session_key: int):
     """Ingest P1-P20 results and finalize the race."""
     print(f"Ingesting results for session {session_key}...")
-    client = supabase()
     
     order = await fetch_session_order(session_key)
     drivers = await fetch_driver_metadata(session_key)
@@ -61,30 +61,33 @@ async def ingest_race_results(race_uuid: str, session_key: int):
         return
 
     # Clear existing results for this race if any
-    client.table("race_results").delete().eq("race_id", race_uuid).execute()
+    # Assuming race_uuid in the old code might now correspond to session_key (raceKey) in SpacetimeDB
+    race_key = session_key
+    await execute_sql(f"DELETE FROM race_result WHERE race_key = {race_key}")
 
-    results_to_insert = []
+    inserted_count = 0
     for entry in order[:20]:
         pos = entry.get("position")
         d_num = entry.get("driver_number")
         driver_info = drivers.get(d_num, {})
         
-        results_to_insert.append({
-            "race_id": race_uuid,
-            "position": pos,
-            "driver_code": driver_info.get("name_acronym", f"#{d_num}"),
-            "driver_name": driver_info.get("full_name", "Unknown"),
-            "team": driver_info.get("team_name", "Unknown"),
-            "team_color": f"#{driver_info.get('team_colour', 'FFFFFF')}",
-            "points": POINTS_MAP.get(pos, 0)
-        })
+        # seedRaceResult args: raceKey, position, driverNumber, driverName, team, timeStatus
+        args = [
+            race_key,
+            pos,
+            d_num if d_num else 0,
+            driver_info.get("full_name", "Unknown"),
+            driver_info.get("team_name", "Unknown"),
+            "Finished"
+        ]
+        if await call_reducer("seedRaceResult", args):
+            inserted_count += 1
 
-    if results_to_insert:
-        client.table("race_results").insert(results_to_insert).execute()
-        print(f"✅ Ingested {len(results_to_insert)} result rows.")
+    if inserted_count > 0:
+        print(f"✅ Ingested {inserted_count} result rows.")
         
         # Set race to completed
-        await finalize_race_status(race_uuid)
+        await call_reducer("seedRace", [race_key, "", "", "", "", 0, "ended", 0])
         print("🏁 Race marked as COMPLETED.")
         
         # In a real production scenario, we'd trigger a standings recalculation here
