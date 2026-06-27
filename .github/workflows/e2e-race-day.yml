@@ -1,0 +1,47 @@
+name: Race Day E2E Verification
+
+on:
+  schedule:
+    # Run twice on Sunday (12:00 UTC and 18:00 UTC) to catch pre-race and post-race UI rendering
+    - cron: '0 12 * * 0'
+    - cron: '0 18 * * 0'
+  workflow_dispatch: # Allow manual triggers from the GitHub UI
+
+jobs:
+  verify-standings:
+    name: Verify Dynamic Standings
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: './Silverwall UIUX design system'
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './Silverwall UIUX design system/package-lock.json'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Standings E2E Tests
+        run: npx playwright test e2e/standings.spec.ts
+        env:
+          # If your local test requires an environment variable to point to a test DB, you can inject it here
+          CI: true
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-race-day
+          path: './Silverwall UIUX design system/playwright-report/'
+          retention-days: 7

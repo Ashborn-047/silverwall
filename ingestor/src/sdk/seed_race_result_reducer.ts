@@ -17,4 +17,6 @@ export default {
   driverName: __t.string(),
   team: __t.string(),
   timeStatus: __t.string(),
+  fastestLap: __t.boolean(),
+  dnf: __t.boolean(),
 };

@@ -148,14 +148,14 @@ async function syncPodiums(year: number) {
     console.log(`Syncing race results (podiums) for ${year}...`);
     try {
         // 1. Get all races for this year from SpacetimeDB to create a lookup
-        const dbRaces = Array.from(conn.db.race.iter()).filter(r => r.seasonYear === year && r.name === 'Race');
+        const dbRaces = Array.from(conn.db.race.iter()).filter((r: any) => r.seasonYear === year && r.name === 'Race');
         if (dbRaces.length === 0) {
             console.log(`No races found in DB for year ${year}, skipping podium sync.`);
             return;
         }
 
         const lookup = new Map<string, number>();
-        for (const r of dbRaces) {
+        for (const r of dbRaces as any[]) {
             const country = r.meetingName.replace(/Grand Prix/gi, '').trim().toLowerCase();
             const locParts = r.location.split(',').map((p: string) => p.trim().toLowerCase());
             
@@ -214,15 +214,17 @@ async function syncPodiums(year: number) {
                     
                     if (resultsData.length > 0) {
                         const podium = resultsData.slice(0, 3);
-                        for (const res of podium) {
+                        for (const res of podium as any[]) {
                             conn.reducers.seedRaceResult({
                                 raceKey: raceKey,
                                 position: parseInt(res.position, 10),
                                 driverNumber: parseInt(res.Driver.permanentNumber || '0', 10),
                                 driverName: `${res.Driver.givenName} ${res.Driver.familyName}`,
                                 team: res.Constructor.name,
-                                timeStatus: res.Time?.time || res.status
-                            });
+                                timeStatus: res.Time?.time || res.status,
+                                fastestLap: res?.FastestLap?.rank === "1",
+                                dnf: !res.status.match(/Finished|\+\d+ Lap/)
+                            } as any);
                         }
                         console.log(`Successfully seeded podium results for ${race.raceName} (raceKey: ${raceKey})`);
                     } else {
@@ -315,7 +317,7 @@ async function syncYearRaces(year: number) {
 
             // Check if track geometry for this circuit is already seeded in SpacetimeDB
             if (s.circuit_key) {
-                const hasGeometry = Array.from(conn.db.track_point.iter()).some(p => p.circuitKey === s.circuit_key);
+                const hasGeometry = Array.from(conn.db.track_point.iter()).some((p: any) => p.circuitKey === s.circuit_key);
                 if (!hasGeometry) {
                     console.log(`Track geometry for circuit ${s.circuit_key} not found in SpacetimeDB. Syncing from Apex...`);
                     await syncTrack(s.session_key);
@@ -623,7 +625,7 @@ function setupLiveIngestion() {
     setInterval(async () => {
         try {
             // Find active live session key from SpacetimeDB
-            const liveRace = Array.from(conn.db.race.iter()).find(r => r.status === 'live');
+            const liveRace = Array.from(conn.db.race.iter()).find((r: any) => r.status === 'live') as any;
             if (liveRace) {
                 if (currentSessionKey !== liveRace.raceKey) {
                     console.log(`🏎️ Detected live race: ${liveRace.meetingName} - ${liveRace.name} (raceKey: ${liveRace.raceKey}). Switching live telemetry ingestion.`);

@@ -12,6 +12,7 @@ const spacetimedb = schema({
       circuit_key: t.i32(),
       status: t.string(), // 'upcoming', 'live', 'ended'
       season_year: t.i32(),
+      race_type: t.string(), // 'grand_prix', 'sprint'
     }
   ),
   driver: table(
@@ -93,6 +94,17 @@ const spacetimedb = schema({
       driver_name: t.string(),
       team: t.string(),
       time_status: t.string(), // e.g. "+1.234s" or "Finished"
+      fastest_lap: t.boolean(),
+      dnf: t.boolean(),
+    }
+  ),
+  race_entry: table(
+    { public: true },
+    {
+      season_year: t.i32().index(),
+      race_key: t.i32().index(),
+      driver_number: t.i32().index(),
+      team: t.string(),
     }
   ),
   commentary: table(
@@ -212,10 +224,113 @@ export const clear_race_results = spacetimedb.reducer(
   }
 );
 
-export const seed_race_result = spacetimedb.reducer(
-  { race_key: t.i32(), position: t.i32(), driver_number: t.i32(), driver_name: t.string(), team: t.string(), time_status: t.string() },
+export const seed_race_entry = spacetimedb.reducer(
+  { season_year: t.i32(), race_key: t.i32(), driver_number: t.i32(), team: t.string() },
   (ctx, args) => {
+    // Avoid duplicates
+    const existing = Array.from(ctx.db.race_entry.iter()).find(e => e.race_key === args.race_key && e.driver_number === args.driver_number);
+    if (!existing) {
+      ctx.db.race_entry.insert(args);
+    }
+  }
+);
+
+const POINTS_MAP_GP: Record<number, number> = { 1:12, 2:9, 3:7, 4:6, 5:5, 6:4, 7:3, 8:2, 9:1, 10:0 };
+const POINTS_MAP_SPRINT: Record<number, number> = { 1:8, 2:7, 3:6, 4:5, 5:4, 6:3, 7:2, 8:1 };
+const FASTEST_LAP_BONUS = 1;
+
+export const seed_race_result = spacetimedb.reducer(
+  { race_key: t.i32(), position: t.i32(), driver_number: t.i32(), driver_name: t.string(), team: t.string(), time_status: t.string(), fastest_lap: t.boolean(), dnf: t.boolean() },
+  (ctx, args) => {
+    // 1. Idempotency Guard
+    const existing = Array.from(ctx.db.race_result.iter()).find(r => r.race_key === args.race_key && r.driver_number === args.driver_number);
+    if (existing) return;
+
+    // 2. Insert the Result Row
     ctx.db.race_result.insert(args);
+
+    // 3. Resolve Race Metadata
+    const race = Array.from(ctx.db.race.iter()).find(r => r.race_key === args.race_key);
+    if (!race) return;
+    const season_year = race.season_year;
+    const race_type = race.race_type;
+
+    // 4. Resolve Constructor
+    const entry = Array.from(ctx.db.race_entry.iter()).find(e => e.season_year === season_year && e.race_key === args.race_key && e.driver_number === args.driver_number);
+    const constructor_team = entry ? entry.team : args.team;
+
+    // 5. Calculate Points
+    const map = race_type === 'sprint' ? POINTS_MAP_SPRINT : POINTS_MAP_GP;
+    let points = args.dnf ? 0 : (map[args.position] ?? 0);
+
+    if (!args.dnf && args.fastest_lap && args.position <= 10 && race_type !== 'sprint') {
+      points += FASTEST_LAP_BONUS;
+    }
+
+    const is_win = !args.dnf && args.position === 1;
+
+    // 6. Update Driver Standings
+    let driver_stds = Array.from(ctx.db.driver_standings.iter()).filter(d => d.season_year === season_year);
+    const current_d = driver_stds.find(d => d.driver_number === args.driver_number);
+    
+    let new_d_points = points;
+    let new_d_wins = is_win ? 1 : 0;
+    
+    if (current_d) {
+      ctx.db.driver_standings.delete(current_d);
+      new_d_points += current_d.points;
+      new_d_wins += current_d.wins;
+    }
+
+    ctx.db.driver_standings.insert({
+      season_year,
+      position: 0,
+      driver_number: args.driver_number,
+      driver_name: current_d ? current_d.driver_name : args.driver_name,
+      team: constructor_team,
+      points: new_d_points,
+      wins: new_d_wins
+    });
+
+    // 7. Update Constructor Standings
+    let const_stds = Array.from(ctx.db.constructor_standings.iter()).filter(c => c.season_year === season_year);
+    const current_c = const_stds.find(c => c.team === constructor_team);
+
+    let new_c_points = points;
+    let new_c_wins = is_win ? 1 : 0;
+
+    if (current_c) {
+      ctx.db.constructor_standings.delete(current_c);
+      new_c_points += current_c.points;
+      new_c_wins += current_c.wins;
+    }
+
+    ctx.db.constructor_standings.insert({
+      season_year,
+      position: 0,
+      team: constructor_team,
+      points: new_c_points,
+      wins: new_c_wins
+    });
+
+    // 8. Recalculate All Positions
+    let all_drivers = Array.from(ctx.db.driver_standings.iter()).filter(d => d.season_year === season_year)
+      .sort((a, b) => b.points - a.points || b.wins - a.wins);
+      
+    all_drivers.forEach((row, i) => {
+      ctx.db.driver_standings.delete(row);
+      row.position = i + 1;
+      ctx.db.driver_standings.insert(row);
+    });
+
+    let all_constructors = Array.from(ctx.db.constructor_standings.iter()).filter(c => c.season_year === season_year)
+      .sort((a, b) => b.points - a.points || b.wins - a.wins);
+      
+    all_constructors.forEach((row, i) => {
+      ctx.db.constructor_standings.delete(row);
+      row.position = i + 1;
+      ctx.db.constructor_standings.insert(row);
+    });
   }
 );
 
