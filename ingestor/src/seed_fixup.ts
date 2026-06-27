@@ -143,7 +143,9 @@ async function main() {
                                             driverNumber: parseInt(res.Driver.permanentNumber || '0', 10),
                                             driverName: `${res.Driver.givenName} ${res.Driver.familyName}`,
                                             team: res.Constructor.name,
-                                            timeStatus: res.Time?.time || res.status
+                                            timeStatus: res.Time?.time || res.status,
+                                            fastestLap: res.FastestLap?.rank === "1",
+                                            dnf: !['Finished', '+1 Lap', '+2 Laps'].includes(res.status)
                                         });
                                     }
                                 } else {
