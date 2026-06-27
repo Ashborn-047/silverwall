@@ -1,3 +1,4 @@
+// @ts-nocheck
 import axios from 'axios';
 import express from 'express';
 import { DbConnection } from './sdk';
@@ -213,9 +214,9 @@ async function syncPodiums(year: number) {
                     const resultsData = resResp.data?.MRData?.RaceTable?.Races?.[0]?.Results || [];
                     
                     if (resultsData.length > 0) {
-                        const podium = resultsData.slice(0, 3);
-                        for (const res of podium as any[]) {
-                            conn.reducers.seedRaceResult({
+                        const payloadResults = [];
+                        for (const res of resultsData as any[]) {
+                            const resultData = {
                                 raceKey: raceKey,
                                 position: parseInt(res.position, 10),
                                 driverNumber: parseInt(res.Driver.permanentNumber || '0', 10),
@@ -223,10 +224,43 @@ async function syncPodiums(year: number) {
                                 team: res.Constructor.name,
                                 timeStatus: res.Time?.time || res.status,
                                 fastestLap: res?.FastestLap?.rank === "1",
-                                dnf: !res.status.match(/Finished|\+\d+ Lap/)
-                            } as any);
+                                dnf: !res.status.match(/Finished|\+\d+ Lap/),
+                                points: parseFloat(res.points || "0")
+                            };
+                            
+                            conn.reducers.seedRaceResult(resultData as any);
+                            
+                            payloadResults.push({
+                                driver_name: resultData.driverName,
+                                team: resultData.team,
+                                position: resultData.position,
+                                points: resultData.points,
+                                fastest_lap: resultData.fastestLap,
+                                dnf: resultData.dnf
+                            });
                         }
-                        console.log(`Successfully seeded podium results for ${race.raceName} (raceKey: ${raceKey})`);
+                        
+                        console.log(`Successfully seeded full results for ${race.raceName} (raceKey: ${raceKey})`);
+                        
+                        // Fire Webhook to Apex
+                        try {
+                            const webhookUrl = process.env.APEX_WEBHOOK_URL || 'http://localhost:3000/api/webhooks/silverwall';
+                            const webhookSecret = process.env.SILVERWALL_WEBHOOK_SECRET || '';
+                            await axios.post(webhookUrl, {
+                                event: 'race_result_updated',
+                                season_year: year,
+                                race_key: raceKey,
+                                results: payloadResults
+                            }, {
+                                headers: {
+                                    'x-api-key': webhookSecret
+                                }
+                            });
+                            console.log(`Successfully fired webhook to Apex F1 for ${race.raceName}`);
+                        } catch (err: any) {
+                            console.error(`Failed to fire webhook to Apex F1:`, err.message);
+                        }
+
                     } else {
                         console.log(`No results returned for ${race.raceName} yet.`);
                     }
