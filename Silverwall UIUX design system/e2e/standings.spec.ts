@@ -11,14 +11,14 @@ test.describe('Dynamic Standings Modal', () => {
     await page.goto('/');
     
     // Find the button that opens the standings modal
-    const standingsBtn = page.locator('button', { hasText: /Standings/i }).first();
+    const standingsBtn = page.locator('button', { hasText: /VIEW \d{4} SEASON RESULTS/i }).first();
     
     // Wait for the page to be fully loaded and interactive
     await expect(standingsBtn).toBeVisible();
     await standingsBtn.click();
 
     // Verify the modal opens
-    const modalHeading = page.locator('h2', { hasText: /Driver Standings/i }).first();
+    const modalHeading = page.locator('h2', { hasText: /This Season Results/i }).first();
     await expect(modalHeading).toBeVisible();
   });
 
@@ -26,11 +26,15 @@ test.describe('Dynamic Standings Modal', () => {
     await page.goto('/');
     
     // Open the modal
-    const standingsBtn = page.locator('button', { hasText: /Standings/i }).first();
+    const standingsBtn = page.locator('button', { hasText: /VIEW \d{4} SEASON RESULTS/i }).first();
     await standingsBtn.click();
 
+    // Navigate to drivers tab
+    const driversTab = page.locator('button', { hasText: /^Drivers$/ }).first();
+    await driversTab.click();
+
     // We wait for the table to populate from SpacetimeDB
-    const tableRow = page.locator('table tbody tr').first();
+    const tableRow = page.locator('.space-y-2 > div').first();
     
     // We expect at least one driver to be rendered if the DB is seeded.
     await expect(tableRow).toBeVisible({ timeout: 10000 });
@@ -46,10 +50,14 @@ test.describe('Dynamic Standings Modal', () => {
     // without needing to call `page.reload()`.
     
     await page.goto('/');
-    const standingsBtn = page.locator('button', { hasText: /Standings/i }).first();
+    const standingsBtn = page.locator('button', { hasText: /VIEW \d{4} SEASON RESULTS/i }).first();
     await standingsBtn.click();
 
-    const firstPlacePoints = page.locator('table tbody tr').first().locator('td').last();
+    // Navigate to drivers tab
+    const driversTab = page.locator('button', { hasText: /^Drivers$/ }).first();
+    await driversTab.click();
+
+    const firstPlacePoints = page.locator('.space-y-2 > div').first();
     
     // We expect the websocket to push data instantly if the DB changes.
     // For now, we just assert the initial render works.
@@ -59,14 +67,14 @@ test.describe('Dynamic Standings Modal', () => {
   test('should be able to close the standings modal', async ({ page }) => {
     await page.goto('/');
     
-    const standingsBtn = page.locator('button', { hasText: /Standings/i }).first();
+    const standingsBtn = page.locator('button', { hasText: /VIEW \d{4} SEASON RESULTS/i }).first();
     await standingsBtn.click();
 
     // Try to close by pressing escape
     await page.keyboard.press('Escape');
 
     // Verify modal is hidden
-    const modalHeading = page.locator('h2', { hasText: /Driver Standings/i }).first();
+    const modalHeading = page.locator('h2', { hasText: /This Season Results/i }).first();
     await expect(modalHeading).not.toBeVisible();
   });
 
