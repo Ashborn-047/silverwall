@@ -22,11 +22,11 @@ export default defineConfig({
     },
   ],
 
-  /* Run the Vite preview server before tests */
+  /* Run the build and Vite preview server before tests */
   webServer: {
-    command: 'npm run preview -- --port 4173',
+    command: 'npm run build && npm run preview -- --port 4173',
     port: 4173,
     reuseExistingServer: !process.env.CI,
-    timeout: 15_000,
+    timeout: 30_000,
   },
 });
