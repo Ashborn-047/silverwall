@@ -153,12 +153,19 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                             name: res.driverName
                         }));
 
+                    // If the race date is in the past or podium results exist, infer status as ended if it was erroneously marked upcoming
+                    const raceTime = new Date(r.date).getTime();
+                    let raceStatus = r.status;
+                    if (raceStatus === 'upcoming' && (podiumResults.length > 0 || raceTime < now)) {
+                        raceStatus = 'ended';
+                    }
+
                     return {
                         round: idx + 1,
                         name: r.meetingName || r.name,
                         circuit: r.location || `Circuit ${r.circuitKey}`,
                         date: r.date,
-                        status: r.status,
+                        status: raceStatus,
                         podium: podiumResults.length > 0 ? podiumResults : null
                     };
                 });
