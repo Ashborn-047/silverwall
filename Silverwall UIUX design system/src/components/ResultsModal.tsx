@@ -140,27 +140,9 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                 });
                 const sortedRaces = dbRaces.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-                const FALLBACK_PODIUMS: Record<number, { pos: number; code: string; name: string }[]> = {
-                    1: [{ pos: 1, code: 'NOR', name: 'Lando Norris' }, { pos: 2, code: 'VER', name: 'Max Verstappen' }, { pos: 3, code: 'RUS', name: 'George Russell' }],
-                    2: [{ pos: 1, code: 'PIA', name: 'Oscar Piastri' }, { pos: 2, code: 'NOR', name: 'Lando Norris' }, { pos: 3, code: 'RUS', name: 'George Russell' }],
-                    3: [{ pos: 1, code: 'VER', name: 'Max Verstappen' }, { pos: 2, code: 'NOR', name: 'Lando Norris' }, { pos: 3, code: 'PIA', name: 'Oscar Piastri' }],
-                    4: [{ pos: 1, code: 'PIA', name: 'Oscar Piastri' }, { pos: 2, code: 'RUS', name: 'George Russell' }, { pos: 3, code: 'NOR', name: 'Lando Norris' }],
-                    5: [{ pos: 1, code: 'PIA', name: 'Oscar Piastri' }, { pos: 2, code: 'VER', name: 'Max Verstappen' }, { pos: 3, code: 'LEC', name: 'Charles Leclerc' }],
-                    6: [{ pos: 1, code: 'ANT', name: 'Andrea Kimi Antonelli' }, { pos: 2, code: 'HAM', name: 'Lewis Hamilton' }, { pos: 3, code: 'HAD', name: 'Isack Hadjar' }],
-                    7: [{ pos: 1, code: 'VER', name: 'Max Verstappen' }, { pos: 2, code: 'NOR', name: 'Lando Norris' }, { pos: 3, code: 'PIA', name: 'Oscar Piastri' }],
-                    8: [{ pos: 1, code: 'NOR', name: 'Lando Norris' }, { pos: 2, code: 'LEC', name: 'Charles Leclerc' }, { pos: 3, code: 'PIA', name: 'Oscar Piastri' }],
-                    9: [{ pos: 1, code: 'PIA', name: 'Oscar Piastri' }, { pos: 2, code: 'NOR', name: 'Lando Norris' }, { pos: 3, code: 'LEC', name: 'Charles Leclerc' }],
-                    10: [{ pos: 1, code: 'RUS', name: 'George Russell' }, { pos: 2, code: 'VER', name: 'Max Verstappen' }, { pos: 3, code: 'ANT', name: 'Andrea Kimi Antonelli' }],
-                    11: [{ pos: 1, code: 'NOR', name: 'Lando Norris' }, { pos: 2, code: 'PIA', name: 'Oscar Piastri' }, { pos: 3, code: 'LEC', name: 'Charles Leclerc' }],
-                    12: [{ pos: 1, code: 'NOR', name: 'Lando Norris' }, { pos: 2, code: 'PIA', name: 'Oscar Piastri' }, { pos: 3, code: 'HUL', name: 'Nico Hulkenberg' }],
-                    13: [{ pos: 1, code: 'PIA', name: 'Oscar Piastri' }, { pos: 2, code: 'NOR', name: 'Lando Norris' }, { pos: 3, code: 'LEC', name: 'Charles Leclerc' }],
-                    14: [{ pos: 1, code: 'NOR', name: 'Lando Norris' }, { pos: 2, code: 'PIA', name: 'Oscar Piastri' }, { pos: 3, code: 'RUS', name: 'George Russell' }],
-                };
-
                 const mappedRaces = sortedRaces.map((r, idx) => {
-                    const roundNum = idx + 1;
 
-                    // Get podium top 3 for this race from SpacetimeDB
+                    // Get podium top 3 for this race dynamically from SpacetimeDB race_result table
                     const podiumResults = allResults
                         .filter(res => res.raceKey === r.raceKey)
                         .sort((a, b) => a.position - b.position)
@@ -171,25 +153,20 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                             name: res.driverName
                         }));
 
-                    // If the race date is in the past or podium results exist, infer status as ended if it was erroneously marked upcoming
+                    // Infer status as ended if podium results exist or race date is in the past
                     const raceTime = new Date(r.date).getTime();
                     let raceStatus = r.status;
                     if (raceStatus === 'upcoming' && (podiumResults.length > 0 || raceTime < now)) {
                         raceStatus = 'ended';
                     }
 
-                    let finalPodium = podiumResults.length > 0 ? podiumResults : null;
-                    if (!finalPodium && raceStatus === 'ended') {
-                        finalPodium = FALLBACK_PODIUMS[roundNum] || FALLBACK_PODIUMS[(roundNum % 14) + 1] || null;
-                    }
-
                     return {
-                        round: roundNum,
+                        round: idx + 1,
                         name: r.meetingName || r.name,
                         circuit: r.location || `Circuit ${r.circuitKey}`,
                         date: r.date,
                         status: raceStatus,
-                        podium: finalPodium
+                        podium: podiumResults.length > 0 ? podiumResults : null
                     };
                 });
                 
