@@ -194,9 +194,27 @@ async function syncPodiums(year: number) {
             }
 
             if (raceKey) {
+                const targetRace = (dbRaces as any[]).find(r => r.raceKey === raceKey);
+                const markEnded = () => {
+                    if (targetRace && targetRace.status !== 'ended') {
+                        conn.reducers.seedRace({
+                            raceKey: targetRace.raceKey,
+                            name: targetRace.name,
+                            meetingName: targetRace.meetingName,
+                            location: targetRace.location,
+                            date: targetRace.date,
+                            circuitKey: targetRace.circuitKey,
+                            status: 'ended',
+                            year: year
+                        });
+                        console.log(`🏁 Marked raceKey ${raceKey} (${race.raceName}) as ended.`);
+                    }
+                };
+
                 // Check if we already have results for this raceKey
                 const hasResults = dbResults.some(res => res.raceKey === raceKey);
                 if (hasResults) {
+                    markEnded();
                     console.log(`Podium results for raceKey ${raceKey} (${race.raceName}) already exist in SpacetimeDB. Skipping.`);
                     continue;
                 }
@@ -214,6 +232,7 @@ async function syncPodiums(year: number) {
                     const resultsData = resResp.data?.MRData?.RaceTable?.Races?.[0]?.Results || [];
                     
                     if (resultsData.length > 0) {
+                        markEnded();
                         const payloadResults = [];
                         for (const res of resultsData as any[]) {
                             const resultData = {
