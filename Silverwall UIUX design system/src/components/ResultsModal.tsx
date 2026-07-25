@@ -439,6 +439,11 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                                                                 Upcoming
                                                             </span>
                                                         )}
+                                                        {race.status === 'ended' && !race.podium && (
+                                                            <span className="px-2 py-0.5 bg-[#00D2BE]/20 text-[#00D2BE] text-[10px] font-mono rounded uppercase">
+                                                                Completed
+                                                            </span>
+                                                        )}
                                                         {race.podium && (
                                                             <div className="flex gap-2 text-xs font-mono">
                                                                 <span className="flex items-center gap-1" style={{ color: '#FFD700' }}>
