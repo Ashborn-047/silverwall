@@ -6,7 +6,12 @@ const CIRCUIT_KEY_TO_APEX_ID: Record<number, string> = {
     23: 'villeneuve', // Montreal / Canada
 };
 
-const apiKey = 'f1_apex_super_secret_dev_key';
+const apiKey = process.env.APEX_API_KEY;
+
+if (!apiKey) {
+    console.error('❌ Error: APEX_API_KEY environment variable is missing.');
+    process.exit(1);
+}
 
 async function testFetch(baseUrl: string, label: string) {
     console.log(`\n--- Testing ${label} API (${baseUrl}) ---`);
