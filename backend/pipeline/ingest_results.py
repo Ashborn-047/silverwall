@@ -65,23 +65,27 @@ async def ingest_race_results(race_uuid: str, session_key: int):
     race_key = session_key
     await execute_sql(f"DELETE FROM race_result WHERE race_key = {race_key}")
 
-    inserted_count = 0
+    values_list = []
     for entry in order[:20]:
         pos = entry.get("position")
+        if pos is None:
+            pos = "NULL"
+
         d_num = entry.get("driver_number")
         driver_info = drivers.get(d_num, {})
-        
-        # seedRaceResult args: raceKey, position, driverNumber, driverName, team, timeStatus
-        args = [
-            race_key,
-            pos,
-            d_num if d_num else 0,
-            driver_info.get("full_name", "Unknown"),
-            driver_info.get("team_name", "Unknown"),
-            "Finished"
-        ]
-        if await call_reducer("seedRaceResult", args):
-            inserted_count += 1
+
+        driver_num_val = d_num if d_num else 0
+        driver_name = driver_info.get("full_name", "Unknown").replace("'", "''")
+        team_name = driver_info.get("team_name", "Unknown").replace("'", "''")
+        time_status = "Finished"
+
+        values_list.append(f"({race_key}, {pos}, {driver_num_val}, '{driver_name}', '{team_name}', '{time_status}')")
+
+    inserted_count = 0
+    if values_list:
+        query = f"INSERT INTO race_result (race_key, position, driver_number, driver_name, team, time_status) VALUES {', '.join(values_list)}"
+        await execute_sql(query)
+        inserted_count = len(values_list)
 
     if inserted_count > 0:
         print(f"✅ Ingested {inserted_count} result rows.")
