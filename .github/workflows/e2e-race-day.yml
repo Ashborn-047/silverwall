@@ -32,10 +32,12 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      - name: Build Frontend
+        run: npm run build
+
       - name: Run Standings E2E Tests
         run: npx playwright test e2e/standings.spec.ts
         env:
-          # If your local test requires an environment variable to point to a test DB, you can inject it here
           CI: true
 
       - name: Upload Playwright Report
