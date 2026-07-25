@@ -149,10 +149,15 @@ async def get_season_races(season_year: int = None):
     else:
         results_res = []
 
+    from collections import defaultdict
+    results_by_race = defaultdict(list)
+    for res_obj in results_res:
+        results_by_race[res_obj.get("race_key")].append(res_obj)
+
     races = []
     for r in res:
         race_key = r.get("race_key")
-        race_results = [res_obj for res_obj in results_res if res_obj.get("race_key") == race_key] if results_res else []
+        race_results = results_by_race.get(race_key, [])
 
         # Need to format driver codes for results
         formatted_results = []
