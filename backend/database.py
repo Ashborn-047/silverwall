@@ -230,22 +230,34 @@ async def get_next_race():
 
 
 async def get_last_race():
-    res = await execute_sql("SELECT * FROM race WHERE status = 'ended' ORDER BY date DESC LIMIT 1")
+    # Fetch ended races ordered by date DESC
+    res = await execute_sql("SELECT * FROM race WHERE status = 'ended' ORDER BY date DESC")
     if not res:
         return None
 
+    # Find the latest ended race that actually has results
+    for r in res:
+        race_key = r.get("race_key")
+        results_res = await execute_sql(f"SELECT * FROM race_result WHERE race_key = {race_key}")
+        if results_res:
+            return {
+                "id": race_key,
+                "name": r.get("meeting_name", r.get("name")),
+                "circuit": r.get("location"),
+                "race_date": r.get("date"),
+                "status": r.get("status"),
+                "race_results": results_res
+            }
+
+    # Fallback to the latest ended race if none have results
     r = res[0]
-    race_key = r.get("race_key")
-    
-    results_res = await execute_sql(f"SELECT * FROM race_result WHERE race_key = {race_key}")
-    
     return {
-        "id": race_key,
+        "id": r.get("race_key"),
         "name": r.get("meeting_name", r.get("name")),
         "circuit": r.get("location"),
         "race_date": r.get("date"),
         "status": r.get("status"),
-        "race_results": results_res if results_res else []
+        "race_results": []
     }
 
 async def update_standings_from_results(year: int):

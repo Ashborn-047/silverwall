@@ -175,23 +175,22 @@ async function syncPodiums(year: number) {
 
         for (const race of jolpiRaces) {
             const round = race.round;
-            const jolpiCountry = race.raceName.replace(/Grand Prix/gi, '').trim().toLowerCase();
-            let raceKey = lookup.get(jolpiCountry);
+            
+            // Match Jolpi race to SpacetimeDB race by finding the closest date within 4 days
+            const jolpiDate = new Date(race.date + 'T' + (race.time || '00:00:00Z')).getTime();
+            let bestRace: any = null;
+            let minDist = Infinity;
 
-            if (!raceKey && race.Circuit?.Location) {
-                const locality = (race.Circuit.Location.locality || '').toLowerCase();
-                const country = (race.Circuit.Location.country || '').toLowerCase();
-                raceKey = lookup.get(locality) || lookup.get(country);
-            }
-
-            if (!raceKey) {
-                for (const [key, val] of lookup.entries()) {
-                    if (key.includes(jolpiCountry) || jolpiCountry.includes(key)) {
-                        raceKey = val;
-                        break;
-                    }
+            for (const r of dbRaces as any[]) {
+                const dbDate = new Date(r.date).getTime();
+                const dist = Math.abs(dbDate - jolpiDate);
+                if (dist < 4 * 24 * 3600 * 1000 && dist < minDist) {
+                    minDist = dist;
+                    bestRace = r;
                 }
             }
+
+            const raceKey = bestRace ? bestRace.raceKey : null;
 
             if (raceKey) {
                 const targetRace = (dbRaces as any[]).find(r => r.raceKey === raceKey);
@@ -335,6 +334,8 @@ async function syncStandings(year: number) {
     }
 }
 
+const attemptedCircuits = new Set<number>();
+
 async function syncYearRaces(year: number) {
     console.log(`Syncing races for ${year}...`);
     try {
@@ -371,10 +372,12 @@ async function syncYearRaces(year: number) {
             // Check if track geometry for this circuit is already seeded in SpacetimeDB
             if (s.circuit_key) {
                 const hasGeometry = Array.from(conn.db.track_point.iter()).some((p: any) => p.circuitKey === s.circuit_key);
-                if (!hasGeometry) {
-                    console.log(`Track geometry for circuit ${s.circuit_key} not found in SpacetimeDB. Syncing from Apex...`);
-                    await syncTrack(s.session_key);
-                    await new Promise(resolve => setTimeout(resolve, 1000)); // Throttle requests
+                if (!hasGeometry && !attemptedCircuits.has(s.circuit_key)) {
+                    attemptedCircuits.add(s.circuit_key);
+                    console.log(`Track geometry for circuit ${s.circuit_key} not found in SpacetimeDB. Syncing from Apex in background...`);
+                    syncTrack(s.session_key).catch(err => {
+                        console.error(`Background track sync failed for circuit ${s.circuit_key}:`, err.message);
+                    });
                 }
             }
         }
