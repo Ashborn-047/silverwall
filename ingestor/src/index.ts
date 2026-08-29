@@ -15,6 +15,14 @@ let lastSyncedTimestamp: Date | null = null;
 let currentSessionKey = -1; // Dynamic live session key
 let isIngesting = false;
 
+process.on('uncaughtException', (err) => {
+    console.error('⚠️ Ingestor Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+    console.error('⚠️ Ingestor Unhandled Rejection:', reason);
+});
+
 const conn = DbConnection.builder()
     .withUri(SPACETIME_URI)
     .withDatabaseName(DBNAME)
@@ -22,8 +30,23 @@ const conn = DbConnection.builder()
         console.log('Ingestor connected to SpacetimeDB. Subscribing to tables...');
         conn.subscriptionBuilder()
             .onApplied(() => {
-                console.log('Ingestor subscription applied. Starting ingestion...');
-                startIngestion();
+                console.log('Ingestor subscription applied. Starting live ingestion & background timers...');
+                setupLiveIngestion();
+                
+                // Run periodic sync of races, standings, and podiums every 10 minutes to auto-update statuses and fetch new data
+                setInterval(async () => {
+                    console.log(">>> Running periodic sync task...");
+                    try {
+                        await syncYearRaces(2026);
+                        await syncYearDrivers(2026);
+                        await syncStandings(2026);
+                        await syncPodiums(2026);
+                    } catch (e: any) {
+                        console.error("Periodic sync task failed:", e.message || e);
+                    }
+                }, 10 * 60 * 1000); // 10 minutes
+
+                startIngestion().catch(err => console.error("Background initial seed failed:", err.message || err));
             })
             .subscribe(["SELECT * FROM race", "SELECT * FROM race_result", "SELECT * FROM track_point"]);
     })
@@ -63,86 +86,47 @@ async function startIngestion() {
 
     // PRIORITY 1: Seed 2026 data & Standings immediately for UI responsiveness
     console.log(">>> PRIORITY: Syncing 2026 Races, Standings, and Podiums...");
-    await syncYearRaces(2026);
+    try { await syncYearRaces(2026); } catch (e: any) { console.error("Sync 2026 races error:", e.message || e); }
     await sleep(2000);
-    await syncYearDrivers(2026);
+    try { await syncYearDrivers(2026); } catch (e: any) { console.error("Sync 2026 drivers error:", e.message || e); }
     await sleep(2000);
-    await syncStandings(2025);
+    try { await syncStandings(2025); } catch (e: any) { console.error("Sync 2025 standings error:", e.message || e); }
     await sleep(2000);
-
-    // Clear 2026 standings before seeding to prevent duplicates
-    try {
-        const { execSync } = require('child_process');
-        execSync(`spacetime sql spacetimedb-uorks "DELETE FROM driver_standings WHERE season_year = 2026"`, { stdio: 'ignore' });
-        execSync(`spacetime sql spacetimedb-uorks "DELETE FROM constructor_standings WHERE season_year = 2026"`, { stdio: 'ignore' });
-    } catch (e) {
-        console.error("Failed to clear 2026 standings on startup:", e);
-    }
+    try { await syncStandings(2026); } catch (e: any) { console.error("Sync 2026 standings error:", e.message || e); }
     await sleep(2000);
-
-    await syncStandings(2026);
-    await sleep(2000);
-    await syncPodiums(2026);
+    try { await syncPodiums(2026); } catch (e: any) { console.error("Sync 2026 podiums error:", e.message || e); }
     await sleep(2000);
 
     // PRIORITY 2: Seed Shanghai Track Geometry (Circuit 49) 
-    // This resolves the 'GEOMETRY_ERROR' on the Landing Page
     console.log("Syncing Circuit 49 (Shanghai) track geometry...");
     try {
         await syncTrack(9673); 
     } catch (e) {
         console.error("Failed priority seed for Shanghai, retrying with fallback session 9663...");
-        await syncTrack(9663); // FP1
+        try { await syncTrack(9663); } catch (err: any) { console.error("Fallback Shanghai sync error:", err.message); }
     }
     await sleep(5000);
 
     // PRIORITY 3: Seed Bahrain Track Geometry (Circuit 63)
     console.log("Seeding Circuit 63 (Bahrain) track geometry...");
-    await syncTrack(9472);
+    try { await syncTrack(9472); } catch (e: any) { console.error("Bahrain track sync error:", e.message); }
     await sleep(2000);
 
     // PRIORITY 4: Seed Canada Track Geometry (Circuit 23)
     console.log("Seeding Circuit 23 (Canada) track geometry...");
-    await syncTrack(9524);
+    try { await syncTrack(9524); } catch (e: any) { console.error("Canada track sync error:", e.message); }
     await sleep(2000);
 
     console.log("Background: Syncing historical metadata (throttled)...");
-    // Move heavy metadata syncs to follow-up to avoid blocking priorities
     const otherYears = [2024, 2025];
     for (const year of otherYears) {
-        await syncYearRaces(year);
+        try { await syncYearRaces(year); } catch (e: any) { console.error(`Sync ${year} races error:`, e.message); }
         await sleep(2000);
-        await syncPodiums(year);
+        try { await syncPodiums(year); } catch (e: any) { console.error(`Sync ${year} podiums error:`, e.message); }
         await sleep(2000);
-        await syncYearDrivers(year);
+        try { await syncYearDrivers(year); } catch (e: any) { console.error(`Sync ${year} drivers error:`, e.message); }
         await sleep(5000);
     }
-
-    // Start live ingestion loop (dynamically checks for live session in SpacetimeDB)
-    setupLiveIngestion();
-
-    // Run periodic sync of races, standings, and podiums every 10 minutes to auto-update statuses and fetch new data
-    setInterval(async () => {
-        console.log(">>> Running periodic sync task...");
-        try {
-            await syncYearRaces(2026);
-            await syncYearDrivers(2026);
-
-            // Clear and update standings to avoid duplication and get latest updates
-            try {
-                const { execSync } = require('child_process');
-                execSync(`spacetime sql spacetimedb-uorks "DELETE FROM driver_standings WHERE season_year = 2026"`, { stdio: 'ignore' });
-                execSync(`spacetime sql spacetimedb-uorks "DELETE FROM constructor_standings WHERE season_year = 2026"`, { stdio: 'ignore' });
-            } catch (e) {
-                console.error("Failed to clear standings via CLI, continuing...", e);
-            }
-
-            await syncStandings(2026);
-            await syncPodiums(2026);
-        } catch (e) {
-            console.error("Periodic sync task failed:", e);
-        }
-    }, 10 * 60 * 1000); // 10 minutes
 }
 
 async function syncPodiums(year: number) {
@@ -220,7 +204,9 @@ async function syncPodiums(year: number) {
 
                 // Check if the race date is in the past
                 const raceDate = new Date(race.date + 'T' + (race.time || '00:00:00Z'));
-                if (raceDate.getTime() > new Date().getTime()) {
+                if (raceDate.getTime() <= new Date().getTime()) {
+                    markEnded();
+                } else {
                     // Race is in the future
                     continue;
                 }

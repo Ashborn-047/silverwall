@@ -14,7 +14,22 @@ from datetime import datetime, timezone
 FRONTEND_URL = "https://silverwall.vercel.app"  # Update to github pages if needed, but vercel is usually preferred
 SPACETIME_DB_NAME = "spacetimedb-uorks"
 SPACETIME_URL = f"https://maincloud.spacetimedb.com/api/v1/database/{SPACETIME_DB_NAME}/sql"
-DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK_URL")
+INGESTOR_URL = "https://silverwall-ingestor.fly.dev"
+
+async def check_ingestor():
+    """Ping Fly Ingestor healthcheck endpoint."""
+    try:
+        async with httpx.AsyncClient() as client:
+            start = datetime.now()
+            response = await client.get(INGESTOR_URL, timeout=10.0)
+            latency = (datetime.now() - start).total_seconds() * 1000
+            
+            if response.status_code == 200:
+                return True, f"🟢 ONLINE ({int(latency)}ms)"
+            else:
+                return False, f"🔴 ERROR HTTP {response.status_code}"
+    except Exception as e:
+        return False, f"🔴 UNREACHABLE ({str(e)})"
 
 async def check_frontend():
     """Ping the frontend and return status and latency."""
@@ -96,18 +111,19 @@ def run_security_audit():
     except Exception as e:
         return f"⚠️ Security Scan Failed: {str(e)}"
 
-async def send_discord_alert(frontend_status, spacetime_status, security_status):
+async def send_discord_alert(frontend_status, spacetime_status, ingestor_status, security_status):
     """Send the compiled report to Discord."""
     if not DISCORD_WEBHOOK:
         print("WARNING: DISCORD_WEBHOOK_URL not set. Printing to console instead.")
         print(frontend_status)
         print(spacetime_status)
+        print(ingestor_status)
         print(security_status)
         return
 
     # Determine overall status color (Red if any system is down)
     color = 0x00D2BE # Silverwall Teal
-    if "🔴" in frontend_status or "🔴" in spacetime_status or "⚠️" in security_status:
+    if "🔴" in frontend_status or "🔴" in spacetime_status or "🔴" in ingestor_status or "⚠️" in security_status:
         color = 0xFF3B30 # Red for errors
         
     payload = {
@@ -121,7 +137,7 @@ async def send_discord_alert(frontend_status, spacetime_status, security_status)
                 "fields": [
                     {
                         "name": "Infrastructure Status",
-                        "value": f"🌍 **Frontend:** {frontend_status}\n🚀 **SpacetimeDB:** {spacetime_status}",
+                        "value": f"🌍 **Frontend:** {frontend_status}\n🚀 **SpacetimeDB:** {spacetime_status}\n⚙️ **Fly Ingestor:** {ingestor_status}",
                         "inline": False
                     },
                     {
@@ -150,11 +166,12 @@ async def run_sentinel():
     
     front_ok, front_status = await check_frontend()
     st_ok, st_status = await check_spacetimedb()
+    ing_ok, ing_status = await check_ingestor()
     sec_status = run_security_audit()
     
-    await send_discord_alert(front_status, st_status, sec_status)
+    await send_discord_alert(front_status, st_status, ing_status, sec_status)
     
-    if not front_ok or not st_ok:
+    if not front_ok or not st_ok or not ing_ok:
         print("ERROR: One or more systems are down!")
         # We can sys.exit(1) here if we want the GitHub Action to fail
         # but usually we just want the Discord alert.

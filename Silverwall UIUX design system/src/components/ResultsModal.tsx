@@ -122,18 +122,18 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                 const allResults = Array.from(conn.db.race_result.iter());
                 const now = new Date().getTime();
 
-                // Read Races directly from SpacetimeDB Table (Filters for Main Sunday Races and filters out cancelled/empty ones)
+                // Read Races directly from SpacetimeDB Table (Filters for Main Sunday Races)
                 const dbRaces = Array.from(conn.db.race.iter()).filter(r => {
                     if (r.seasonYear !== selectedYear || r.name !== 'Race') {
                         return false;
                     }
                     
-                    // Filter out cancelled races (ended/past date with no results after 2 days)
+                    // Filter out obsolete placeholder schedule dates (past dates older than 30 days without results)
                     const hasResults = allResults.some(res => res.raceKey === r.raceKey);
                     if (r.status === 'ended' && !hasResults) {
                         const raceTime = new Date(r.date).getTime();
-                        if (now - raceTime > 2 * 24 * 60 * 60 * 1000) {
-                            return false; // Skip cancelled race
+                        if (now - raceTime > 30 * 24 * 60 * 60 * 1000) {
+                            return false;
                         }
                     }
                     return true;

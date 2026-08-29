@@ -206,6 +206,11 @@ export const clear_track_geometry = spacetimedb.reducer(
 export const seed_driver_standings = spacetimedb.reducer(
   { season_year: t.i32(), position: t.i32(), driver_number: t.i32(), driver_name: t.string(), team: t.string(), points: t.f64(), wins: t.i32() },
   (ctx, args) => {
+    for (const d of ctx.db.driver_standings.iter()) {
+      if (d.season_year === args.season_year && (d.driver_number === args.driver_number || d.driver_name === args.driver_name)) {
+        ctx.db.driver_standings.delete(d);
+      }
+    }
     ctx.db.driver_standings.insert(args);
   }
 );
@@ -213,6 +218,11 @@ export const seed_driver_standings = spacetimedb.reducer(
 export const seed_constructor_standings = spacetimedb.reducer(
   { season_year: t.i32(), position: t.i32(), team: t.string(), points: t.f64(), wins: t.i32() },
   (ctx, args) => {
+    for (const c of ctx.db.constructor_standings.iter()) {
+      if (c.season_year === args.season_year && c.team === args.team) {
+        ctx.db.constructor_standings.delete(c);
+      }
+    }
     ctx.db.constructor_standings.insert(args);
   }
 );

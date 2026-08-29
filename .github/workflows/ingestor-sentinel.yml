@@ -1,0 +1,61 @@
+name: Ingestor Health Sentinel & Auto-Healer
+
+on:
+  schedule:
+    # Run every 2 hours
+    - cron: '0 */2 * * *'
+    # Extra runs on Sunday (Race Day) at 14:00, 16:00, 18:00, 20:00 UTC
+    - cron: '0 14 * * 0'
+    - cron: '0 16 * * 0'
+    - cron: '0 18 * * 0'
+    - cron: '0 20 * * 0'
+  workflow_dispatch: # Manual trigger from GitHub UI
+
+jobs:
+  health-check-and-heal:
+    name: 🛡️ Ingestor Health Check & Auto-Healer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flyctl CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Ping Ingestor & Trigger Hotfix if Down
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          echo "Pinging Fly Ingestor at https://silverwall-ingestor.fly.dev/..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://silverwall-ingestor.fly.dev/ || echo "000")
+          echo "Response HTTP Status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::warning ::Ingestor returned HTTP $HTTP_STATUS. Triggering Fly machine restart auto-fix..."
+            
+            if [ -n "$FLY_API_TOKEN" ]; then
+              flyctl machine restart -a silverwall-ingestor || flyctl apps restart silverwall-ingestor || echo "Fly restart failed or token missing"
+            else
+              echo "FLY_API_TOKEN secret is not set in GitHub repository settings."
+            fi
+
+            if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+              curl -H "Content-Type: application/json" -X POST -d '{
+                "username": "SilverWall Auto-Healer",
+                "avatar_url": "https://raw.githubusercontent.com/f1-telemetry/silverwall/main/docs/assets/logo.png",
+                "embeds": [{
+                  "title": "⚠️ Fly Ingestor Unreachable — Hotfix Triggered",
+                  "color": 16724784,
+                  "description": "The `silverwall-ingestor` Fly machine returned HTTP status **'"$HTTP_STATUS"'**.\n\n🔄 **Auto-Healer Action:** `flyctl machine restart -a silverwall-ingestor` executed.",
+                  "footer": { "text": "SILVERWALL_AUTO_HEALER_ACTIVE" }
+                }]
+              }' "$DISCORD_WEBHOOK_URL"
+            fi
+
+            # Fail step to mark workflow run if restart was needed
+            exit 1
+          else
+            echo "✅ Ingestor service is healthy and operating normally."
+          fi
