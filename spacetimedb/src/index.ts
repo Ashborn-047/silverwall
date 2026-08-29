@@ -227,6 +227,22 @@ export const seed_constructor_standings = spacetimedb.reducer(
   }
 );
 
+export const clear_standings = spacetimedb.reducer(
+  { season_year: t.i32() },
+  (ctx, { season_year }) => {
+    for (const d of ctx.db.driver_standings.iter()) {
+      if (d.season_year === season_year) {
+        ctx.db.driver_standings.delete(d);
+      }
+    }
+    for (const c of ctx.db.constructor_standings.iter()) {
+      if (c.season_year === season_year) {
+        ctx.db.constructor_standings.delete(c);
+      }
+    }
+  }
+);
+
 export const clear_race_results = spacetimedb.reducer(
   {},
   (ctx) => {
@@ -247,10 +263,6 @@ export const seed_race_entry = spacetimedb.reducer(
   }
 );
 
-const POINTS_MAP_GP: Record<number, number> = { 1:12, 2:9, 3:7, 4:6, 5:5, 6:4, 7:3, 8:2, 9:1, 10:0 };
-const POINTS_MAP_SPRINT: Record<number, number> = { 1:8, 2:7, 3:6, 4:5, 5:4, 6:3, 7:2, 8:1 };
-const FASTEST_LAP_BONUS = 1;
-
 export const seed_race_result = spacetimedb.reducer(
   { race_key: t.i32(), position: t.i32(), driver_number: t.i32(), driver_name: t.string(), team: t.string(), time_status: t.string(), fastest_lap: t.bool(), dnf: t.bool() },
   (ctx, args) => {
@@ -260,89 +272,6 @@ export const seed_race_result = spacetimedb.reducer(
 
     // 2. Insert the Result Row
     ctx.db.race_result.insert(args);
-
-    // 3. Resolve Race Metadata
-    const race = Array.from(ctx.db.race.iter()).find((r: any) => r.race_key === args.race_key) as any;
-    if (!race) return;
-    const season_year = race.season_year;
-    const race_type = race.race_type;
-
-    // 4. Resolve Constructor
-    const entry = Array.from(ctx.db.race_entry.iter()).find((e: any) => e.season_year === season_year && e.race_key === args.race_key && e.driver_number === args.driver_number) as any;
-    const constructor_team = entry ? entry.team : args.team;
-
-    // 5. Calculate Points
-    const map = race_type === 'sprint' ? POINTS_MAP_SPRINT : POINTS_MAP_GP;
-    let points = args.dnf ? 0 : (map[args.position] ?? 0);
-
-    if (!args.dnf && args.fastest_lap && args.position <= 10 && race_type !== 'sprint') {
-      points += FASTEST_LAP_BONUS;
-    }
-
-    const is_win = !args.dnf && args.position === 1;
-
-    // 6. Update Driver Standings
-    let driver_stds = Array.from(ctx.db.driver_standings.iter()).filter((d: any) => d.season_year === season_year);
-    const current_d = driver_stds.find((d: any) => d.driver_number === args.driver_number) as any;
-    
-    let new_d_points = points;
-    let new_d_wins = is_win ? 1 : 0;
-    
-    if (current_d) {
-      ctx.db.driver_standings.delete(current_d);
-      new_d_points += current_d.points;
-      new_d_wins += current_d.wins;
-    }
-
-    ctx.db.driver_standings.insert({
-      season_year,
-      position: 0,
-      driver_number: args.driver_number,
-      driver_name: current_d ? current_d.driver_name : args.driver_name,
-      team: constructor_team,
-      points: new_d_points,
-      wins: new_d_wins
-    } as any);
-
-    // 7. Update Constructor Standings
-    let const_stds = Array.from(ctx.db.constructor_standings.iter()).filter((c: any) => c.season_year === season_year);
-    const current_c = const_stds.find((c: any) => c.team === constructor_team) as any;
-
-    let new_c_points = points;
-    let new_c_wins = is_win ? 1 : 0;
-
-    if (current_c) {
-      ctx.db.constructor_standings.delete(current_c);
-      new_c_points += current_c.points;
-      new_c_wins += current_c.wins;
-    }
-
-    ctx.db.constructor_standings.insert({
-      season_year,
-      position: 0,
-      team: constructor_team,
-      points: new_c_points,
-      wins: new_c_wins
-    } as any);
-
-    // 8. Recalculate All Positions
-    let all_drivers = Array.from(ctx.db.driver_standings.iter()).filter((d: any) => d.season_year === season_year)
-      .sort((a: any, b: any) => b.points - a.points || b.wins - a.wins);
-      
-    all_drivers.forEach((row: any, i) => {
-      ctx.db.driver_standings.delete(row);
-      row.position = i + 1;
-      ctx.db.driver_standings.insert(row);
-    });
-
-    let all_constructors = Array.from(ctx.db.constructor_standings.iter()).filter((c: any) => c.season_year === season_year)
-      .sort((a: any, b: any) => b.points - a.points || b.wins - a.wins);
-      
-    all_constructors.forEach((row: any, i) => {
-      ctx.db.constructor_standings.delete(row);
-      row.position = i + 1;
-      ctx.db.constructor_standings.insert(row);
-    });
   }
 );
 

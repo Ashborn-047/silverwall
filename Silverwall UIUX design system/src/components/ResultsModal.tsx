@@ -77,11 +77,20 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
             try {
-                // Fetch Standings from SpacetimeDB natively
-                const drivers = Array.from(conn.db.driver_standings.iter()).filter(d => d.seasonYear === selectedYear);
-                const sortedDrivers = drivers.sort((a, b) => a.position - b.position).map(d => {
+                // Fetch Standings from SpacetimeDB natively and deduplicate
+                const rawDrivers = Array.from(conn.db.driver_standings.iter()).filter(d => d.seasonYear === selectedYear);
+                const driverMap = new Map<string, any>();
+                for (const d of rawDrivers) {
+                    const key = d.driverName.toLowerCase();
+                    const existing = driverMap.get(key);
+                    if (!existing || (d.position > 0 && existing.position === 0) || d.points > existing.points) {
+                        driverMap.set(key, d);
+                    }
+                }
+                const drivers = Array.from(driverMap.values());
+                const sortedDrivers = drivers.sort((a, b) => b.points - a.points || (a.position || 99) - (b.position || 99)).map((d, idx) => {
                     let color = '#FFFFFF';
-                    const driverMeta = Array.from(conn.db.driver.iter()).find(dm => dm.driverNumber === d.driverNumber);
+                    const driverMeta = Array.from(conn.db.driver.iter()).find(dm => dm.driverNumber === d.driverNumber || dm.name === d.driverName);
                     if (driverMeta && driverMeta.teamColor) {
                         color = driverMeta.teamColor.startsWith('#') ? driverMeta.teamColor : `#${driverMeta.teamColor}`;
                     }
@@ -90,7 +99,7 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                     const lastName = names.length > 1 ? names[names.length - 1] : d.driverName;
 
                     return {
-                        position: d.position,
+                        position: idx + 1,
                         code: lastName.substring(0, 3).toUpperCase(),
                         name: d.driverName,
                         team: d.team,
@@ -100,8 +109,17 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                 });
                 setDriverStandings(sortedDrivers);
 
-                const constructors = Array.from(conn.db.constructor_standings.iter()).filter(c => c.seasonYear === selectedYear);
-                const sortedConstructors = constructors.sort((a, b) => a.position - b.position).map(c => {
+                const rawConstructors = Array.from(conn.db.constructor_standings.iter()).filter(c => c.seasonYear === selectedYear);
+                const constMap = new Map<string, any>();
+                for (const c of rawConstructors) {
+                    const key = c.team.toLowerCase();
+                    const existing = constMap.get(key);
+                    if (!existing || (c.position > 0 && existing.position === 0) || c.points > existing.points) {
+                        constMap.set(key, c);
+                    }
+                }
+                const constructors = Array.from(constMap.values());
+                const sortedConstructors = constructors.sort((a, b) => b.points - a.points || (a.position || 99) - (b.position || 99)).map((c, idx) => {
                     let color = '#FFFFFF';
                     const driverMeta = Array.from(conn.db.driver.iter()).find(dm => dm.team === c.team);
                     if (driverMeta && driverMeta.teamColor) {
@@ -109,11 +127,11 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                     }
 
                     return {
-                        position: c.position,
+                        position: idx + 1,
                         team: c.team,
                         points: c.points,
                         color,
-                        champion: c.position === 1,
+                        champion: idx === 0,
                     };
                 });
                 setConstructorStandings(sortedConstructors);
