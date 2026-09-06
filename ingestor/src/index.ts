@@ -1,4 +1,8 @@
 // @ts-nocheck
+import { WebSocket } from 'undici';
+if (typeof globalThis.WebSocket === 'undefined') {
+    globalThis.WebSocket = WebSocket as any;
+}
 import axios from 'axios';
 import express from 'express';
 import { DbConnection } from './sdk';
@@ -33,8 +37,12 @@ const conn = DbConnection.builder()
                 console.log('Ingestor subscription applied. Starting live ingestion & background timers...');
                 setupLiveIngestion();
                 
-                // Run periodic sync of races, standings, and podiums every 10 minutes to auto-update statuses and fetch new data
-                setInterval(async () => {
+                // Adaptive sync: 2-min burst when a race just ended with no results, else 10-min normal
+                const NORMAL_SYNC_MS = 10 * 60 * 1000;  // 10 minutes
+                const BURST_SYNC_MS = 2 * 60 * 1000;    // 2 minutes
+                const BURST_WINDOW_MS = 3 * 60 * 60 * 1000; // 3 hours after race end
+
+                const runPeriodicSync = async () => {
                     console.log(">>> Running periodic sync task...");
                     try {
                         await syncYearRaces(2026);
@@ -44,7 +52,26 @@ const conn = DbConnection.builder()
                     } catch (e: any) {
                         console.error("Periodic sync task failed:", e.message || e);
                     }
-                }, 10 * 60 * 1000); // 10 minutes
+
+                    // Determine next interval: burst if a recently-ended race has no results
+                    const now = Date.now();
+                    const dbRaces = Array.from(conn.db.race.iter()).filter((r: any) => r.seasonYear === 2026 && r.name === 'Race');
+                    const dbResults = Array.from(conn.db.race_result.iter());
+                    const needsBurst = dbRaces.some((r: any) => {
+                        const raceDate = new Date(r.date).getTime();
+                        const timeSinceRace = now - raceDate;
+                        const isRecentlyEnded = timeSinceRace > 0 && timeSinceRace < BURST_WINDOW_MS;
+                        const resultCount = dbResults.filter((res: any) => res.raceKey === r.raceKey).length;
+                        return isRecentlyEnded && resultCount < 10;
+                    });
+
+                    const nextInterval = needsBurst ? BURST_SYNC_MS : NORMAL_SYNC_MS;
+                    if (needsBurst) {
+                        console.log(`🔥 BURST MODE: Race recently ended with incomplete results. Next sync in ${nextInterval / 1000}s`);
+                    }
+                    setTimeout(runPeriodicSync, nextInterval);
+                };
+                setTimeout(runPeriodicSync, NORMAL_SYNC_MS);
 
                 startIngestion().catch(err => console.error("Background initial seed failed:", err.message || err));
             })
@@ -129,152 +156,254 @@ async function startIngestion() {
     }
 }
 
+function formatDriverName(fullName: string): string {
+    if (!fullName) return 'Unknown';
+    const cleaned = fullName.trim();
+    if (cleaned.toUpperCase().includes('ANTONELLI')) return 'Andrea Kimi Antonelli';
+    if (cleaned.toUpperCase().includes('RUSSELL')) return 'George Russell';
+    if (cleaned.toUpperCase().includes('VERSTAPPEN')) return 'Max Verstappen';
+    if (cleaned.toUpperCase().includes('NORRIS')) return 'Lando Norris';
+    if (cleaned.toUpperCase().includes('PIASTRI')) return 'Oscar Piastri';
+    if (cleaned.toUpperCase().includes('HAMILTON')) return 'Lewis Hamilton';
+    if (cleaned.toUpperCase().includes('LECLERC')) return 'Charles Leclerc';
+    if (cleaned.toUpperCase().includes('GASLY')) return 'Pierre Gasly';
+    if (cleaned.toUpperCase().includes('LINDBLAD')) return 'Arvid Lindblad';
+    if (cleaned.toUpperCase().includes('COLAPINTO')) return 'Franco Colapinto';
+    if (cleaned.toUpperCase().includes('TSUNODA')) return 'Yuki Tsunoda';
+    if (cleaned.toUpperCase().includes('BORTOLETO')) return 'Gabriel Bortoleto';
+    if (cleaned.toUpperCase().includes('HULKENBERG') || cleaned.toUpperCase().includes('HÜLKENBERG')) return 'Nico Hülkenberg';
+    if (cleaned.toUpperCase().includes('SAINZ')) return 'Carlos Sainz';
+    if (cleaned.toUpperCase().includes('LAWSON')) return 'Liam Lawson';
+    if (cleaned.toUpperCase().includes('BEARMAN')) return 'Oliver Bearman';
+    if (cleaned.toUpperCase().includes('OCON')) return 'Esteban Ocon';
+    if (cleaned.toUpperCase().includes('ALBON')) return 'Alexander Albon';
+    if (cleaned.toUpperCase().includes('PEREZ') || cleaned.toUpperCase().includes('PÉREZ')) return 'Sergio Pérez';
+    if (cleaned.toUpperCase().includes('BOTTAS')) return 'Valtteri Bottas';
+    if (cleaned.toUpperCase().includes('STROLL')) return 'Lance Stroll';
+    if (cleaned.toUpperCase().includes('ALONSO')) return 'Fernando Alonso';
+    if (cleaned.toUpperCase().includes('HADJAR')) return 'Isack Hadjar';
+    
+    return cleaned.split(' ')
+        .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+        .join(' ');
+}
+
+async function fetchOpenF1Results(raceKey: number) {
+    console.log(`Fallback: Fetching results for session ${raceKey} from OpenF1...`);
+    try {
+        const [driversResp, posResp, lapsResp] = await Promise.all([
+            axios.get(`${OPENF1_BASE_URL}/drivers`, { params: { session_key: raceKey } }).catch(() => ({ data: [] })),
+            axios.get(`${OPENF1_BASE_URL}/position`, { params: { session_key: raceKey } }).catch(() => ({ data: [] })),
+            axios.get(`${OPENF1_BASE_URL}/laps`, { params: { session_key: raceKey } }).catch(() => ({ data: [] }))
+        ]);
+
+        const drivers = driversResp.data || [];
+        const positions = posResp.data || [];
+        const laps = lapsResp.data || [];
+
+        if (!Array.isArray(positions) || positions.length === 0) {
+            console.warn(`No OpenF1 positions found for session ${raceKey}`);
+            return [];
+        }
+
+        const latestByDriver = new Map<number, any>();
+        for (const p of positions) {
+            const existing = latestByDriver.get(p.driver_number);
+            if (!existing || new Date(p.date).getTime() > new Date(existing.date).getTime()) {
+                latestByDriver.set(p.driver_number, p);
+            }
+        }
+
+        let fastestLapDriver = -1;
+        let minLapDuration = Infinity;
+        if (Array.isArray(laps)) {
+            for (const l of laps) {
+                if (l.lap_duration && l.lap_duration < minLapDuration && l.is_pit_out_lap === false) {
+                    minLapDuration = l.lap_duration;
+                    fastestLapDriver = l.driver_number;
+                }
+            }
+        }
+
+        const pointsTable = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+        const sortedDrivers = Array.from(latestByDriver.values()).sort((a, b) => a.position - b.position);
+
+        return sortedDrivers.map(p => {
+            const d = Array.isArray(drivers) ? drivers.find((drv: any) => drv.driver_number === p.driver_number) : null;
+            const rawName = d?.full_name || d?.broadcast_name || `Driver ${p.driver_number}`;
+            const driverName = formatDriverName(rawName);
+            const isFastest = p.driver_number === fastestLapDriver;
+            let pts = pointsTable[p.position - 1] || 0;
+            if (isFastest && p.position <= 10) {
+                pts += 1;
+            }
+
+            return {
+                raceKey: raceKey,
+                position: p.position,
+                driverNumber: p.driver_number,
+                driverName: driverName,
+                team: d?.team_name || 'Unknown',
+                timeStatus: p.position === 1 ? 'Finished' : (p.position <= 10 ? 'Finished' : '+1 Lap'),
+                fastestLap: isFastest,
+                dnf: false,
+                points: pts
+            };
+        });
+    } catch (err: any) {
+        console.error(`Failed to fetch OpenF1 results for session ${raceKey}:`, err.message);
+        return [];
+    }
+}
+
 async function syncPodiums(year: number) {
     console.log(`Syncing race results (podiums) for ${year}...`);
     try {
-        // 1. Get all races for this year from SpacetimeDB to create a lookup
+        // 1. Get all races for this year from SpacetimeDB
         const dbRaces = Array.from(conn.db.race.iter()).filter((r: any) => r.seasonYear === year && r.name === 'Race');
         if (dbRaces.length === 0) {
             console.log(`No races found in DB for year ${year}, skipping podium sync.`);
             return;
         }
 
-        const lookup = new Map<string, number>();
-        for (const r of dbRaces as any[]) {
-            const country = r.meetingName.replace(/Grand Prix/gi, '').trim().toLowerCase();
-            const locParts = r.location.split(',').map((p: string) => p.trim().toLowerCase());
-            
-            if (country) lookup.set(country, r.raceKey);
-            for (const p of locParts) {
-                if (p) lookup.set(p, r.raceKey);
-            }
+        // 2. Fetch the season calendar from Jolpi (if available)
+        let jolpiRaces: any[] = [];
+        try {
+            const calResp = await axios.get(`https://api.jolpi.ca/ergast/f1/${year}.json`);
+            jolpiRaces = calResp.data?.MRData?.RaceTable?.Races || [];
+        } catch (e: any) {
+            console.warn(`Jolpi calendar unavailable for ${year}:`, e.message);
         }
 
-        // 2. Fetch the season calendar from Jolpi
-        console.log(`Fetching F1 calendar for ${year} from Jolpi...`);
-        const calResp = await axios.get(`https://api.jolpi.ca/ergast/f1/${year}.json`);
-        const jolpiRaces = calResp.data?.MRData?.RaceTable?.Races || [];
-
         const dbResults = Array.from(conn.db.race_result.iter());
+        const now = new Date().getTime();
 
-        for (const race of jolpiRaces) {
-            const round = race.round;
-            
-            // Match Jolpi race to SpacetimeDB race by finding the closest date within 4 days
-            const jolpiDate = new Date(race.date + 'T' + (race.time || '00:00:00Z')).getTime();
-            let bestRace: any = null;
+        for (const targetRace of dbRaces as any[]) {
+            const raceKey = targetRace.raceKey;
+            const raceDate = new Date(targetRace.date).getTime();
+
+            const markEnded = () => {
+                if (targetRace && targetRace.status !== 'ended') {
+                    conn.reducers.seedRace({
+                        raceKey: targetRace.raceKey,
+                        name: targetRace.name,
+                        meetingName: targetRace.meetingName,
+                        location: targetRace.location,
+                        date: targetRace.date,
+                        circuitKey: targetRace.circuitKey,
+                        status: 'ended',
+                        year: year
+                    });
+                    console.log(`🏁 Marked raceKey ${raceKey} (${targetRace.meetingName}) as ended.`);
+                }
+            };
+
+            // Check if we already have FULL results for this raceKey (>= 10 drivers = complete classification)
+            const existingResultCount = dbResults.filter(res => res.raceKey === raceKey).length;
+            if (existingResultCount >= 10) {
+                // Full results already seeded, just ensure status is correct
+                if (raceDate <= now) markEnded();
+                continue;
+            }
+            // If we have partial results (1-9, e.g. old podium-only seed), we'll re-fetch to backfill
+            if (existingResultCount > 0) {
+                console.log(`⚠️ Race ${targetRace.meetingName} (raceKey: ${raceKey}) has only ${existingResultCount} results — will attempt backfill.`);
+            }
+
+            // If race is in the future, skip
+            if (raceDate > now) {
+                continue;
+            }
+
+            // Race is in the past or has finished - ensure ended
+            markEnded();
+
+            // Find matching Jolpi race by closest date within 4 days
+            let matchingJolpiRace: any = null;
             let minDist = Infinity;
-
-            for (const r of dbRaces as any[]) {
-                const dbDate = new Date(r.date).getTime();
-                const dist = Math.abs(dbDate - jolpiDate);
+            for (const jr of jolpiRaces) {
+                const jolpiDate = new Date(jr.date + 'T' + (jr.time || '00:00:00Z')).getTime();
+                const dist = Math.abs(raceDate - jolpiDate);
                 if (dist < 4 * 24 * 3600 * 1000 && dist < minDist) {
                     minDist = dist;
-                    bestRace = r;
+                    matchingJolpiRace = jr;
                 }
             }
 
-            const raceKey = bestRace ? bestRace.raceKey : null;
+            let resultsToSeed: any[] = [];
 
-            if (raceKey) {
-                const targetRace = (dbRaces as any[]).find(r => r.raceKey === raceKey);
-                const markEnded = () => {
-                    if (targetRace && targetRace.status !== 'ended') {
-                        conn.reducers.seedRace({
-                            raceKey: targetRace.raceKey,
-                            name: targetRace.name,
-                            meetingName: targetRace.meetingName,
-                            location: targetRace.location,
-                            date: targetRace.date,
-                            circuitKey: targetRace.circuitKey,
-                            status: 'ended',
-                            year: year
-                        });
-                        console.log(`🏁 Marked raceKey ${raceKey} (${race.raceName}) as ended.`);
-                    }
-                };
-
-                // Check if we already have results for this raceKey
-                const hasResults = dbResults.some(res => res.raceKey === raceKey);
-                if (hasResults) {
-                    markEnded();
-                    console.log(`Podium results for raceKey ${raceKey} (${race.raceName}) already exist in SpacetimeDB. Skipping.`);
-                    continue;
-                }
-
-                // Check if the race date is in the past
-                const raceDate = new Date(race.date + 'T' + (race.time || '00:00:00Z'));
-                if (raceDate.getTime() <= new Date().getTime()) {
-                    markEnded();
-                } else {
-                    // Race is in the future
-                    continue;
-                }
-
-                console.log(`Fetching results for ${race.raceName} (Round ${round}, raceKey: ${raceKey})...`);
+            // 1. Try Jolpi
+            if (matchingJolpiRace) {
                 try {
+                    const round = matchingJolpiRace.round;
+                    console.log(`Fetching Jolpi results for ${matchingJolpiRace.raceName} (Round ${round}, raceKey: ${raceKey})...`);
                     const resResp = await axios.get(`https://api.jolpi.ca/ergast/f1/${year}/${round}/results.json`);
                     const resultsData = resResp.data?.MRData?.RaceTable?.Races?.[0]?.Results || [];
-                    
                     if (resultsData.length > 0) {
-                        markEnded();
-                        const payloadResults = [];
                         for (const res of resultsData as any[]) {
-                            const resultData = {
+                            resultsToSeed.push({
                                 raceKey: raceKey,
                                 position: parseInt(res.position, 10),
                                 driverNumber: parseInt(res.Driver.permanentNumber || '0', 10),
-                                driverName: `${res.Driver.givenName} ${res.Driver.familyName}`,
+                                driverName: formatDriverName(`${res.Driver.givenName} ${res.Driver.familyName}`),
                                 team: res.Constructor.name,
                                 timeStatus: res.Time?.time || res.status,
                                 fastestLap: res?.FastestLap?.rank === "1",
                                 dnf: !res.status.match(/Finished|\+\d+ Lap/),
                                 points: parseFloat(res.points || "0")
-                            };
-                            
-                            conn.reducers.seedRaceResult(resultData as any);
-                            
-                            payloadResults.push({
-                                driver_name: resultData.driverName,
-                                team: resultData.team,
-                                position: resultData.position,
-                                points: resultData.points,
-                                fastest_lap: resultData.fastestLap,
-                                dnf: resultData.dnf
                             });
                         }
-                        
-                        console.log(`Successfully seeded full results for ${race.raceName} (raceKey: ${raceKey})`);
-                        
-                        // Fire Webhook to Apex
-                        try {
-                            const webhookUrl = process.env.APEX_WEBHOOK_URL || 'http://localhost:3000/api/webhooks/silverwall';
-                            const webhookSecret = process.env.SILVERWALL_WEBHOOK_SECRET || '';
-                            await axios.post(webhookUrl, {
-                                event: 'race_result_updated',
-                                season_year: year,
-                                race_key: raceKey,
-                                results: payloadResults
-                            }, {
-                                headers: {
-                                    'x-api-key': webhookSecret
-                                }
-                            });
-                            console.log(`Successfully fired webhook to Apex F1 for ${race.raceName}`);
-                        } catch (err: any) {
-                            console.error(`Failed to fire webhook to Apex F1:`, err.message);
-                        }
-
-                    } else {
-                        console.log(`No results returned for ${race.raceName} yet.`);
                     }
                 } catch (err: any) {
-                    console.error(`Failed to fetch results for ${race.raceName}:`, err.message);
+                    console.warn(`Jolpi fetch failed for raceKey ${raceKey}:`, err.message);
                 }
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Rate limit buffer
-            } else {
-                console.warn(`Could not find raceKey for Jolpi race: ${race.raceName} (${year})`);
             }
+
+            // 2. Fallback to OpenF1 if Jolpi returned no results
+            if (resultsToSeed.length === 0) {
+                console.log(`Jolpi had no results for ${targetRace.meetingName} (raceKey: ${raceKey}). Falling back to OpenF1...`);
+                resultsToSeed = await fetchOpenF1Results(raceKey);
+            }
+
+            // 3. Seed results if found
+            if (resultsToSeed.length > 0) {
+                const payloadResults = [];
+                for (const res of resultsToSeed) {
+                    conn.reducers.seedRaceResult(res);
+                    payloadResults.push({
+                        driver_name: res.driverName,
+                        team: res.team,
+                        position: res.position,
+                        points: res.points,
+                        fastest_lap: res.fastestLap,
+                        dnf: res.dnf
+                    });
+                }
+                console.log(`Successfully seeded ${resultsToSeed.length} results for ${targetRace.meetingName} (raceKey: ${raceKey})`);
+
+                // Fire Webhook to Apex
+                try {
+                    const webhookUrl = process.env.APEX_WEBHOOK_URL || 'http://localhost:3000/api/webhooks/silverwall';
+                    const webhookSecret = process.env.SILVERWALL_WEBHOOK_SECRET || '';
+                    await axios.post(webhookUrl, {
+                        event: 'race_result_updated',
+                        season_year: year,
+                        race_key: raceKey,
+                        results: payloadResults
+                    }, {
+                        headers: {
+                            'x-api-key': webhookSecret
+                        }
+                    });
+                    console.log(`Successfully fired webhook to Apex F1 for ${targetRace.meetingName}`);
+                } catch (err: any) {
+                    console.error(`Failed to fire webhook to Apex F1:`, err.message);
+                }
+            } else {
+                console.log(`No results available yet for ${targetRace.meetingName} (raceKey: ${raceKey}).`);
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Rate limit buffer
         }
     } catch (err) {
         console.error(`Failed to sync podiums for ${year}:`, err);
@@ -284,37 +413,113 @@ async function syncPodiums(year: number) {
 async function syncStandings(year: number) {
     console.log(`Syncing Championship Standings for ${year}...`);
     try {
-        // Fetch Driver Standings from Jolpi (Ergast continuation)
-        const driverResp = await axios.get(`https://api.jolpi.ca/ergast/f1/${year}/driverStandings.json`);
-        const driverStandings = driverResp.data.MRData.StandingsTable.StandingsLists[0].DriverStandings;
+        let seeded = false;
+        if (year <= 2025) {
+            try {
+                // Fetch Driver Standings from Jolpi (Ergast continuation)
+                const driverResp = await axios.get(`https://api.jolpi.ca/ergast/f1/${year}/driverStandings.json`);
+                const driverStandings = driverResp.data.MRData.StandingsTable.StandingsLists[0].DriverStandings;
 
-        for (const ds of driverStandings) {
-            conn.reducers.seedDriverStandings({
-                seasonYear: year,
-                position: parseInt(ds.position, 10),
-                driverNumber: parseInt(ds.Driver.permanentNumber || '0', 10),
-                driverName: `${ds.Driver.givenName} ${ds.Driver.familyName}`,
-                team: ds.Constructors[0]?.name || 'Unknown',
-                points: parseFloat(ds.points),
-                wins: parseInt(ds.wins, 10)
-            });
+                for (const ds of driverStandings) {
+                    conn.reducers.seedDriverStandings({
+                        seasonYear: year,
+                        position: parseInt(ds.position, 10),
+                        driverNumber: parseInt(ds.Driver.permanentNumber || '0', 10),
+                        driverName: formatDriverName(`${ds.Driver.givenName} ${ds.Driver.familyName}`),
+                        team: ds.Constructors[0]?.name || 'Unknown',
+                        points: parseFloat(ds.points),
+                        wins: parseInt(ds.wins, 10)
+                    });
+                }
+
+                // Fetch Constructor Standings
+                const constResp = await axios.get(`https://api.jolpi.ca/ergast/f1/${year}/constructorStandings.json`);
+                const constStandings = constResp.data.MRData.StandingsTable.StandingsLists[0].ConstructorStandings;
+
+                for (const cs of constStandings) {
+                    conn.reducers.seedConstructorStandings({
+                        seasonYear: year,
+                        position: parseInt(cs.position, 10),
+                        team: cs.Constructor.name,
+                        points: parseFloat(cs.points),
+                        wins: parseInt(cs.wins, 10)
+                    });
+                }
+
+                console.log(`Seeded ${driverStandings.length} drivers and ${constStandings.length} constructors for ${year}`);
+                seeded = true;
+            } catch (e: any) {
+                console.warn(`Jolpi standings failed for ${year}: ${e.message}. Falling back to DB calculation.`);
+            }
         }
 
-        // Fetch Constructor Standings
-        const constResp = await axios.get(`https://api.jolpi.ca/ergast/f1/${year}/constructorStandings.json`);
-        const constStandings = constResp.data.MRData.StandingsTable.StandingsLists[0].ConstructorStandings;
+        // For 2026 or fallback: Calculate standings directly from all completed race results in SpacetimeDB
+        if (!seeded || year === 2026) {
+            // F1 points table: position -> points (no `points` column in race_result, so we compute from position)
+            const F1_POINTS_TABLE: Record<number, number> = { 1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1 };
 
-        for (const cs of constStandings) {
-            conn.reducers.seedConstructorStandings({
-                seasonYear: year,
-                position: parseInt(cs.position, 10),
-                team: cs.Constructor.name,
-                points: parseFloat(cs.points),
-                wins: parseInt(cs.wins, 10)
-            });
+            const dbRaces = Array.from(conn.db.race.iter()).filter((r: any) => r.seasonYear === year && r.name === 'Race');
+            const raceKeys = new Set(dbRaces.map((r: any) => r.raceKey));
+            const allResults = Array.from(conn.db.race_result.iter()).filter((res: any) => raceKeys.has(res.raceKey));
+
+            if (allResults.length > 0) {
+                const driverMap = new Map<string, { driverNumber: number, name: string, team: string, points: number, wins: number }>();
+                const constMap = new Map<string, { team: string, points: number, wins: number }>();
+
+                for (const res of allResults as any[]) {
+                    const normName = formatDriverName(res.driverName);
+                    // Compute points from finishing position (race_result has no points column)
+                    let pts = F1_POINTS_TABLE[res.position] || 0;
+                    // +1 point for fastest lap if finished in top 10
+                    if (res.fastestLap && res.position <= 10) {
+                        pts += 1;
+                    }
+                    const isWin = res.position === 1 ? 1 : 0;
+
+                    // Driver
+                    const d = driverMap.get(normName) || { driverNumber: res.driverNumber, name: normName, team: res.team, points: 0, wins: 0 };
+                    d.points += pts;
+                    d.wins += isWin;
+                    if (res.driverNumber > 0) d.driverNumber = res.driverNumber;
+                    if (res.team && res.team !== 'Unknown') d.team = res.team;
+                    driverMap.set(normName, d);
+
+                    // Constructor
+                    if (res.team && res.team !== 'Unknown') {
+                        const c = constMap.get(res.team) || { team: res.team, points: 0, wins: 0 };
+                        c.points += pts;
+                        c.wins += isWin;
+                        constMap.set(res.team, c);
+                    }
+                }
+
+                const sortedDrivers = Array.from(driverMap.values()).sort((a, b) => b.points - a.points || b.wins - a.wins);
+                sortedDrivers.forEach((d, idx) => {
+                    conn.reducers.seedDriverStandings({
+                        seasonYear: year,
+                        position: idx + 1,
+                        driverNumber: d.driverNumber,
+                        driverName: d.name,
+                        team: d.team,
+                        points: d.points,
+                        wins: d.wins
+                    });
+                });
+
+                const sortedConstructors = Array.from(constMap.values()).sort((a, b) => b.points - a.points || b.wins - a.wins);
+                sortedConstructors.forEach((c, idx) => {
+                    conn.reducers.seedConstructorStandings({
+                        seasonYear: year,
+                        position: idx + 1,
+                        team: c.team,
+                        points: c.points,
+                        wins: c.wins
+                    });
+                });
+
+                console.log(`Calculated & updated standings for ${year}: ${sortedDrivers.length} drivers, ${sortedConstructors.length} constructors`);
+            }
         }
-
-        console.log(`Seeded ${driverStandings.length} drivers and ${constStandings.length} constructors for ${year}`);
     } catch (err) {
         console.error(`Failed to sync standings for ${year}:`, err);
     }
@@ -329,6 +534,9 @@ async function syncYearRaces(year: number) {
             params: { year: year }
         });
         const sessions = resp.data;
+        // Pre-fetch results to know which races already have data (prevents status overwrite)
+        const dbResults = Array.from(conn.db.race_result.iter());
+
         for (const s of sessions) {
             let status = 'upcoming';
             const now = new Date().getTime();
@@ -339,6 +547,13 @@ async function syncYearRaces(year: number) {
                 status = 'ended';
             } else if (now >= start && now <= end) {
                 status = 'live';
+            }
+
+            // FIX: If this race already has results in DB, ALWAYS keep status as 'ended'
+            // This prevents syncYearRaces from overwriting a correctly-ended race back to 'upcoming'/'live'
+            const hasResultsInDb = dbResults.some((res: any) => res.raceKey === s.session_key);
+            if (hasResultsInDb) {
+                status = 'ended';
             }
 
             const meetingName = s.meeting_name || `${s.country_name || 'Unknown'} Grand Prix`;

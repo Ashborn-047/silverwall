@@ -18,6 +18,7 @@
     "express": "^5.2.1",
     "spacetimedb": "2.0.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "undici": "^6.28.1"
   }
 }

@@ -464,6 +464,11 @@ export default function ResultsModal({ isOpen, onClose }: ResultsModalProps) {
                                                                 </span>
                                                             </div>
                                                         )}
+                                                        {race.status === 'ended' && !race.podium && (
+                                                            <span className="px-2 py-0.5 bg-[#888]/20 text-[#888] text-[10px] font-mono rounded uppercase">
+                                                                Completed
+                                                            </span>
+                                                        )}
                                                         {expandedRace === race.round ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                                     </div>
                                                 </button>
