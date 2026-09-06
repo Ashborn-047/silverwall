@@ -15,6 +15,7 @@ FRONTEND_URL = "https://silverwall.vercel.app"  # Update to github pages if need
 SPACETIME_DB_NAME = "spacetimedb-uorks"
 SPACETIME_URL = f"https://maincloud.spacetimedb.com/api/v1/database/{SPACETIME_DB_NAME}/sql"
 INGESTOR_URL = "https://silverwall-ingestor.fly.dev"
+DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK_URL")
 
 async def check_ingestor():
     """Ping Fly Ingestor healthcheck endpoint."""
@@ -69,8 +70,8 @@ def run_security_audit():
     """Run npm audit on the frontend to detect vulnerabilities."""
     try:
         print("Running npm audit...")
-        # We run from the 'backend' directory in GitHub Actions, so we must go up one level
-        repo_root = os.path.dirname(os.getcwd())
+        # Resolve repository root robustly relative to this script
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         project_dir = os.path.join(repo_root, 'Silverwall UIUX design system')
         if not os.path.exists(project_dir):
             return "⚠️ Security Scan Skipped: Frontend directory not found."
