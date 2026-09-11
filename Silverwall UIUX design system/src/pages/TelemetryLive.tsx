@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Wifi, Activity, Radio, Trophy } from 'lucide-react';
-import useSpacetimeTelemetry from '../hooks/useSpacetimeTelemetry';
+import useBackendTelemetry from '../hooks/useBackendTelemetry';
 import { useTrack, FrontendTrackPoint as TrackPoint } from '../hooks/useTrack';
 import useSpacetimeStatus from '../hooks/useSpacetimeStatus';
 import CountdownOverlay from '../components/CountdownOverlay';
@@ -89,8 +89,8 @@ function getTyreLetter(compound: string | undefined): string {
 }
 
 export default function TelemetryLive() {
-  // SpacetimeDB telemetry hook
-  const { frame, status } = useSpacetimeTelemetry();
+  // 🔄 SWITCHED: Now using backend WebSocket directly instead of SpacetimeDB
+  const { frame, status: wsStatus } = useBackendTelemetry();
   // Race status from SpacetimeDB
   const raceStatus = useSpacetimeStatus();
   // Provide a safe fallback for circuitId since useTrack now expects a number
@@ -105,8 +105,8 @@ export default function TelemetryLive() {
   const [showResults, setShowResults] = useState(false);
 
   // Connection status from hook
-  const isConnected = status === 'connected';
-  const isWaiting = status === 'waiting';
+  const isConnected = wsStatus === 'connected';
+  const isWaiting = wsStatus !== 'connected';
 
   // Get driver team colors map
   const teamColors: Record<string, string> = {
