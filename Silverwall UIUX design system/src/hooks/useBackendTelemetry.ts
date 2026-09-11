@@ -37,7 +37,7 @@ export function useBackendTelemetry(wsUrl?: string) {
         // Use environment variable or fallback to local/production backend
         const backendWsUrl = wsUrl ||
             (import.meta.env.PROD
-                ? 'wss://your-production-backend.up.railway.app/ws/live'  // UPDATE with your backend URL
+                ? 'wss://silverwall-ingestor.fly.dev/ws/live'
                 : 'ws://localhost:8000/ws/live'
             );
 
