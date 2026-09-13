@@ -78,8 +78,18 @@ export function useSpacetimeStatus(): RaceStatus {
 
             const currentSeason = config.find(c => c.key === 'current_season')?.value || '2026';
 
-            // Find live race
-            const liveRace = races.find(r => r.status === 'live');
+            const now = Date.now();
+            const SESSION_DURATION_MS = 2.5 * 60 * 60 * 1000; // 2.5 hours default session duration window
+
+            // 1. Find live race (explicitly 'live' in DB OR actively in-session by start/end time)
+            const liveRace = races.find(r => r.status === 'live') ||
+                races.find(r => {
+                    if (r.status === 'ended') return false;
+                    const startTime = new Date(r.date).getTime();
+                    const endTime = startTime + SESSION_DURATION_MS;
+                    return now >= startTime && now <= endTime;
+                });
+
             if (liveRace) {
                 setStatus({
                     status: 'live',
@@ -94,10 +104,9 @@ export function useSpacetimeStatus(): RaceStatus {
                 return;
             }
 
-            // Find next upcoming race (filter out past ones that might be mislabeled as upcoming)
-            const now = Date.now();
+            // 2. Find next upcoming race (strictly starting in the future)
             const upcomingRaces = races
-                .filter(r => r.status === 'upcoming' && new Date(r.date).getTime() > now)
+                .filter(r => r.status !== 'ended' && new Date(r.date).getTime() > now)
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
             if (upcomingRaces.length > 0) {

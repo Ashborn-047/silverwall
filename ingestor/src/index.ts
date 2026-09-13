@@ -892,11 +892,58 @@ function setupLiveIngestion() {
 
     setInterval(async () => {
         try {
-            // Find active live session key from SpacetimeDB
-            const liveRace = Array.from(conn.db.race.iter()).find((r: any) => r.status === 'live') as any;
+            const now = Date.now();
+            const SESSION_DURATION_MS = 2.5 * 60 * 60 * 1000;
+            const races = Array.from(conn.db.race.iter()) as any[];
+
+            // 1. Find active live race from SpacetimeDB
+            let liveRace = races.find((r: any) => r.status === 'live');
+
+            // 2. Real-time auto-activation: if no race explicitly marked 'live', check if any upcoming session started
+            if (!liveRace) {
+                const startingRace = races.find((r: any) => {
+                    if (r.status === 'ended') return false;
+                    const start = new Date(r.date).getTime();
+                    const end = start + SESSION_DURATION_MS;
+                    return now >= start && now <= end;
+                });
+
+                if (startingRace) {
+                    console.log(`🏎️ [REALTIME] Session started! Updating raceKey ${startingRace.raceKey} (${startingRace.name}) to 'live' in SpacetimeDB.`);
+                    conn.reducers.seedRace({
+                        raceKey: startingRace.raceKey,
+                        name: startingRace.name,
+                        meetingName: startingRace.meetingName,
+                        location: startingRace.location,
+                        date: startingRace.date,
+                        circuitKey: startingRace.circuitKey,
+                        status: 'live',
+                        year: startingRace.seasonYear || 2026
+                    });
+                    liveRace = startingRace;
+                }
+            } else {
+                // Auto-finalize session when session window expires
+                const start = new Date(liveRace.date).getTime();
+                if (now > start + SESSION_DURATION_MS) {
+                    console.log(`🏁 [REALTIME] Session window completed for raceKey ${liveRace.raceKey} (${liveRace.name}). Marking as 'ended'.`);
+                    conn.reducers.seedRace({
+                        raceKey: liveRace.raceKey,
+                        name: liveRace.name,
+                        meetingName: liveRace.meetingName,
+                        location: liveRace.location,
+                        date: liveRace.date,
+                        circuitKey: liveRace.circuitKey,
+                        status: 'ended',
+                        year: liveRace.seasonYear || 2026
+                    });
+                    liveRace = null;
+                }
+            }
+
             if (liveRace) {
                 if (currentSessionKey !== liveRace.raceKey) {
-                    console.log(`🏎️ Detected live race: ${liveRace.meetingName} - ${liveRace.name} (raceKey: ${liveRace.raceKey}). Switching live telemetry ingestion.`);
+                    console.log(`🏎️ Switching live telemetry ingestion to raceKey: ${liveRace.raceKey}`);
                     currentSessionKey = liveRace.raceKey;
                     // Reset sync timestamp
                     lastSyncedTimestamp = new Date();

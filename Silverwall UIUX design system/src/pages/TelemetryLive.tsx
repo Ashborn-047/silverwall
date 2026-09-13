@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Wifi, Activity, Radio, Trophy } from 'lucide-react';
 import useBackendTelemetry from '../hooks/useBackendTelemetry';
+import useSpacetimeTelemetry from '../hooks/useSpacetimeTelemetry';
 import { useTrack, FrontendTrackPoint as TrackPoint } from '../hooks/useTrack';
 import useSpacetimeStatus from '../hooks/useSpacetimeStatus';
 import CountdownOverlay from '../components/CountdownOverlay';
@@ -19,7 +20,9 @@ interface Driver {
   gap: string;
   team: string;
   teamColor: string;
-  tyre?: string; // 'SOFT', 'MEDIUM', 'HARD', 'INTERMEDIATE', 'WET'
+  speed?: number;
+  gear?: number;
+  tyre?: string;
   tyreAge?: number;
 }
 
@@ -67,30 +70,47 @@ function trackPointsToSvgPath(points: TrackPoint[]): string {
 
 // Helper for tyre colors
 function getTyreColor(compound: string | undefined): string {
-  if (!compound) return '#555'; // Unknown
-  const c = compound.toUpperCase();
-  if (c.includes('SOFT')) return '#FF3B3B'; // Red
-  if (c.includes('MEDIUM')) return '#FFD700'; // Yellow
-  if (c.includes('HARD')) return '#F0F0F0'; // White
-  if (c.includes('INTER')) return '#00D2BE'; // Green/Teal
-  if (c.includes('WET')) return '#0090FF'; // Blue
-  return '#555';
+  switch (compound?.toUpperCase()) {
+    case 'SOFT':
+      return '#FF1801';
+    case 'MEDIUM':
+      return '#FFD700';
+    case 'HARD':
+      return '#FFFFFF';
+    case 'INTERMEDIATE':
+      return '#39B54A';
+    case 'WET':
+      return '#00AEEF';
+    default:
+      return '#9CA3AF';
+  }
 }
 
 function getTyreLetter(compound: string | undefined): string {
-  if (!compound) return '?';
-  const c = compound.toUpperCase();
-  if (c.includes('SOFT')) return 'S';
-  if (c.includes('MEDIUM')) return 'M';
-  if (c.includes('HARD')) return 'H';
-  if (c.includes('INTER')) return 'I';
-  if (c.includes('WET')) return 'W';
-  return '?';
+  switch (compound?.toUpperCase()) {
+    case 'SOFT':
+      return 'S';
+    case 'MEDIUM':
+      return 'M';
+    case 'HARD':
+      return 'H';
+    case 'INTERMEDIATE':
+      return 'I';
+    case 'WET':
+      return 'W';
+    default:
+      return '?';
+  }
 }
 
 export default function TelemetryLive() {
-  // 🔄 SWITCHED: Now using backend WebSocket directly instead of SpacetimeDB
-  const { frame, status: wsStatus } = useBackendTelemetry();
+  // Telemetry hooks: SpacetimeDB (primary cloud subscription) + backend WebSocket (optional/local)
+  const { frame: wsFrame, status: wsStatus } = useBackendTelemetry();
+  const { frame: stFrame, status: stStatus } = useSpacetimeTelemetry();
+
+  // Prefer active WebSocket frame if it has cars, otherwise use SpacetimeDB frame
+  const frame = (wsFrame && wsFrame.cars && wsFrame.cars.length > 0) ? wsFrame : stFrame;
+
   // Race status from SpacetimeDB
   const raceStatus = useSpacetimeStatus();
   // Provide a safe fallback for circuitId since useTrack now expects a number
@@ -104,9 +124,9 @@ export default function TelemetryLive() {
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [showResults, setShowResults] = useState(false);
 
-  // Connection status from hook
-  const isConnected = wsStatus === 'connected';
-  const isWaiting = wsStatus !== 'connected';
+  // Connection status
+  const isConnected = wsStatus === 'connected' || stStatus === 'connected';
+  const isWaiting = !isConnected && raceStatus.status !== 'live';
 
   // Get driver team colors map
   const teamColors: Record<string, string> = {
@@ -146,6 +166,8 @@ export default function TelemetryLive() {
         gap: car.gap || (index === 0 ? 'LEADER' : '--'),
         team: teamNames[car.team] || car.team || 'Unknown',
         teamColor: car.color || teamColors[car.team] || '#00D2BE',
+        speed: car.speed || 0,
+        gear: car.gear || 0,
         tyre: car.tyre,
         tyreAge: car.tyre_age
       }));

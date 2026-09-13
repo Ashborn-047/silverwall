@@ -14,6 +14,8 @@ interface Car {
     brake: number;
     position: number;
     color: string;
+    gap?: string;
+    driver_number?: number;
     tyre?: string;
     tyre_age?: number;
 }
@@ -40,7 +42,15 @@ export function useSpacetimeTelemetry() {
 
         const updateTelemetry = () => {
             const races = Array.from(conn.db.race.iter());
-            const liveRace = races.find(r => r.status === 'live');
+            const now = Date.now();
+            const SESSION_DURATION_MS = 2.5 * 60 * 60 * 1000;
+
+            const liveRace = races.find(r => r.status === 'live') ||
+                races.find(r => {
+                    if (r.status === 'ended') return false;
+                    const startTime = new Date(r.date).getTime();
+                    return now >= startTime && now <= startTime + SESSION_DURATION_MS;
+                });
 
             if (!liveRace) {
                 setStatus('waiting');

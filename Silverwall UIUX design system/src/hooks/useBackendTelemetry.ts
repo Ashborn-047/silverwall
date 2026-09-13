@@ -34,15 +34,20 @@ export function useBackendTelemetry(wsUrl?: string) {
     const wsRef = useRef<WebSocket | null>(null);
 
     useEffect(() => {
-        // Use environment variable or fallback to local/production backend
+        // Use environment variable or fallback to local backend in development
         const backendWsUrl = wsUrl ||
-            (import.meta.env.PROD
-                ? 'wss://silverwall-ingestor.fly.dev/ws/live'
-                : 'ws://localhost:8000/ws/live'
-            );
+            import.meta.env.VITE_WS_LIVE_URL ||
+            (import.meta.env.DEV ? 'ws://localhost:8000/ws/live' : undefined);
+
+        if (!backendWsUrl) {
+            setStatus('disconnected');
+            return;
+        }
 
         console.log(`🔌 Connecting to backend: ${backendWsUrl}`);
         let reconnectTimer: NodeJS.Timeout;
+        let retryCount = 0;
+        const MAX_RETRIES = 5;
 
         const connect = () => {
             try {
@@ -80,15 +85,25 @@ export function useBackendTelemetry(wsUrl?: string) {
                 };
 
                 ws.onclose = () => {
-                    console.log('⚠️ Disconnected from backend, reconnecting in 3s...');
-                    setStatus('disconnected');
                     wsRef.current = null;
-                    reconnectTimer = setTimeout(connect, 3000);
+                    if (retryCount < MAX_RETRIES) {
+                        retryCount++;
+                        const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+                        console.log(`⚠️ Disconnected from backend, retry ${retryCount}/${MAX_RETRIES} in ${delay / 1000}s...`);
+                        setStatus('disconnected');
+                        reconnectTimer = setTimeout(connect, delay);
+                    } else {
+                        console.log('ℹ️ Backend WebSocket unavailable. Falling back to SpacetimeDB telemetry stream.');
+                        setStatus('disconnected');
+                    }
                 };
             } catch (err) {
                 console.error('❌ Connection failed:', err);
                 setStatus('error');
-                reconnectTimer = setTimeout(connect, 5000);
+                if (retryCount < MAX_RETRIES) {
+                    retryCount++;
+                    reconnectTimer = setTimeout(connect, 5000);
+                }
             }
         };
 
