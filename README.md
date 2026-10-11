@@ -6,12 +6,12 @@
 ### 🚀 Next-Gen Architecture (SpacetimeDB)
 ```mermaid
 graph TD
-    A[OpenF1 API] -->|Telemetry & Standings| I[TS Ingestor Worker (Fly.io sin)]
-    I -->|Low Latency Reducers| S[(SpacetimeDB Core)]
-    C[Clerk Auth] -->|Authenticate SDK| F[React Frontend (Vite)]
+    A["OpenF1 API"] -->|Telemetry & Standings| I["TS Ingestor Worker (Fly.io sin)"]
+    I -->|Low Latency Reducers| S[("SpacetimeDB Core")]
+    C["Clerk Auth"] -->|Authenticate SDK| F["React Frontend (Vite)"]
     S <-->|Direct Multiplexed Sync| F
-    S <-->|Slash Commands| B[Discord Bot Service]
-    U[Discord User] <-->|Interactions| B
+    S <-->|Slash Commands| B["Discord Bot Service"]
+    U["Discord User"] <-->|Interactions| B
 ```
 
 #### 🛠️ Production Milestones & Current State
@@ -119,12 +119,12 @@ silverwall/
 
 ```mermaid
 graph TD
-    A[OpenF1 Live API] -->|Car Data & GPS Locations| I[TS Ingestor Worker<br/>Fly.io Singapore]
-    I -->|insert_telemetry Reducer| S[(SpacetimeDB Cloud<br/>Reactive In-Memory Engine)]
+    A["OpenF1 Live API"] -->|Car Data & GPS Locations| I["TS Ingestor Worker<br/>Fly.io Singapore"]
+    I -->|insert_telemetry Reducer| S[("SpacetimeDB Cloud<br/>Reactive In-Memory Engine")]
     I -->|seed_race / seed_standings| S
-    S <-->|Direct Multiplexed WebSocket| F[React Frontend<br/>Vite / Tailwind CSS]
-    AP[Apex F1 API / Fly Postgres] -->|High-Res Circuit Vertices| I
-    G[GitHub Sentinel Workflow] -->|Health Ping Every 2h| I
+    S <-->|Direct Multiplexed WebSocket| F["React Frontend<br/>Vite / Tailwind CSS"]
+    AP["Apex F1 API / Fly Postgres"] -->|High-Res Circuit Vertices| I
+    G["GitHub Sentinel Workflow"] -->|Health Ping Every 2h| I
 ```
 
 ---
