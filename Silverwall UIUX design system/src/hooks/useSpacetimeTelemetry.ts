@@ -45,9 +45,11 @@ export function useSpacetimeTelemetry() {
             const now = Date.now();
             const SESSION_DURATION_MS = 2.5 * 60 * 60 * 1000;
 
+            const results = Array.from(conn.db.race_result.iter());
             const liveRace = races.find(r => r.status === 'live') ||
                 races.find(r => {
-                    if (r.status === 'ended') return false;
+                    const hasFullResults = results.filter((res: any) => res.raceKey === r.raceKey).length >= 10;
+                    if (hasFullResults) return false;
                     const startTime = new Date(r.date).getTime();
                     return now >= startTime && now <= startTime + SESSION_DURATION_MS;
                 });

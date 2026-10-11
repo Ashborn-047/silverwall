@@ -321,12 +321,13 @@ async function syncPodiums(year: number) {
                 console.log(`⚠️ Race ${targetRace.meetingName} (raceKey: ${raceKey}) has only ${existingResultCount} results — will attempt backfill.`);
             }
 
-            // If race is in the future, skip
-            if (raceDate > now) {
+            // If race is in the future OR currently underway (within 2.5h session window), skip!
+            const SESSION_DURATION_MS = 2.5 * 60 * 60 * 1000;
+            if (now < raceDate + SESSION_DURATION_MS) {
                 continue;
             }
 
-            // Race is in the past or has finished - ensure ended
+            // Race has finished (beyond 2.5h) - ensure ended
             markEnded();
 
             // Find matching Jolpi race by closest date within 4 days
@@ -912,8 +913,10 @@ function setupLiveIngestion() {
 
             // 2. Real-time auto-activation: if no race explicitly marked 'live', check if any upcoming session started
             if (!liveRace) {
+                const dbResults = Array.from(conn.db.race_result.iter());
                 const startingRace = races.find((r: any) => {
-                    if (r.status === 'ended') return false;
+                    const hasResults = dbResults.filter((res: any) => res.raceKey === r.raceKey).length >= 10;
+                    if (hasResults) return false;
                     const start = new Date(r.date).getTime();
                     const end = start + SESSION_DURATION_MS;
                     return now >= start && now <= end;

@@ -81,10 +81,13 @@ export function useSpacetimeStatus(): RaceStatus {
             const now = Date.now();
             const SESSION_DURATION_MS = 2.5 * 60 * 60 * 1000; // 2.5 hours default session duration window
 
+            const results = Array.from(conn.db.race_result.iter());
+
             // 1. Find live race (explicitly 'live' in DB OR actively in-session by start/end time)
             const liveRace = races.find(r => r.status === 'live') ||
                 races.find(r => {
-                    if (r.status === 'ended') return false;
+                    const hasFullResults = results.filter((res: any) => res.raceKey === r.raceKey).length >= 10;
+                    if (hasFullResults) return false;
                     const startTime = new Date(r.date).getTime();
                     const endTime = startTime + SESSION_DURATION_MS;
                     return now >= startTime && now <= endTime;
