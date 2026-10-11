@@ -9,7 +9,7 @@ interface TrackMapProps {
   className?: string;
 }
 
-const OPENF1_TO_STATIC_ID: Record<number, number> = {
+export const OPENF1_TO_STATIC_ID: Record<number, number> = {
   63: 63, // bahrain
   49: 49, // shanghai
   23: 23, // montreal

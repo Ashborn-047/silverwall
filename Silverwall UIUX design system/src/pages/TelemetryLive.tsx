@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Activity, Radio, Trophy } from 'lucide-react';
+import { ArrowLeft, Activity, Radio, Trophy, ZoomIn, ZoomOut, RotateCcw, Tag } from 'lucide-react';
 import useBackendTelemetry from '../hooks/useBackendTelemetry';
 import useSpacetimeTelemetry from '../hooks/useSpacetimeTelemetry';
 import { useTrack, FrontendTrackPoint as TrackPoint } from '../hooks/useTrack';
@@ -11,6 +11,8 @@ import ResultsModal from '../components/ResultsModal';
 import ReplayControls from '../components/ReplayControls';
 import SessionSelector, { SelectedSession } from '../components/SessionSelector';
 import useReplayEngine from '../hooks/useReplayEngine';
+import { getCircuitById } from '../data/tracks';
+import { OPENF1_TO_STATIC_ID } from '../components/TrackMap';
 
 // ============================================================================
 // 🏎️ TELEMETRY LIVE VIEWER
@@ -110,6 +112,8 @@ export default function TelemetryLive() {
 
   const [selectedSession, setSelectedSession] = useState<SelectedSession | null>(null);
   const [isReplayMode, setIsReplayMode] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [showAllDriverTags, setShowAllDriverTags] = useState(true);
 
   // Race status from SpacetimeDB
   const raceStatus = useSpacetimeStatus();
@@ -117,15 +121,64 @@ export default function TelemetryLive() {
   const circuitId = selectedSession?.circuitKey || (raceStatus.circuit ? parseInt(String(raceStatus.circuit), 10) :
     (raceStatus.nextSeason?.circuit ? parseInt(String(raceStatus.nextSeason.circuit), 10) : 61));
 
+  // Resolve static circuit metadata for authentic circuit branding & geometry
+  const staticId = OPENF1_TO_STATIC_ID[circuitId] || circuitId;
+  const staticCircuit = getCircuitById(staticId);
+
   // Track hook - fetches directly from SpacetimeDB track_point table
   const { track, points: trackPoints } = useTrack(circuitId);
+
+  // Active track points - prioritize live DB points, fall back to static circuit geometry
+  const activeTrackPoints = useMemo(() => {
+    return trackPoints.length > 0 ? trackPoints : (staticCircuit?.points || []);
+  }, [trackPoints, staticCircuit]);
 
   // Replay Engine hook (60 FPS timeline playback clock with IndexedDB caching)
   const replayEngine = useReplayEngine(
     selectedSession?.sessionKey || 11388,
-    trackPoints,
+    activeTrackPoints,
     62
   );
+
+  // Dynamically compute the optimal viewBox to eliminate all dead space
+  // and expand the circuit to fill the maximum possible screen area
+  const { viewBoxStr } = useMemo(() => {
+    if (!activeTrackPoints || activeTrackPoints.length === 0) {
+      return {
+        viewBoxStr: `0 0 ${SVG_VIEWBOX} ${SVG_VIEWBOX}`
+      };
+    }
+
+    const coords = activeTrackPoints.map(p => toSvgCoords(p.x, p.y));
+    const minX = Math.min(...coords.map(c => c.cx));
+    const maxX = Math.max(...coords.map(c => c.cx));
+    const minY = Math.min(...coords.map(c => c.cy));
+    const maxY = Math.max(...coords.map(c => c.cy));
+
+    const w = maxX - minX;
+    const h = maxY - minY;
+
+    // Generous padding so car markers and driver tags don't clip at boundaries
+    const padX = Math.max(w * 0.08, 45);
+    const padY = Math.max(h * 0.12, 45);
+
+    const baseVbW = w + 2 * padX;
+    const baseVbH = h + 2 * padY;
+
+    // Center of circuit bounding box
+    const cX = minX + w / 2;
+    const cY = minY + h / 2;
+
+    // Apply interactive zoom if user zooms in
+    const finalVbW = baseVbW / zoomLevel;
+    const finalVbH = baseVbH / zoomLevel;
+    const finalVbX = cX - finalVbW / 2;
+    const finalVbY = cY - finalVbH / 2;
+
+    return {
+      viewBoxStr: `${Math.round(finalVbX)} ${Math.round(finalVbY)} ${Math.round(finalVbW)} ${Math.round(finalVbH)}`
+    };
+  }, [activeTrackPoints, zoomLevel]);
 
   // Telemetry frame resolution:
   // If user is playing/scrubbing replay, or viewing an ended past race, use replayEngine.frame
@@ -420,7 +473,7 @@ export default function TelemetryLive() {
         </aside>
 
         {/* CENTER PANEL: TRACK MAP */}
-        <section className="relative bg-[#050608] flex items-center justify-center p-8 overflow-hidden">
+        <section className="relative bg-[#050608] flex items-center justify-center p-4 md:p-6 overflow-hidden">
           {/* Active Session Countdown Overlay */}
           {raceStatus.status === 'waiting' && <CountdownOverlay raceStatus={raceStatus} isFullScreen={false} />}
 
@@ -433,54 +486,136 @@ export default function TelemetryLive() {
             }}
           />
 
-          {/* Track Map Container */}
-          <div className="relative w-full max-w-2xl aspect-[16/10] flex items-center justify-center">
+          {/* HUD Top Left: Track Technical Specs */}
+          <div className="absolute top-4 left-4 z-10 hidden sm:flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-[#0A0C10]/85 backdrop-blur-md border border-[#00D2BE]/20 shadow-lg">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00D2BE] animate-ping" />
+              <span className="font-mono text-[11px] text-[#00D2BE] font-bold tracking-wider uppercase">
+                {staticCircuit?.name || track?.name || `Circuit ${circuitId}`}
+              </span>
+              {staticCircuit?.length_km && (
+                <span className="font-mono text-[10px] text-[#9CA3AF] pl-2 border-l border-white/10">
+                  {staticCircuit.length_km} KM • {staticCircuit.corners} CORNERS
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* HUD Top Right: Interactive Map Controls (Tags & Zoom) */}
+          <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5 bg-[#0A0C10]/85 backdrop-blur-md border border-[#00D2BE]/20 rounded p-1 shadow-lg">
+            <button
+              onClick={() => setShowAllDriverTags(prev => !prev)}
+              title={showAllDriverTags ? "Show Leaders Only" : "Show All Driver Tags"}
+              className={`px-2.5 py-1 font-mono text-[10px] rounded transition-colors flex items-center gap-1.5 ${
+                showAllDriverTags 
+                  ? 'bg-[#00D2BE]/20 text-[#00D2BE] border border-[#00D2BE]/40' 
+                  : 'text-[#9CA3AF] hover:text-[#E0E0E0] hover:bg-white/5'
+              }`}
+            >
+              <Tag size={11} />
+              <span>{showAllDriverTags ? 'ALL TAGS' : 'TOP 3'}</span>
+            </button>
+
+            <div className="h-4 w-[1px] bg-white/10 mx-0.5" />
+
+            <button
+              onClick={() => setZoomLevel(z => Math.max(1, Math.round((z - 0.25) * 100) / 100))}
+              disabled={zoomLevel <= 1}
+              title="Zoom Out"
+              className="p-1.5 text-[#9CA3AF] hover:text-[#00D2BE] disabled:opacity-30 disabled:hover:text-[#9CA3AF] transition-colors rounded hover:bg-white/5"
+            >
+              <ZoomOut size={13} />
+            </button>
+
+            <span className="font-mono text-[10px] text-[#00D2BE] w-10 text-center font-bold">
+              {zoomLevel.toFixed(1)}x
+            </span>
+
+            <button
+              onClick={() => setZoomLevel(z => Math.min(2.5, Math.round((z + 0.25) * 100) / 100))}
+              disabled={zoomLevel >= 2.5}
+              title="Zoom In"
+              className="p-1.5 text-[#9CA3AF] hover:text-[#00D2BE] disabled:opacity-30 disabled:hover:text-[#9CA3AF] transition-colors rounded hover:bg-white/5"
+            >
+              <ZoomIn size={13} />
+            </button>
+
+            {zoomLevel > 1 && (
+              <button
+                onClick={() => setZoomLevel(1)}
+                title="Reset Zoom / Fit to Screen"
+                className="p-1.5 text-[#00D2BE] hover:text-white transition-colors rounded hover:bg-white/5 ml-0.5"
+              >
+                <RotateCcw size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* Track Map Container — Expands to fill available viewport space */}
+          <div className="relative w-full h-full flex items-center justify-center">
             {/* Dynamic Track from Backend + Real Car Positions */}
-            <svg viewBox={`0 0 ${SVG_VIEWBOX} ${SVG_VIEWBOX}`} className="w-full h-full drop-shadow-[0_0_12px_rgba(0,210,190,0.4)]">
+            <svg
+              viewBox={viewBoxStr}
+              className="w-full h-full max-h-[calc(100vh-210px)] object-contain drop-shadow-[0_0_18px_rgba(0,210,190,0.35)] transition-all duration-300"
+            >
               {/* Track Path - from backend or fallback */}
-              {trackPoints.length > 0 ? (
+              {activeTrackPoints.length > 0 ? (
                 <>
                   {/* Track Border (Inner Glow/Outline) */}
                   <path
-                    d={trackPointsToSvgPath(trackPoints)}
+                    d={trackPointsToSvgPath(activeTrackPoints)}
                     fill="none"
                     stroke="#00D2BE"
                     strokeWidth="8"
                     strokeLinejoin="round"
                     strokeLinecap="round"
-                    opacity="0.2"
+                    opacity="0.22"
                   />
                   {/* Main Track Line */}
                   <path
-                    d={trackPointsToSvgPath(trackPoints)}
+                    d={trackPointsToSvgPath(activeTrackPoints)}
                     fill="none"
                     stroke="#00D2BE"
-                    strokeWidth="2"
+                    strokeWidth="2.5"
                     strokeLinejoin="round"
                     strokeLinecap="round"
-                    opacity="0.9"
+                    opacity="0.95"
                   />
                 </>
               ) : (
                 /* Fallback static track */
                 <g>
-                  <text x="400" y="480" textAnchor="middle" fill="#555" fontSize="14" fontFamily="monospace">NO TRACK DATA</text>
-                  <text x="400" y="500" textAnchor="middle" fill="#333" fontSize="10" fontFamily="monospace">Waiting for geometry...</text>
+                  <text x="500" y="480" textAnchor="middle" fill="#555" fontSize="14" fontFamily="monospace">NO TRACK DATA</text>
+                  <text x="500" y="505" textAnchor="middle" fill="#333" fontSize="10" fontFamily="monospace">Waiting for geometry...</text>
                 </g>
               )}
 
               {/* Start/Finish Line */}
-              {trackPoints.length > 0 && (() => {
-                const startCoords = toSvgCoords(trackPoints[0].x, trackPoints[0].y);
+              {activeTrackPoints.length > 0 && (() => {
+                const startCoords = toSvgCoords(activeTrackPoints[0].x, activeTrackPoints[0].y);
                 return (
-                  <line
-                    x1={startCoords.cx}
-                    y1={startCoords.cy - 10}
-                    x2={startCoords.cx}
-                    y2={startCoords.cy + 10}
-                    stroke="#FFFFFF"
-                    strokeWidth="3"
-                  />
+                  <g>
+                    <line
+                      x1={startCoords.cx}
+                      y1={startCoords.cy - 12}
+                      x2={startCoords.cx}
+                      y2={startCoords.cy + 12}
+                      stroke="#FFFFFF"
+                      strokeWidth="3"
+                      strokeDasharray="4 2"
+                    />
+                    <text
+                      x={startCoords.cx}
+                      y={startCoords.cy - 16}
+                      textAnchor="middle"
+                      fill="#00D2BE"
+                      fontSize="9"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                    >
+                      S/F
+                    </text>
+                  </g>
                 );
               })()}
 
@@ -490,14 +625,41 @@ export default function TelemetryLive() {
                 const coords = toSvgCoords(car.x, car.y);
                 const isSelected = selectedDriver?.code === car.code;
                 const teamColor = getDriverColor(car.code);
+                const showBadge = showAllDriverTags || isSelected || i < 3;
 
                 return (
-                  <g key={car.code} className="transition-all duration-300 ease-linear" style={{ transform: `translate(${coords.cx}px, ${coords.cy}px)` }}>
-                    {/* Driver Label (only for selected or top 3) */}
-                    {(isSelected || i < 3) && (
+                  <g
+                    key={car.code}
+                    className="cursor-pointer transition-all duration-300 ease-linear hover:opacity-100"
+                    style={{ transform: `translate(${coords.cx}px, ${coords.cy}px)` }}
+                    onClick={() => {
+                      const d = leaderboard.find(l => l.code === car.code);
+                      if (d) setSelectedDriver(d);
+                    }}
+                  >
+                    {/* Driver Label */}
+                    {showBadge && (
                       <g transform="translate(10, -10)">
-                        <rect x="-4" y="-12" width="30" height="16" rx="2" fill="#0A0C10" fillOpacity="0.8" stroke={teamColor} strokeWidth="1" />
-                        <text x="11" y="0" textAnchor="middle" fill="#FFFFFF" fontSize="10" fontFamily="monospace" fontWeight="bold">
+                        <rect
+                          x="-4"
+                          y="-12"
+                          width="30"
+                          height="16"
+                          rx="2"
+                          fill="#0A0C10"
+                          fillOpacity="0.85"
+                          stroke={teamColor}
+                          strokeWidth="1.2"
+                        />
+                        <text
+                          x="11"
+                          y="0"
+                          textAnchor="middle"
+                          fill="#FFFFFF"
+                          fontSize="9.5"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                        >
                           {car.code}
                         </text>
                       </g>
@@ -505,10 +667,10 @@ export default function TelemetryLive() {
 
                     {/* Car Dot */}
                     <circle
-                      r={isSelected ? 6 : 4}
+                      r={isSelected ? 7 : 5}
                       fill={teamColor}
                       stroke="#FFFFFF"
-                      strokeWidth={isSelected ? 2 : 1}
+                      strokeWidth={isSelected ? 2.5 : 1.5}
                       className="transition-all duration-300"
                     />
                   </g>
@@ -517,12 +679,12 @@ export default function TelemetryLive() {
             </svg>
           </div>
 
-          <div className="absolute bottom-8 right-8 text-right">
-            <h2 className="text-[#555] text-xs font-mono tracking-[0.2em] uppercase mb-1">
-              {track?.name || 'Loading...'}
+          <div className="absolute bottom-6 right-6 text-right pointer-events-none">
+            <h2 className="text-[#555] text-[11px] font-mono tracking-[0.25em] uppercase mb-0.5">
+              {staticCircuit?.name || track?.name || `CIRCUIT ${circuitId}`}
             </h2>
-            <h1 className="text-[#00D2BE] text-2xl font-bold uppercase tracking-wider">
-              {track?.location || '—'}
+            <h1 className="text-[#00D2BE] text-xl font-bold uppercase tracking-wider">
+              {staticCircuit?.location || track?.location || '—'}
             </h1>
           </div>
         </section>
