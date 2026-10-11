@@ -26,10 +26,15 @@ SilverWall is powered by a **SpacetimeDB reactive engine**. It provides ultra-lo
 
 ---
 ![SilverWall Autonomous](https://img.shields.io/badge/Engine-Autonomous-00D2BE?style=for-the-badge)
-![SpacetimeDB](https://img.shields.io/badge/Database-SpacetimeDB-9A3412?style=flat-square)
+![SpacetimeDB](https://img.shields.io/badge/Database-SpacetimeDB-EA580C?style=flat-square&logo=rust)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)
-![Fly.io](https://img.shields.io/badge/Deploy-Fly.io-24185B?style=flat-square&logo=flydotio)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?style=flat-square&logo=vite)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat-square&logo=tailwindcss)
+![Node.js](https://img.shields.io/badge/Node.js-22-339933?style=flat-square&logo=node.js)
+![Fly.io](https://img.shields.io/badge/Deploy-Fly.io-24185B?style=flat-square&logo=flydotio)
+![OpenF1 API](https://img.shields.io/badge/Data-OpenF1_Live-E10600?style=flat-square)
+![License MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 
 ---
 
