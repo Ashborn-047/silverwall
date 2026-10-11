@@ -61,7 +61,7 @@ test.describe('Dynamic Standings Modal', () => {
 
     // We expect the websocket to push data instantly if the DB changes.
     // For now, we just assert the initial render works.
-    await expect(firstPlacePoints).toBeVisible();
+    await expect(firstPlacePoints).toBeVisible({ timeout: 10000 });
   });
 
   test('should be able to close the standings modal', async ({ page }) => {

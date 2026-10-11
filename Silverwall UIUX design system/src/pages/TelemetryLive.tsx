@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Wifi, Activity, Radio, Trophy } from 'lucide-react';
+import { ArrowLeft, Activity, Radio, Trophy } from 'lucide-react';
 import useBackendTelemetry from '../hooks/useBackendTelemetry';
 import useSpacetimeTelemetry from '../hooks/useSpacetimeTelemetry';
 import { useTrack, FrontendTrackPoint as TrackPoint } from '../hooks/useTrack';
@@ -8,6 +8,9 @@ import useSpacetimeStatus from '../hooks/useSpacetimeStatus';
 import CountdownOverlay from '../components/CountdownOverlay';
 import CommentaryPanel from '../components/CommentaryPanel';
 import ResultsModal from '../components/ResultsModal';
+import ReplayControls from '../components/ReplayControls';
+import SessionSelector, { SelectedSession } from '../components/SessionSelector';
+import useReplayEngine from '../hooks/useReplayEngine';
 
 // ============================================================================
 // 🏎️ TELEMETRY LIVE VIEWER
@@ -35,10 +38,7 @@ interface TelemetryData {
   rpm: number;
 }
 
-interface DriverTelemetry {
-  code: string;
-  throttle: number;
-}
+
 
 // SVG viewBox constants - MUST be consistent between track and cars
 const SVG_VIEWBOX = 1000;
@@ -108,17 +108,32 @@ export default function TelemetryLive() {
   const { frame: wsFrame, status: wsStatus } = useBackendTelemetry();
   const { frame: stFrame, status: stStatus } = useSpacetimeTelemetry();
 
-  // Prefer active WebSocket frame if it has cars, otherwise use SpacetimeDB frame
-  const frame = (wsFrame && wsFrame.cars && wsFrame.cars.length > 0) ? wsFrame : stFrame;
+  const [selectedSession, setSelectedSession] = useState<SelectedSession | null>(null);
+  const [isReplayMode, setIsReplayMode] = useState(false);
 
   // Race status from SpacetimeDB
   const raceStatus = useSpacetimeStatus();
-  // Provide a safe fallback for circuitId since useTrack now expects a number
-  const circuitId = raceStatus.circuit ? parseInt(String(raceStatus.circuit), 10) :
-    (raceStatus.nextSeason?.circuit ? parseInt(String(raceStatus.nextSeason.circuit), 10) : 61);
+  // Provide circuitId from selected session, active race, or default to Singapore (61)
+  const circuitId = selectedSession?.circuitKey || (raceStatus.circuit ? parseInt(String(raceStatus.circuit), 10) :
+    (raceStatus.nextSeason?.circuit ? parseInt(String(raceStatus.nextSeason.circuit), 10) : 61));
 
   // Track hook - fetches directly from SpacetimeDB track_point table
   const { track, points: trackPoints } = useTrack(circuitId);
+
+  // Replay Engine hook (60 FPS timeline playback clock with IndexedDB caching)
+  const replayEngine = useReplayEngine(
+    selectedSession?.sessionKey || 11388,
+    trackPoints,
+    62
+  );
+
+  // Telemetry frame resolution:
+  // If user is playing/scrubbing replay, or viewing an ended past race, use replayEngine.frame
+  const isReplaying = isReplayMode || replayEngine.isPlaying || replayEngine.currentTime > 0 || selectedSession?.status === 'ended';
+  const liveWsFrame = wsFrame?.cars && wsFrame.cars.length > 0 ? wsFrame : null;
+  const liveStFrame = stFrame?.cars && stFrame.cars.length > 0 ? stFrame : null;
+  const liveFrame = liveWsFrame || liveStFrame;
+  const frame = (isReplaying && replayEngine.frame) ? replayEngine.frame : (liveFrame || replayEngine.frame);
 
   const sessionTime = '--:--:--';
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
@@ -209,16 +224,7 @@ export default function TelemetryLive() {
     }
   }, [selectedCar]);
 
-  // Bottom bar telemetry from frame
-  const driverTelemetry = useMemo<DriverTelemetry[]>(() => {
-    if (frame?.cars && frame.cars.length > 0) {
-      return frame.cars.slice(0, 4).map(car => ({
-        code: car.code,
-        throttle: car.throttle,
-      }));
-    }
-    return [];
-  }, [frame]);
+
 
   // Get driver color by code
   const getDriverColor = (code: string): string => {
@@ -258,10 +264,21 @@ export default function TelemetryLive() {
             </h1>
           </div>
 
+          {/* Session Selector Pill */}
+          <SessionSelector
+            currentSessionKey={selectedSession?.sessionKey || 11388}
+            currentMeetingName={selectedSession?.meetingName || raceStatus.meetingName || 'Singapore Grand Prix'}
+            onSelectSession={(sess) => {
+              setSelectedSession(sess);
+              setIsReplayMode(sess.status === 'ended');
+              replayEngine.loadSession(sess.sessionKey);
+            }}
+          />
+
           {/* Session Context */}
-          <div className="hidden md:flex items-center gap-3 font-mono text-xs">
+          <div className="hidden lg:flex items-center gap-3 font-mono text-xs">
             <span className="text-[#E0E0E0] uppercase tracking-wider">
-              {raceStatus.sessionName || 'RACE'}
+              {selectedSession?.sessionName || raceStatus.sessionName || 'RACE'}
             </span>
             <span className="text-[#333]">·</span>
             <span className="text-[#9CA3AF] uppercase">
@@ -602,33 +619,35 @@ export default function TelemetryLive() {
       </main>
 
       {/* ========================================================================
-          BOTTOM TELEMETRY BAR
+          REPLAY PLAYBACK CONTROLS
       ======================================================================== */}
-      <footer className="h-12 border-t border-[#00D2BE]/10 bg-[#050608] flex items-center px-6 gap-6 overflow-hidden">
-        <div className="flex items-center gap-2 min-w-[120px]">
-          <Wifi size={14} className="text-[#00D2BE]" />
-          <span className="text-[#00D2BE] text-[10px] uppercase tracking-widest font-mono">Live Telemetry</span>
-        </div>
-
-        <div className="flex-1 flex items-center gap-8 overflow-x-auto no-scrollbar">
-          {driverTelemetry.map((d) => (
-            <div key={d.code} className="flex items-center gap-3 min-w-[140px]">
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-3" style={{ backgroundColor: getDriverColor(d.code) }} />
-                <span className="text-[#9CA3AF] font-mono text-xs font-bold">{d.code}</span>
-              </div>
-              {/* Mini Throttle Bar */}
-              <div className="flex-1 h-1.5 bg-[#333] rounded-full overflow-hidden w-24">
-                <div
-                  className="h-full bg-[#00D2BE]"
-                  style={{ width: `${d.throttle}%` }}
-                />
-              </div>
-              <span className="text-[#555] font-mono text-[10px] w-8 text-right">{d.throttle}%</span>
-            </div>
-          ))}
-        </div>
-      </footer>
+      <ReplayControls
+        isPlaying={replayEngine.isPlaying}
+        currentTime={replayEngine.currentTime}
+        duration={replayEngine.duration}
+        playbackRate={replayEngine.playbackRate}
+        currentLap={replayEngine.currentLap}
+        totalLaps={replayEngine.totalLaps}
+        progressPercent={replayEngine.progressPercent}
+        onTogglePlay={() => {
+          setIsReplayMode(true);
+          replayEngine.togglePlay();
+        }}
+        onSeek={(time) => {
+          setIsReplayMode(true);
+          replayEngine.seekTo(time);
+        }}
+        onSetSpeed={replayEngine.setSpeed}
+        onRestart={() => {
+          setIsReplayMode(true);
+          replayEngine.restart();
+        }}
+        isLiveMode={raceStatus.status === 'live'}
+        onSwitchToLive={() => {
+          setIsReplayMode(false);
+          replayEngine.pause();
+        }}
+      />
 
       {/* Results Modal */}
       {showResults && <ResultsModal isOpen={true} onClose={() => setShowResults(false)} />}
