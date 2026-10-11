@@ -1,36 +1,34 @@
 # SilverWall 🏎️
 
-> [!IMPORTANT]
-> **UNDER MAINTENANCE**: SilverWall is currently undergoing a major architectural pivot. We are migrating from the legacy Python/Supabase stack to a **Full TypeScript + SpacetimeDB** architecture to resolve 2026 season parity issues and enhance real-time performance.
-
 > [!NOTE]
-> **MIGRATION STATUS**: The backend telemetry engine, Season Races, and Championship Standings have been successfully migrated to **SpacetimeDB**. Core 2024/2025/2026 data is verified and fully operational. Track geometry visualization is currently undergoing refinement and is temporarily disabled on the main landing page.
+> **ARCHITECTURE**: SilverWall runs on a **Full TypeScript + SpacetimeDB** architecture. The real-time telemetry engine, season races, circuit geometry, and championship standings are powered by **SpacetimeDB Cloud** with continuous live polling by our dedicated Fly.io ingestor worker in Singapore (`sin`).
 
 ### 🚀 Next-Gen Architecture (SpacetimeDB)
 ```mermaid
 graph TD
-    A[OpenF1 API] -->|Telemetry & Standings| I[TS Ingestor Worker]
-    I -->|Low Latency Push| S[(SpacetimeDB Core)]
-    C[Clerk Auth] -->|Authenticate SDK| F[React Frontend]
+    A[OpenF1 API] -->|Telemetry & Standings| I[TS Ingestor Worker (Fly.io sin)]
+    I -->|Low Latency Reducers| S[(SpacetimeDB Core)]
+    C[Clerk Auth] -->|Authenticate SDK| F[React Frontend (Vite)]
     S <-->|Direct Multiplexed Sync| F
     S <-->|Slash Commands| B[Discord Bot Service]
     U[Discord User] <-->|Interactions| B
 ```
 
-#### 🛠️ Recent Progress (Phase 3)
-- **Restored 2026 Season Parity**: Resolved "Off Season" state; the landing page now correctly displays upcoming 2026 races with real-time countdowns from SpacetimeDB.
-- **Verified 2024/2025/2026 Standings**: Historical and upcoming championship data is now served natively from the new TypeScript engine.
-- **Track Geometry Modernization**: Initiated migration of circuit maps to high-fidelity vertex-based rendering (feature currently in refinement).
+#### 🛠️ Production Milestones & Current State
+- **SpacetimeDB Core Live**: 377+ historical & active F1 sessions, multi-season driver & constructor standings natively served via multiplexed WebSocket subscriptions.
+- **Singapore GP Live Telemetry Ready**: Session 11388 (2026 Singapore Grand Prix at Marina Bay) registered as upcoming with 47 high-fidelity track vertices and real-time GPS coordinate normalization.
+- **Autonomous Ingestor**: Dedicated Singapore-based Fly machine (`silverwall-ingestor`) continuously ingesting OpenF1 live telemetry, results, and adaptive standings bursts.
+- **Circuit Geometry Alignment**: High-fidelity track normalization ensuring live car dots render directly on SVG outlines across all circuits.
 
 **Engineering-Grade F1 Telemetry Dashboard**
 
-SilverWall is transitioning to a **SpacetimeDB-powered** reactive engine. It provides ultra-low latency F1 telemetry, session tracking, and historical data with zero polling overhead.
+SilverWall is powered by a **SpacetimeDB reactive engine**. It provides ultra-low latency F1 telemetry, session tracking, and historical data with zero frontend polling overhead.
 
 ---
 ![SilverWall Autonomous](https://img.shields.io/badge/Engine-Autonomous-00D2BE?style=for-the-badge)
-![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=flat-square&logo=supabase)
+![SpacetimeDB](https://img.shields.io/badge/Database-SpacetimeDB-9A3412?style=flat-square)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi)
+![Fly.io](https://img.shields.io/badge/Deploy-Fly.io-24185B?style=flat-square&logo=flydotio)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)
 
 ---
@@ -38,7 +36,7 @@ SilverWall is transitioning to a **SpacetimeDB-powered** reactive engine. It pro
 ## ⚡ Autonomous Features
 
 ### 🧠 Year-Agnostic Intelligence
-The backend dynamically identifies the "Active Season" based on Supabase data. As soon as you seed a new season, the entire app transitions—no code changes required.
+The system dynamically activates the live race when `now >= date_start && now <= date_end`, seamlessly transitioning the entire UI from countdown mode to live telemetry pit-wall with zero manual intervention.
 
 ### 🏁 Automated Data Lifecycle
 - **Dynamic Results**: The `/api/results` endpoint is 100% database-driven—no more hardcoded placeholders.
@@ -66,88 +64,53 @@ SilverWall features a dual-layer Discord integration:
 
 ```
 silverwall/
-├── 📂 backend/                     # FastAPI Python Backend
-│   ├── main.py                     # FastAPI app entry point with CORS
-│   ├── database.py                 # Supabase client initialization
-│   ├── models.py                   # Pydantic models for API responses
-│   ├── requirements.txt            # Python dependencies
-│   ├── vercel.json                 # Vercel serverless deployment config
-│   ├── Procfile                    # Railway/Heroku deployment
-│   │
-│   ├── 📂 routes/                  # API Endpoint Handlers
-│   │   ├── status.py               # /api/status - Race status & countdown
-│   │   ├── standings.py            # /api/standings/* & /api/champions
-│   │   ├── track.py                # /api/track/{circuit} - SVG geometry
-│   │   ├── results.py              # /api/results & /api/season/races
-│   │   ├── discord.py              # /api/discord/interactions - Bot handlers
-│   │   ├── commentary.py           # /api/commentary - AI race commentary
-│   │   └── radio.py                # /api/radio - Team radio messages
-│   │
-│   ├── 📂 migrations/              # Supabase SQL Migrations (Consolidated)
-│   │   ├── 001_create_tables.sql   # Core schema (seasons, races, standings)
-│   │   ├── 002_historical_2024.sql # Complete 2024 season data
-│   │   ├── 003_historical_2025.sql # Complete 2025 season data
-│   │   ├── 004_seed_2026_season.sql # 2026 season opener kickoff
-│   │   └── 005_seed_tracks.sql     # Bootstrap track geometry maps
-│   │
-│   ├── 📂 pipeline/                # Automation Scripts
-│   │   ├── seed_tracks.py          # Seed track geometry to Supabase
-│   │   ├── ingest_results.py       # Fetch & store race results from OpenF1
-│   │   ├── health_keepalive.py     # Supabase keepalive + Discord alerts
-│   │   ├── register_commands.py    # Register Discord Slash Commands
-│   │   └── fake_monza_timeline.py  # Test timeline generator
-│   │
-│   ├── 📂 websocket/               # WebSocket Handlers
-│   │   └── telemetry_ws.py         # Real-time telemetry streaming
-│   │
-│   ├── openf1_fetcher.py           # OpenF1 API client
-│   └── gemini_fetcher.py           # Gemini AI integration for commentary
+├── 📂 ingestor/                    # Real-Time Telemetry Ingestor (Fly.io Node/TS)
+│   ├── src/
+│   │   ├── index.ts                # Main polling loop, session switcher, adaptive burst
+│   │   └── sdk/                    # SpacetimeDB Client SDK (Reducers & Tables)
+│   ├── fly.toml                    # Fly.io deployment config (Singapore sin region)
+│   ├── Dockerfile                  # Container build (node:22-slim)
+│   └── package.json                # undici, spacetimedb, axios, express
+│
+├── 📂 spacetimedb/                 # SpacetimeDB Module Definition
+│   └── src/                        # In-memory reactive tables & reducers
 │
 ├── 📂 Silverwall UIUX design system/  # React Frontend (Vite + TypeScript)
 │   ├── index.html                  # HTML entry point
 │   ├── vite.config.ts              # Vite configuration
-│   ├── tailwind.config.js          # Tailwind CSS configuration
-│   ├── package.json                # NPM dependencies
-│   │
-│   └── 📂 src/
-│       ├── main.tsx                # React entry point
-│       ├── App.tsx                 # Router configuration
-│       │
-│       ├── 📂 pages/               # Route Pages
-│       │   ├── Landing.tsx         # Home page with race card & countdown
-│       │   ├── TelemetryLive.tsx   # Live telemetry pit-wall dashboard
-│       │   └── DesignSystem.tsx    # Component library showcase
-│       │
-│       ├── 📂 components/          # Reusable UI Components
-│       │   ├── ResultsModal.tsx    # Season results modal (standings, races)
-│       │   ├── CountdownOverlay.tsx # Race countdown overlay
-│       │   ├── SeasonCountdown.tsx # Off-season countdown display
-│       │   └── CommentaryPanel.tsx # AI-generated race commentary
-│       │
-│       ├── 📂 hooks/               # Custom React Hooks
-│       │   ├── useRaceStatus.ts    # Fetches race status from /api/status
-│       │   ├── useChampions.ts     # Fetches champions from /api/champions
-│       │   ├── useStandings.ts     # Fetches standings from /api/standings
-│       │   ├── useTrack.ts         # Fetches track SVG from /api/track
-│       │   └── useTelemetry.ts     # WebSocket telemetry hook
-│       │
-│       └── 📂 styles/              # Global Styles
-│           └── index.css           # Tailwind imports & custom styles
+│   ├── tailwind.config.js          # Tailwind CSS styling
+│   └── src/
+│       ├── App.tsx                 # App routes
+│       ├── contexts/
+│       │   └── SpacetimeContext.tsx # Global WebSocket provider to SpacetimeDB
+│       ├── pages/
+│       │   ├── Landing.tsx         # Race card, countdown & season overview
+│       │   ├── TelemetryLive.tsx   # Live pit-wall telemetry & normalized track map
+│       │   └── DesignSystem.tsx    # F1 HUD design tokens & components
+│       ├── components/
+│       │   ├── TrackMap.tsx        # High-res SVG circuit rendering
+│       │   ├── CountdownOverlay.tsx # Live session countdown HUD
+│       │   └── ResultsModal.tsx    # Interactive championship results
+│       ├── hooks/
+│       │   ├── useSpacetimeStatus.ts    # Live race status & real-time countdown
+│       │   ├── useSpacetimeTelemetry.ts # Normalized car coordinates & telemetry stream
+│       │   ├── useStandings.ts          # Reactive driver & constructor standings
+│       │   └── useTrack.ts              # Vertex track geometry loader
+│       └── sdk/                    # Generated SpacetimeDB TypeScript client
 │
-├── 📂 .github/
-│   └── 📂 workflows/
-│       ├── deploy-pages.yml        # Frontend deployment
-│       └── silverwall_automation.yml # Automated health check task
+├── 📂 backend/                     # FastAPI Backend (Geometry & Apex Bridge)
+│   ├── main.py                     # FastAPI entry point
+│   ├── routes/
+│   │   ├── track.py                # High-res circuit geometry normalization
+│   │   ├── status.py               # Session status & health checks
+│   │   └── discord.py              # Discord Bot slash command gateway
+│   └── tracks.json                 # Static circuit geometry database
 │
-├── 📂 docs/                        # Documentation
-│   ├── API.md                      # API endpoint documentation
-│   └── ARCHITECTURE.md             # System architecture details
+├── 📂 .github/workflows/
+│   ├── ingestor-sentinel.yml       # Ingestor health keepalive & auto-healer
+│   └── deploy-pages.yml            # CI build & automated verification
 │
-├── README.md                       # This file
-├── CHANGELOG.md                    # Version history
-├── DEPLOYMENT.md                   # Deployment instructions
-├── Dockerfile                      # Container deployment
-└── railway.json                    # Railway deployment config
+└── README.md                       # Documentation
 ```
 
 ---
@@ -156,29 +119,27 @@ silverwall/
 
 ```mermaid
 graph TD
-    A[OpenF1 API] -->|Live Telemetry| B[FastAPI Backend]
-    S[(Supabase DB)] <-->|Schedules/Standings/Tracks| B
-    B -->|REST API| F[React Frontend]
-    B -->|WebSocket| F
-    G[GitHub Actions] -->|Trigger| H[Health Sentinel]
-    H -->|Ping| S
-    H -->|Report| D1[Discord Webhook]
-    U[Discord User] <-->|Slash Commands| B
-    B <-->|Interactions| D2[Discord Bot]
+    A[OpenF1 Live API] -->|Car Data & GPS Locations| I[TS Ingestor Worker<br/>Fly.io Singapore]
+    I -->|insert_telemetry Reducer| S[(SpacetimeDB Cloud<br/>Reactive In-Memory Engine)]
+    I -->|seed_race / seed_standings| S
+    S <-->|Direct Multiplexed WebSocket| F[React Frontend<br/>Vite / Tailwind CSS]
+    AP[Apex F1 API / Fly Postgres] -->|High-Res Circuit Vertices| I
+    G[GitHub Sentinel Workflow] -->|Health Ping Every 2h| I
 ```
 
 ---
 
-## 🗄️ Database Schema
+## 🗄️ SpacetimeDB Reactive Schema
 
-| Table | Description |
-|-------|-------------|
-| `seasons` | Year, champion driver/constructor |
-| `races` | Race schedule (date, circuit, status) |
-| `race_results` | P1-P10 results for each race |
-| `driver_standings` | Points, wins, position per driver |
-| `constructor_standings` | Team championship standings |
-| `tracks` | Circuit geometry (SVG path data) |
+| Table | Primary Columns | Description |
+|---|---|---|
+| `race` | `race_key`, `name`, `meeting_name`, `date`, `circuit_key`, `status` | Full season schedules (upcoming, live, ended) |
+| `telemetry` | `driver_number`, `session_key`, `speed`, `rpm`, `gear`, `x`, `y` | Live streaming telemetry frames per car |
+| `track_point` | `circuit_key`, `order`, `x`, `y` | Ordered SVG vertex paths for track rendering |
+| `driver` | `driver_number`, `name`, `team`, `color` | F1 grid driver profiles and team branding |
+| `driver_standings` | `season_year`, `position`, `driver_name`, `points`, `wins` | World Drivers' Championship standings |
+| `constructor_standings` | `season_year`, `position`, `team`, `points`, `wins` | World Constructors' Championship standings |
+| `race_result` | `race_key`, `position`, `driver_name`, `points`, `fastest_lap` | Official classified race results and podiums |
 
 ---
 
@@ -279,13 +240,14 @@ npm run dev -- --port 3000
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
-|-------|------------|
-| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS |
-| **Backend** | Python, FastAPI, Pydantic |
-| **Database** | Supabase (PostgreSQL) |
-| **Real-time** | WebSocket, OpenF1 API |
-| **AI** | Google Gemini (Commentary) |
-| **CI/CD** | GitHub Actions |
+|---|---|
+| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, SpacetimeDB Web SDK |
+| **Telemetry Ingestor** | Node.js 22, TypeScript, Undici WebSocket, Express Healthcheck |
+| **Reactive Database** | SpacetimeDB Cloud (Multiplexed WebSockets & In-Memory Reducers) |
+| **Backend & Geometry** | FastAPI, Python 3.11, Pydantic, Apex Circuit API |
+| **Cloud Infrastructure** | Fly.io (Singapore `sin` region), Vercel |
+| **External APIs** | OpenF1 Live API, Ergast / Jolpi F1 Archive |
+| **CI/CD & Monitoring** | GitHub Actions Keepalive Sentinel, Discord Webhooks |
 
 ---
 
