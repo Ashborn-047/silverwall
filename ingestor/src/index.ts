@@ -603,10 +603,21 @@ async function syncYearRaces(year: number) {
 async function syncYearDrivers(year: number) {
     console.log(`Syncing drivers for ${year}...`);
     try {
-        const resp = await axios.get(`${OPENF1_BASE_URL}/drivers`, {
-            params: { year: year }
-        });
-        const drivers = resp.data;
+        let drivers: any[] = [];
+        try {
+            const resp = await axios.get(`${OPENF1_BASE_URL}/drivers`, {
+                params: { year: year },
+                timeout: 5000
+            });
+            drivers = resp.data || [];
+        } catch {
+            // Fallback to latest session drivers if year query not supported
+            const resp = await axios.get(`${OPENF1_BASE_URL}/drivers`, {
+                params: { session_key: 'latest' },
+                timeout: 5000
+            });
+            drivers = resp.data || [];
+        }
         // Group by driver number to avoid duplicates
         const uniqueDrivers = new Map();
         for (const d of drivers) {

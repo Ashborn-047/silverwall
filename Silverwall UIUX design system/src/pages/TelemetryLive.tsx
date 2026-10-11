@@ -114,8 +114,8 @@ export default function TelemetryLive() {
   // Race status from SpacetimeDB
   const raceStatus = useSpacetimeStatus();
   // Provide a safe fallback for circuitId since useTrack now expects a number
-  const circuitId = typeof raceStatus.circuit === 'number' ? raceStatus.circuit :
-    (typeof raceStatus.nextSeason?.circuit === 'number' ? raceStatus.nextSeason.circuit : 22); // Default to a known circuit (e.g., 22) if not available yet
+  const circuitId = raceStatus.circuit ? parseInt(String(raceStatus.circuit), 10) :
+    (raceStatus.nextSeason?.circuit ? parseInt(String(raceStatus.nextSeason.circuit), 10) : 61);
 
   // Track hook - fetches directly from SpacetimeDB track_point table
   const { track, points: trackPoints } = useTrack(circuitId);
@@ -469,6 +469,7 @@ export default function TelemetryLive() {
 
               {/* LIVE CARS */}
               {frame?.cars?.map((car, i) => {
+                if (car.x === 0 && car.y === 0) return null;
                 const coords = toSvgCoords(car.x, car.y);
                 const isSelected = selectedDriver?.code === car.code;
                 const teamColor = getDriverColor(car.code);

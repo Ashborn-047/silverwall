@@ -73,14 +73,52 @@ export function useSpacetimeTelemetry() {
 
             const drivers = Array.from(conn.db.driver.iter());
 
+            // Check if coordinates are raw OpenF1 units (> 1) and need normalization to 0-1
+            const allCoords = Array.from(latestByDriver.values());
+            const hasRawCoords = allCoords.some(c => Math.abs(c.x) > 1 || Math.abs(c.y) > 1);
+
+            // Circuit bounding boxes for exact alignment with track SVG
+            const CIRCUIT_BOUNDS: Record<number, { minX: number; maxX: number; minY: number; maxY: number }> = {
+                61: { minX: -13225, maxX: 1170, minY: -4906, maxY: 4089 }, // Singapore Marina Bay
+                49: { minX: -12000, maxX: 4000, minY: -3000, maxY: 6000 },  // Shanghai
+                63: { minX: -3000, maxX: 3000, minY: -3000, maxY: 3000 },   // Bahrain
+            };
+
+            let bounds = liveRace?.circuitKey ? CIRCUIT_BOUNDS[liveRace.circuitKey] : undefined;
+            if (!bounds && hasRawCoords) {
+                const xs = allTelemetry.map(c => c.x).filter(x => x !== 0);
+                const ys = allTelemetry.map(c => c.y).filter(y => y !== 0);
+                if (xs.length > 0 && ys.length > 0) {
+                    bounds = {
+                        minX: Math.min(...xs),
+                        maxX: Math.max(...xs),
+                        minY: Math.min(...ys),
+                        maxY: Math.max(...ys)
+                    };
+                }
+            }
+
             const cars: Car[] = Array.from(latestByDriver.values()).map((t, index) => {
                 const driverInfo = drivers.find(d => d.driverNumber === t.driverNumber);
+                let carX = t.x;
+                let carY = t.y;
+
+                if (hasRawCoords && bounds && (t.x !== 0 || t.y !== 0)) {
+                    const width = bounds.maxX - bounds.minX;
+                    const height = bounds.maxY - bounds.minY;
+                    const maxRange = Math.max(width, height) || 1;
+                    const xOffset = (1.0 - (width / maxRange)) / 2;
+                    const yOffset = (1.0 - (height / maxRange)) / 2;
+                    carX = (t.x - bounds.minX) / maxRange + xOffset;
+                    carY = (t.y - bounds.minY) / maxRange + yOffset;
+                }
+
                 return {
                     code: driverInfo?.name || t.driverNumber.toString(),
                     team: driverInfo?.team || 'Unknown',
                     color: driverInfo?.teamColor || '#00D2BE',
-                    x: t.x,
-                    y: t.y,
+                    x: carX,
+                    y: carY,
                     speed: t.speed,
                     gear: t.gear,
                     drs: t.drs === 1,
@@ -106,6 +144,7 @@ export function useSpacetimeTelemetry() {
 
         conn.db.telemetry.onInsert((_) => updateTelemetry());
         conn.db.race.onInsert((_) => updateTelemetry());
+        (conn.db.race as any).onUpdate?.((_: any) => updateTelemetry());
         conn.db.driver.onInsert((_) => updateTelemetry());
 
         return () => {
