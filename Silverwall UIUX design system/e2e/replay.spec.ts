@@ -5,10 +5,12 @@ import { test, expect } from '@playwright/test';
 // Validates replay scrubber, playback engine, and historical session selector
 // ============================================================================
 
+const TELEMETRY_URL = process.env.GITHUB_ACTIONS ? '/silverwall/telemetry/live' : '/telemetry/live';
+
 test.describe('Replay Controls & Scrubber', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/telemetry/live');
+    await page.goto(TELEMETRY_URL);
     await page.waitForLoadState('domcontentloaded');
   });
 
@@ -67,7 +69,7 @@ test.describe('Replay Controls & Scrubber', () => {
 test.describe('Session Selector & Historical Archive', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/telemetry/live');
+    await page.goto(TELEMETRY_URL);
     await page.waitForLoadState('domcontentloaded');
   });
 

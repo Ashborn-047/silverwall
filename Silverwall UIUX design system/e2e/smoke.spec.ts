@@ -103,7 +103,8 @@ test.describe('Navigation', () => {
   });
 
   test('should navigate to telemetry page without crash', async ({ page }) => {
-    await page.goto('/telemetry/live');
+    const telemetryUrl = process.env.GITHUB_ACTIONS ? '/silverwall/telemetry/live' : '/telemetry/live';
+    await page.goto(telemetryUrl);
     // Should not be a completely blank page
     await expect(page.locator('body')).toBeVisible();
     // Should have some content (not a white screen)
